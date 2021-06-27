@@ -10,10 +10,27 @@ Function CacheAndLoadText$(url:Object)
 EndFunction
 
 'DebugStop
-Local text:String = CacheAndLoadText( "initialize.txt" )
+Local bank:TBank = LoadBank( "initialize.txt" )
+Local size:Int = BankSize( bank ) 
+Print( "BANK SIZE: "+size)
+
+'ResizeBank( bank, size + 1 )
+'PokeByte( bank, size, 0 )
+
+' Get bank contents and convert to a string
+'Local buff:Byte Ptr = LockBank(bank)
+'Local text:String  = String.FromCString( buff )
+'UnlockBank(bank)
+'bank = Null
+
+Local text:String
+For Local n:Int = 0 Until size
+	text :+ Chr( bank.PeekByte(n) )
+Next
+text :+ "XX"
+
 Print( "Loaded "+Len(text)+"bytes" )
-text = text[.. text.length - 2]
-'text = text + "}"
+
 
 DebugStop
 hexdump( text )
