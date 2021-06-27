@@ -1,0 +1,14 @@
+# Hidden files
+.bmx/
+.vscode/
+
+# Backup files
+*.bak
+
+# Executables
+*.debug
+
+# Temporary and Clutter
+temp/
+notes/
+
