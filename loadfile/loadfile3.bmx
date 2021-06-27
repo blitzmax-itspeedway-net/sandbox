@@ -1,4 +1,7 @@
 SuperStrict
+Framework brl.TextStream
+Import brl.ramstream
+Import brl.retro
 
 Function CacheAndLoadText$(url:Object)
 	Local tmpResult$
@@ -10,11 +13,11 @@ Function CacheAndLoadText$(url:Object)
 EndFunction
 
 'DebugStop
-Local text:String = CacheAndLoadText( "initialize.txt" )
+Local text:String = CacheAndLoadText( "initialize.json" )
 
 Print( "Loaded "+Len(text)+"bytes" )
 
-'DebugStop
+DebugStop
 hexdump( text )
 
 
