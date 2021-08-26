@@ -1,14 +1,19 @@
-# Hidden files
+# Ignore everything and then include folders and files with extensions
+*
+!/**/
+!*.*
+
+# Exclude folders
 .bmx/
 .vscode/
 
-# Backup files
+# Exclude files
 *.bak
-
-# Executables
 *.debug
+*.old
+*.exe
+*.a
+*.i
+*.i2
 
-# Temporary and Clutter
-temp/
-notes/
 
