@@ -61,6 +61,20 @@ Type TBlitzMaxLexer Extends TLexer
 		Until id = 0
 	End Method
 
+	Method tokenise()
+'DebugStop
+		Local token:TToken	' = nextToken()
+		'nextChar()			' Move to first character
+		previous = New TToken( TK_Invalid, "", 0,0, "" ) ' Beginning of file (Stops NUL)
+		Repeat
+			token = nextToken()
+			If token ; tokens.addlast( token )
+			previous = token
+		Until token And token.id = TK_EOF
+		' Set the token cursor to the first element
+		tokpos = tokens.firstLink()
+	End Method
+	
 	' Language specific tokeniser
 	Method GetNextToken:TToken()
 		Local char:String = peekchar()
@@ -79,12 +93,26 @@ Type TBlitzMaxLexer Extends TLexer
 			' Check if this is a named-token or just an alpha
 			Local symbol:TSymbol = TSymbol( defined.valueforkey( Lower(text) ) )
 			If symbol
-				If symbol.id = TK_REM And previous.id <> TK_END
+'If Lower(text) = "end" DebugStop
+				If previous.id = TK_END
 'DebugStop
-					Return New TToken( symbol.id, ExtractRemark(), line, pos, symbol.class )
-				Else
-					Return New TToken( symbol.id, text, line, pos, symbol.class )
+					Select symbol.id
+					Case TK_EXTERN, TK_FUNCTION, TK_IF, TK_INTERFACE, TK_METHOD, TK_REM, TK_SELECT, TK_STRUCT, TK_TRY, TK_TYPE, TK_WHILE
+						Local sym:TSymbol = TSymbol( defined.valueforkey( "end"+Lower(text) ) )
+						previous.id = sym.id
+						previous.class = sym.class
+						previous.value :+ " "+text
+						Return Null					
+					EndSelect
+					
+					' If we get here, then maybe it is just an "end" statement!
 				End If
+				
+				' REM is a special case, multi-line statement
+				If symbol.id = TK_REM ; Return New TToken( symbol.id, ExtractRemark(), line, pos, symbol.class )
+
+				' Return the symbol
+				Return New TToken( symbol.id, text, line, pos, symbol.class )
 			End If
 			Return New TToken( TK_ALPHA, text, line, pos, "ALPHA" )
 		'Case Instr( valid_symbols, char, 1 )            ' Single character symbol

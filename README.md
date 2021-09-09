@@ -8,7 +8,7 @@ A place where I save stuff that I am testing or experimenting with.
 
 # NO WARRANTY AND NO GUARANTEE
 
-Please do not log issues with this code, they will be ignored.
+Please do not log issues with this code, they will be ignored and closed.
 
 # Currently in my Sandbox:
 
@@ -20,4 +20,6 @@ Please do not log issues with this code, they will be ignored.
 	* Transpiler for Blitzmax (Pretty-Printer)
 	* Transpiler for C++
 	* Transpiler for Java
+* json
+    * Testing
 

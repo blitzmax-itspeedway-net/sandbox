@@ -6,6 +6,8 @@
 # Exclude folders
 .bmx/
 .vscode/
+languageserver/
+transpiler/old
 
 # Exclude files
 *.bak

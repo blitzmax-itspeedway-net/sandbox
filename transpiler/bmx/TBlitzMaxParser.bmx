@@ -35,7 +35,7 @@ Global SYM_MODULEBODY:Int[] = [ TK_INCLUDE, TK_MODULEINFO, TK_LOCAL, TK_GLOBAL, 
 Type TBlitzMaxParser Extends TParser
 	
 	Field strictmode:Int = 0
-	Field symbolTable:TSymbolTable = New TSymbolTable()	
+	'Field symbolTable:TSymbolTable = New TSymbolTable()	
 	'
 	'Field prev:TToken, save:TToken	' Used for lookback (Specifically for END XXX statements)
 	'Field definition:TToken			' Used to identify a block definition comment
@@ -224,7 +224,7 @@ DebugStop
 					ast.add( Parse_Rem( token ) )			
 				Case TK_STRICT, TK_SUPERSTRICT
 					If fsm > FSM_STRICTMODE
-						Publish( "syntax-error", "'"+token.value+"' was unexpected at this time", token )
+						Publish( "syntax-error", "'"+token.value+"' was unexpected at this time" )
 						Continue
 					End If
 					fsm = FSM_FRAMEWORK
@@ -232,7 +232,7 @@ DebugStop
 					ast.add( Parse_Strictmode( token ) )
 				Case TK_FRAMEWORK
 					If fsm > FSM_FRAMEWORK
-						publish( "syntax-error", "'"+token.value+"' was unexpected at this time", token )
+						publish( "syntax-error", "'"+token.value+"' was unexpected at this time" )
 						Continue
 					End If
 					fsm = FSM_IMPORT
@@ -240,7 +240,7 @@ DebugStop
 					ast.add( Parse_Framework( token ) )
 				Case TK_MODULE
 					If fsm > FSM_FRAMEWORK
-						publish( "syntax-error", "'"+token.value+"' was unexpected at this time", token )
+						publish( "syntax-error", "'"+token.value+"' was unexpected at this time" )
 						Continue
 					End If
 					fsm = FSM_MODULE
@@ -249,7 +249,7 @@ DebugStop
 					ast.add( ast_module )
 				Case TK_MODULEINFO
 					If fsm <> FSM_MODULE
-						publish( "syntax-error", "'"+token.value+"' was unexpected at this time", token )
+						publish( "syntax-error", "'"+token.value+"' was unexpected at this time" )
 						Continue
 					End If
 					'
@@ -257,7 +257,7 @@ DebugStop
 				Case TK_IMPORT
 'DebugStop
 					If fsm > FSM_IMPORT
-						publish( "syntax-error", "'"+token.value+"' was unexpected at this time", token )
+						publish( "syntax-error", "'"+token.value+"' was unexpected at this time" )
 						Continue
 					End If
 
@@ -567,13 +567,13 @@ DebugStop
 	End Method
 
 	' Dump the symbol table into a string
-	Method reveal:String()
-		Local report:String = "POSITION  SCOPE     NAME      TYPE~n"
-		For Local row:TSymbolTableRow = EachIn symbolTable.list
-			report :+ (row.line+","+row.pos)[..8]+"  "+row.scope[..8]+"  "+row.name[..8]+"  "+row.class[..8]+"~n"
-		Next
-		Return report
-	End Method
+	'Method reveal:String()
+	'	Local report:String = "POSITION  SCOPE     NAME      TYPE~n"
+	'	For Local row:TSymbolTableRow = EachIn symbolTable.list
+	'		report :+ (row.line+","+row.pos)[..8]+"  "+row.scope[..8]+"  "+row.name[..8]+"  "+row.class[..8]+"~n"
+	'	Next
+	'	Return report
+	'End Method
 	
 	' Recover from syntax errors
 	' Called by parse method during try-catch for TParseError()

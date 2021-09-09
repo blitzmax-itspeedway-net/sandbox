@@ -10,6 +10,14 @@ local abc:string = "Quoted string"
 
 Global capabilities:String[]
 
+Rem
+    This is a first example
+End Rem
+
+Rem
+    This is a second example
+Endrem
+
 Function addCapability( capability:String )
 	capabilities :+ [capability]
 End Function

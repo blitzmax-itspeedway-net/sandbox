@@ -8,7 +8,9 @@ Import brl.reflection
 Import Text.RegEx
 
 'Import bmx.lexer
-Import bmx.parser
+'Import bmx.parser
+Import bmx.blitzmaxparser
+Import bmx.transpiler
 
 '
 Include "bin/loadfile().bmx"
@@ -22,21 +24,21 @@ Include "bin/loadfile().bmx"
 'Include "bin/TParser.bmx"
 
 '	BLITZMAX PARSER
-Include "bin/lexer-const-bmx.bmx"
-Include "bin/TBlitzMaxLexer.bmx"
-Include "bin/TBlitzMaxParser.bmx"
+'Include "bin/lexer-const-bmx.bmx"
+'Include "bin/TBlitzMaxLexer.bmx"
+'Include "bin/TBlitzMaxParser.bmx"
 
 '	DELIVERABLES
 'Include "bin/AbstractSyntaxTree.bmx"
-Include "bin/TBlitzMaxAST.bmx"
+'Include "bin/TBlitzMaxAST.bmx"
 Include "bin/TSymbolTable.bmx"
 Include "bin/TLanguageServerVisitor.bmx"
 
 '	OUTPUT / TRANSPILE
-Include "bin/TTranspiler.bmx"
-Include "bin/TTranspileBlitzMax.bmx"
-Include "bin/TTranspileCPP.bmx"
-Include "bin/TTranspileJava.bmx"
+'Include "/home/si/dev/bmx.transpiler/transpiler.mod/src/TTranspiler.bmx"
+'Include "/home/si/dev/bmx.transpiler/transpiler.mod/src/TTranspileBlitzMax.bmx"
+'Include "/home/si/dev/bmx.transpiler/transpiler.mod/src/TTranspileCPP.bmx"
+'Include "/home/si/dev/bmx.transpiler/transpiler.mod/src/TTranspileJava.bmx"
 
 '	TYPES AND FUNCTIONS
 
