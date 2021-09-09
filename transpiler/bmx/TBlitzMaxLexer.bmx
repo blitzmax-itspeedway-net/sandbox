@@ -140,7 +140,7 @@ Type TBlitzMaxLexer Extends TLexer
 	Method ExtractRemark:String()
         Local remark:String
 'DebugStop
-		Local match:TRegExMatch = findnext("(?im)^[ \t]*(ENDREM|END REM)(?![a-zA-Z0-9_])", True)
+		Local match:TRegExMatch = findnext("(?im)^[ \t]*(ENDREM|END[ \t]*REM)(?![a-zA-Z0-9_])", True)
 		If Not match Return ""
 		' Have we found anything?
 		'For Local i:Int = 0 Until match.SubCount()
