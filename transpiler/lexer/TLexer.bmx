@@ -37,7 +37,11 @@ Const TK_TAB:Int 			= 9
 Const TK_LF:Int 			= 10
 Const TK_CR:Int 			= 13
 Const TK_EOL:Int 			= TK_CR
-Const TK_EOF:Int 			= $FFFF
+
+Const TK_MISSING:Int 		= $FFF0		'	Expected token was missing!
+Const TK_MISSINGOPT:Int		= $FFF1		'	Optional token was missing!
+'Const TK_SKIPPED:Int 		= $FFF2		'	No token 
+Const TK_EOF:Int 			= $FFFF		'	End of FILE
 
 '	SINGLE CHARACTER TOKENS
 
@@ -84,24 +88,29 @@ Const TK_QString:Int		= 604	'	Quoted String
 Const TK_Number:Int			= 605	' 	Number
 
 '	BASE LEXER
+Type TSourceStream
+	Field source:String
+	Field linenum:Int, linepos:Int	' Source 
+End Type
 
-Type TLexer
+Type TLexerV1 Extends TSourceStream
 
 	'Field SYM_LINECOMMENT:String = ""
 	'Field SYM_ALPHAEXTRA:String  = ""	' Additional Characters allowed in ALPHA
 			
-	Field source:String
-	Field linenum:Int, linepos:Int	' Source 
 	Field cursor:Int				' Lexer (Char cursor)
 	'Field lookahead:String			' Next character
 	Field tokpos:TLink				' Current token cursor
 	Field previous:TToken			' Previous token (For back-checking)
 	
-	Field tokens:TList = New TList()
+	'Field tokens:TList = New TList()
+	Field tokens:TObjectList = New TObjectList()	' List of tokens in the source
+	Field token:TToken								' Current token
+	
 	Field defined:TMap = New TMap()	' List of known tokens. Key is token, Value is class
 	Field lookup:String[128]
 	'Field tokentable:TStringMap = New TStringMap()	
-	
+		
 	Method New( source:String )
 		Self.source = source
 		cursor = 0
@@ -133,8 +142,10 @@ Type TLexer
 	End Method
 
 	' Set the token cursor to the first element
-	Method reset()
-		tokpos = tokens.firstLink()
+	Method reset:TToken()
+		'tokpos = tokens.firstLink()
+		cursor = 0
+		Return TToken( tokens.valueAtIndex( cursor ) )
 	End Method
 	
 	' Gets the first token link
@@ -175,6 +186,7 @@ Type TLexer
 '	End Method
 	
     ' Gets the next token from the list
+Rem
     Method getNext:TToken()	' ignorelist:String="" )
 		'If tokpos=Null Or tokens.isempty() Return New TToken( "EOF","", linenum, linepos)
 		If tokpos=Null Return New TToken( TK_EOF,"", linenum, linepos, "EOF")
@@ -182,7 +194,7 @@ Type TLexer
 		tokpos = tokpos.nextlink
 		Return TToken(tok)
     End Method
-
+End Rem
     ' Pops the first token from the stack
     'Method Pop:TToken()	' ignorelist:String="" )
     '    If tokens.isempty() Return New TToken( "EOF","", linenum, linepos)
@@ -219,6 +231,7 @@ Type TLexer
     End Method
 
     ' Matches the next token otherwise throws an error
+Rem
 	Method Expect:TToken( expectation:Int )
         If tokpos=Null ThrowException( "Unexpected end of file" )
 		Local token:TToken = TToken( tokpos.value )
@@ -243,6 +256,7 @@ Type TLexer
 '		End If
 		ThrowException( "Unexpected token '"+token.value+"'", token.line, token.pos )
 	End Method	
+EndRem
 Rem
     Method Expect:TToken( expectedclass:String, expectedvalue:String="" )
 		Local tok:TToken = TToken( tokpos.value )
@@ -297,7 +311,8 @@ End Rem
 			previous = token
 		Until token.id = TK_EOF
 		' Set the token cursor to the first element
-		tokpos = tokens.firstLink()
+		'tokpos = tokens.firstLink()
+		cursor = 0
 	End Method
 	
 	' Get the next available token
@@ -382,6 +397,10 @@ End Rem
 'DebugStop
 		If cursor>=source.length Return ""
         Local char:String = source[cursor..cursor+1]
+
+        'Local ascii:Int = source[cursor]
+		'Local ch:String = Chr( ascii )
+'DebugStop
         While Instr( IgnoredSymbols, char )
 		'repeat
             'If cursor>=source.length Return ""
@@ -486,6 +505,9 @@ End Rem
 			peek = peekchar( "~r" )
 		Wend
 		text = Trim( text )
+		' Consume the EOL as this is a required part of the statement!
+'DebugStop
+		popchar()
         Return text
 	End Method
 	
@@ -629,6 +651,31 @@ End Rem
 		Return content
 	End Method
 	 
+End Type
+
+Type TLexer Extends TLexerV1
+
+	' Retrieves the current token (At the cursor)
+	Method getNext:TToken()
+		If cursor>=tokens.count Return Create_EOF_Token()
+		cursor :+ 1
+		Return TToken( tokens.valueAtIndex( cursor ) )
+	End Method
+
+	' HELPER FUNCTIONS
+	
+	Method Create_EOF_Token:TToken()
+		Return New TToken( TK_EOF, "", linenum, linepos, "EOF" )
+	End Method
+
+	Method Create_Missing_Token:TToken( id:Int=0 )
+		Return New TToken( TK_MISSING, "(token:"+id+")", linenum, linepos, "MISSING" )
+	End Method
+
+	Method Create_Missing_Optional_Token:TToken( id:Int=0 )
+		Return New TToken( TK_MISSINGOPT, "(token:"+id+")", linenum, linepos, "MISSING-OPTIONAL" )
+	End Method
+
 End Type
 
 ' A Simple Symbol

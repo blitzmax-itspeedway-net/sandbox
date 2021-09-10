@@ -56,6 +56,9 @@ Type TASTNode
 	Field descr:String		' Optional Trailing "line" comment
 	Field link:TLink		' Used in Compound nodes
 	
+	' 9/9/21, Additional fields for diagnostic information
+	Field exists:Int = True
+	
 	Method New( name:String )
 		Self.name  = name
 	End Method

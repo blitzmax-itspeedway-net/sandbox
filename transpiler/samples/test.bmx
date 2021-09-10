@@ -1,8 +1,18 @@
 '   This program tests framework, import and include statements
+' More comments
+
+REM More comments
+END REM
+
+REM AND EVEN MORE
+ENDREM
 superstrict
 
 import abc.xyz
 import brl.retri
+
+include "xyz.bmx"
+
 type abc
     method xyz()
     end method
@@ -16,4 +26,7 @@ end type ' End MyType
 function bbb()
 end function
 
+local x:int = 10
+print( x )
+print x
 

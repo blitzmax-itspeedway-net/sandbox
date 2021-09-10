@@ -19,6 +19,8 @@ Type TASTNode
 	Field descr:String		' Optional Trailing "line" comment
 	Field link:TLink		' Used in Compound nodes
 	
+	Field comment:TToken	' Trailing comment or Null
+	
 	Method New( name:String )
 		Self.name  = name
 	End Method
@@ -31,6 +33,11 @@ Type TASTNode
 		Self.name  = name
 		consume( token )
 		Self.descr = descr
+	End Method
+
+	Method class:String()
+		Local T:TTypeId = TTypeId.ForObject( Self )
+		Return T.metadata("class")
 	End Method
 	
 	Method consume( token:TToken )

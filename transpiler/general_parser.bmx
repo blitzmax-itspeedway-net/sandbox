@@ -4,41 +4,58 @@ SuperStrict
 Framework brl.retro
 'Import brl.collections
 'Import brl.map
+Import brl.objectlist
 Import brl.reflection
 Import Text.RegEx
 
+' COMMENTED OUT BECAUSE WE ARE TESTING LOCAL COPIES
 'Import bmx.lexer
 'Import bmx.parser
-Import bmx.blitzmaxparser
-Import bmx.transpiler
+'Import bmx.blitzmaxparser
+'Import bmx.transpiler
 
-'
 Include "bin/loadfile().bmx"
-'Include "bin/TException.bmx"
 
-'Include "../bin/json.bmx"
+' SANDBOX LEXER
+Include "lexer/TLexer.bmx"
+Include "lexer/TToken.bmx"
+Include "lexer/TException.bmx"
 
-'	GENERIC LEXER AND PARSER
-'Include "bin/TToken.bmx"
-'Include "bin/TLexer.bmx"
-'Include "bin/TParser.bmx"
+' SANDBOX PARSER
+Include "parser/TParser.bmx"
+Include "parser/TASTNode.bmx"
+Include "parser/TASTBinary.bmx"
+Include "parser/TASTCompound.bmx"
+Include "parser/TVisitor.bmx"
 
-'	BLITZMAX PARSER
-'Include "bin/lexer-const-bmx.bmx"
-'Include "bin/TBlitzMaxLexer.bmx"
-'Include "bin/TBlitzMaxParser.bmx"
+' Exception handler for Parse errors
+Type TParseError Extends TException
+End Type
+
+Function ThrowParseError( message:String, line:Int=-1, pos:Int=-1 )
+	Throw( New TParseError( message, line, pos ) )
+End Function
+
+' SANDBOX BLITZMAX LEXER/PARSER
+Include "bmx/lexer-const-bmx.bmx"
+Include "bmx/TBlitzMaxAST.bmx"
+Include "bmx/TBlitzMaxLexer.bmx"
+Include "bmx/TBlitzMaxParser.bmx"
+
+' SANDBOX TRANSPILER
+Include "transpiler/TTranspiler.bmx"
+Include "transpiler/TTranspileBlitzMax.bmx"	' BlitzMax NG
+Include "transpiler/TTranspileCPP.bmx"			' C++
+Include "transpiler/TTranspileJava.bmx"		' Java
+'Include "src/TTranspileJavaScript.bmx"	' HTML/JavaScr
 
 '	DELIVERABLES
-'Include "bin/AbstractSyntaxTree.bmx"
-'Include "bin/TBlitzMaxAST.bmx"
 Include "bin/TSymbolTable.bmx"
 Include "bin/TLanguageServerVisitor.bmx"
 
-'	OUTPUT / TRANSPILE
-'Include "/home/si/dev/bmx.transpiler/transpiler.mod/src/TTranspiler.bmx"
-'Include "/home/si/dev/bmx.transpiler/transpiler.mod/src/TTranspileBlitzMax.bmx"
-'Include "/home/si/dev/bmx.transpiler/transpiler.mod/src/TTranspileCPP.bmx"
-'Include "/home/si/dev/bmx.transpiler/transpiler.mod/src/TTranspileJava.bmx"
+'Include "bin/TException.bmx"
+'Include "bin/TToken.bmx"
+
 
 '	TYPES AND FUNCTIONS
 

@@ -49,7 +49,66 @@ Type TParser
 		Self.lexer = lexer
 		Self.token = lexer.getnext()
 	End Method
+
+	' Advances the token
+	Method advance()
+		token = lexer.getNext()
+	End Method
 	
+	' Consume a symbol.
+	' If symbol does not exist, create a missing node in it's place
+	Method eat:TToken( expectation:Int )
+		'If cursor> tokens.count Return Create_EOF_Token()
+		Local token:TToken = Self.token
+		If token.id = expectation
+			advance()
+			Return token
+		End If
+		' Optional token not found, so return a placeholder
+		Return New TToken( TK_MISSING, "", token.line, token.pos, "MISSING" )
+	End Method
+
+	' Consume an optional symbol.
+	Method eatOptional:TToken( expectation:Int, usenull:Int = False )
+		'If cursor> tokens.count Return Create_EOF_Token()
+		Local token:TToken = Self.token
+		If token.id = expectation
+			advance()
+			Return token
+		End If
+		' Optional token not found, so return a placeholder
+		If usenull Return Null
+		Return New TToken( TK_MISSINGOPT, "", token.line, token.pos, "MISSING-OPTIONAL" )
+	End Method
+
+	' Consume an optional symbol.
+	Method eatOptional:TToken( expectation:Int[], usenull:Int = False )
+		'If cursor> tokens.count Return Create_EOF_Token()
+		Local token:TToken = Self.token
+		If token.in( expectation )
+			advance()
+			Return token
+		End If
+		' Optional token not found, so return a placeholder
+		If usenull Return Null
+		Return New TToken( TK_MISSINGOPT, "", token.line, token.pos, "MISSING-OPTIONAL" )
+	End Method
+
+	' Eat all the tokens until we hit a completion (or EOF)
+	Method eatUntil:TASTCompound( completion:Int[] )
+DebugStop
+		Local ast:TASTCompound = New TASTCompound( "IGNORED" )
+		Repeat
+			Local token:TToken = Self.token
+			If token.in( completion ) Or token.id=TK_EOF
+				advance()
+				Return ast
+			End If
+			ast.add( New TASTNode( "IGNORED", token ))
+			advance()
+		Forever
+	End Method
+		
 	Method parse_ast:TASTNode()
 '	Method testabnf:Int( rulename:String, path:String="" )
 'DebugStop
@@ -453,7 +512,7 @@ End Rem
 
 	' This method is used by the parser to synchronise following a syntax error
 	' It is ALWAYS language dependent, so is defined as abstract here
-	Method error_recovery() ; End method
+	Method error_recovery() ; End Method
 	
 	' Use Reflection to call the token method
 	Rem 
@@ -487,5 +546,5 @@ End Rem
 	'Method token_( token:TToken )
 	'	ThrowException( "No method implemented for token '"+token.class+"'", token.line, token.pos )
 	'End Method
-
+	
 End Type

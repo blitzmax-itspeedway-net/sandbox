@@ -13,22 +13,22 @@ SuperStrict
 'Import bmx.parser
 Import Text.Regex
 
-Include "bin/loadfile().bmx"
+Include "../bin/loadfile().bmx"
 
 'Include "bmx/AbstractSyntaxTree.bmx"
 
 ' SANDBOX LEXER
-Include "lexer/TLexer.bmx"
-Include "lexer/TToken.bmx"
-Include "lexer/TException.bmx"
+Include "../lexer/TLexer.bmx"
+Include "../lexer/TToken.bmx"
+Include "../lexer/TException.bmx"
 
 ' SANDBOX PARSER
 
-Include "parser/TParser.bmx"
-Include "parser/TASTNode.bmx"
-Include "parser/TASTBinary.bmx"
-Include "parser/TASTCompound.bmx"
-Include "parser/TVisitor.bmx"
+Include "../parser/TParser.bmx"
+Include "../parser/TASTNode.bmx"
+Include "../parser/TASTBinary.bmx"
+Include "../parser/TASTCompound.bmx"
+Include "../parser/TVisitor.bmx"
 
 ' Exception handler for Parse errors
 Type TParseError Extends TException
@@ -39,10 +39,10 @@ Function ThrowParseError( message:String, line:Int=-1, pos:Int=-1 )
 End Function
 
 ' SANDBOX BLITZMAX LEXER/PARSER
-Include "bmx/lexer-const-bmx.bmx"
-Include "bmx/TBlitzMaxAST.bmx"
-Include "bmx/TBlitzMaxLexer.bmx"
-Include "bmx/TBlitzMaxParser.bmx"
+Include "../bmx/lexer-const-bmx.bmx"
+Include "../bmx/TBlitzMaxAST.bmx"
+Include "../bmx/TBlitzMaxLexer.bmx"
+Include "../bmx/TBlitzMaxParser.bmx"
 
 'Include "bin/TException.bmx"
 'Include "bin/TToken.bmx"
@@ -53,7 +53,7 @@ Local start:Int, finish:Int
 
 Try
 	'DebugStop
-	Local source:String = loadFile( "samples/capabilites.bmx" )
+	Local source:String = loadFile( "../samples/capabilites.bmx" )
 	'Local source:String = loadFile( "samples/maxide.bmx" )
 	Local lexer:TLexer = New TBlitzMaxLexer( source )
 'DebugStop

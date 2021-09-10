@@ -3,12 +3,12 @@ SuperStrict
 '	(c) Copyright Si Dunford, July 2021, All Rights Reserved
 
 Import Text.RegEx
-Include "bin/loadfile().bmx"
+Include "../bin/loadfile().bmx"
 
 Local start:Int, finish:Int
 
-'Local source:String = loadFile( "samples/capabilites.bmx" )
-Local source:String = loadFile( "samples/maxide.bmx" )
+'Local source:String = loadFile( "../samples/capabilites.bmx" )
+Local source:String = loadFile( "../samples/maxide.bmx" )
 
 start  = MilliSecs()
 

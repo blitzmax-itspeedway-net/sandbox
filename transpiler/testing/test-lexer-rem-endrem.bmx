@@ -4,9 +4,9 @@ Framework Text.RegEx
 Import brl.retro
 Import brl.stream
 Import brl.filesystem
-Include "bin/loadfile().bmx"
+Include "../bin/loadfile().bmx"
 
-Global source:String = loadFile( "samples/test.bmx" ) 
+Global source:String = loadFile( "../samples/test.bmx" ) 
 Global cursor:Int = Instr( source,"REM" )+2
 
 Function findNext:TRegExMatch( text:String, regex:Int = False )

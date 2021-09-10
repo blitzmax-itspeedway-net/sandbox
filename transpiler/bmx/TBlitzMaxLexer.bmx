@@ -72,7 +72,8 @@ Type TBlitzMaxLexer Extends TLexer
 			previous = token
 		Until token And token.id = TK_EOF
 		' Set the token cursor to the first element
-		tokpos = tokens.firstLink()
+		'tokpos = tokens.firstLink()
+		cursor = 0
 	End Method
 	
 	' Language specific tokeniser
