@@ -96,7 +96,7 @@ Type TParser
 
 	' Eat all the tokens until we hit a completion (or EOF)
 	Method eatUntil:TASTCompound( completion:Int[] )
-DebugStop
+'DebugStop
 		Local ast:TASTCompound = New TASTCompound( "IGNORED" )
 		Repeat
 			Local token:TToken = Self.token

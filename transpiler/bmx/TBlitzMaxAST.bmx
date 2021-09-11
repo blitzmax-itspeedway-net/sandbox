@@ -31,6 +31,11 @@ Type TAST_Skipped Extends TASTNode { class="diagnostic" }
 		Self.name  = name
 		Self.value = value
 	End Method
+
+	Method New( token:TToken, value:String )
+		consume( token )
+		Self.descr = value
+	End Method	
 		
 End Type
 

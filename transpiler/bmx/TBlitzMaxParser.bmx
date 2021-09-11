@@ -50,7 +50,7 @@ Type TBlitzMaxParser Extends TParser
 	' Every story starts, as they say, with a beginning...
 	Method parse_program:TASTNode()
 		Local fsm:Int = 0
-DebugStop	
+'DebugStop	
 		' Scan the tokens, creating children
 		token = lexer.reset()	' Starting position
 		'advance()
@@ -62,9 +62,10 @@ DebugStop
 		'ast = parseHeader( ast, token )
 
 DebugStop		
-		Local ast:TASTCompound = New TASTCompound( "PROGRAM" )
-		ast = parseHeader( ast )
+		'Local ast:TASTCompound = New TASTCompound( "PROGRAM" )
+		'ast = parseHeader( ast )
 		
+		ast = parseSequence( "PROGRAM", SYM_HEADER+SYM_PROGRAMBODY )
 		' Capture Comments and EOL
 		'If parseCEOL( ast ) Return ast
 		'ast.add( Parse_Strictmode() )	' STRICTMODE
@@ -231,7 +232,77 @@ DebugStop
 
 	' Parse a sequence.
 	' The tokens MUST exist in order or not be present (Creating a missing token)
-	Method parseSequence:TASTCompound( ast:TASTCompound )
+	Method parseSequence:TASTCompound( name:String, options:Int[], closing:Int=TK_EOF )
+
+		Local ast:TASTCompound = New TASTCompound( name )
+		
+		' TRY HEADER
+		If closing = TK_EOF
+			ParseCEOL( ast )
+			ast.add( Parse_Strictmode() )
+			ParseCEOL( ast )
+			ast.add( Parse_Framework() )
+			If token.id = TK_Module
+				ParseCEOL( ast )
+				ast.name = "MODULE"
+				ast.add( Parse_Module() )
+				Repeat
+					ParseCEOL( ast )
+					If token.id <> TK_ModuleInfo Exit
+					ast.add( Parse_Moduleinfo() )
+				Forever
+			End If
+			' Imports
+			Repeat
+				ParseCEOL( ast )
+				If token.id <> TK_Import Exit
+				ast.add( Parse_Import() )
+			Forever
+		End If
+		' PARSE BODY
+		Repeat	
+'DebugStop					
+			Try
+				' Process EOL/Comments and Return at EOF
+				If Not token Or parseCEOL( ast ) Return ast
+				
+				If token.in( options )
+				
+					' Parse this token
+					Select token.id			
+					Case TK_FUNCTION
+						ast.add( New TAST_Function() )
+'					Case TK_METHOD
+'						ast.add( New TAST_Method() )
+'					Case TK_TYPE
+'						ast.add( New TAST_Type() )
+					Default
+						ast.add( New TAST_Skipped( token, "Unexpected" ) )
+						advance()
+					End Select
+		
+				Else	' TOKEN IS NOT IN THE OPTION LIST!
+					' Ask parent if they know about it
+					'If parent.knows( token ) Return ast
+					' Mark token as ERROR and skip until we find a token we do understand.
+					ast.add( New TAST_Skipped( "ERROR", "" ) )
+					ast.add( eatUntil( options+[closing] ) )
+				
+				End If
+		
+			Catch e:TParseError
+DebugStop
+				If e 
+					token = lexer.fastFwd( TK_EOL )	' Skip to end of line
+				End If
+
+			EndTry
+		Forever
+
+		Return ast		
+		
+	
+	
 	End Method
 		
 	' Parses the application header into an EXISTING ast compound node

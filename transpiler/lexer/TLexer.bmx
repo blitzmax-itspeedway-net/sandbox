@@ -657,7 +657,7 @@ Type TLexer Extends TLexerV1
 
 	' Retrieves the current token (At the cursor)
 	Method getNext:TToken()
-		If cursor>=tokens.count Return Create_EOF_Token()
+		If (cursor+1)>=tokens.count Return Create_EOF_Token()
 		cursor :+ 1
 		Return TToken( tokens.valueAtIndex( cursor ) )
 	End Method
