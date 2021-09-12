@@ -98,13 +98,15 @@ Type TParser
 	Method eatUntil:TASTCompound( completion:Int[] )
 'DebugStop
 		Local ast:TASTCompound = New TASTCompound( "IGNORED" )
+		ast.valid = False
 		Repeat
 			Local token:TToken = Self.token
 			If token.in( completion ) Or token.id=TK_EOF
 				advance()
 				Return ast
 			End If
-			ast.add( New TASTNode( "IGNORED", token ))
+'DebugStop
+			ast.add( New TASTError( "IGNORED", token ))
 			advance()
 		Forever
 	End Method
@@ -139,15 +141,23 @@ Type TParser
 		Local after:TToken = lexer.peek()
 		If after.id <> TK_EOF ; ThrowParseError( "'"+after.value+"' unexpected past End", after.line, after.pos )
 		
+		Print "~nSTARTING VALIDATION:"
+DebugStop
+		Local validator:TParseValidator = New TParseValidator( program )
+		Local valid:Int = validator.run()
+		Print "~nFINSIHED VALIDATION:"
+		
 		' Print state and return value
 'DebugStop
-		If program
+		If program And valid
 			Print "PARSING SUCCESS"
-			Return program
+			'Return program
 		Else
 			Print "PARSING FAILURE"
-			Return Null
+			'Return Null
 		End If
+		Return program
+		
 	End Method
 
 	' Internal event handler

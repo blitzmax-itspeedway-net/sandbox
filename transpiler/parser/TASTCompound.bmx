@@ -33,7 +33,7 @@ Type TASTCompound Extends TASTNode
 
 	' Used for debugging tree structure
 	Method reveal:String( indent:String = "" )
-		Local block:String = indent+name
+		Local block:String = ["!","."][valid]+" "+indent+name
 		If value<>"" block :+ " "+Replace(value,"~n","\n")
 		block :+ "~n"
 		If descr<>"" block :+ indent+"  ("+descr+")~n"
@@ -41,6 +41,18 @@ Type TASTCompound Extends TASTNode
 			block :+ child.reveal( indent+"  " )
 		Next
 		Return block
+	End Method
+	
+	' Validate the node and it's children
+	' Passes the child state back
+	Method validate:Int()
+		If Not children Return True
+'		valid = True
+		Local status:Int = True
+		For Local child:TASTNode = EachIn children
+			status = Min( status, child.validate() )
+		Next
+		Return status
 	End Method
 	
 End Type

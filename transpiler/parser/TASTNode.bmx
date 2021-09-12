@@ -10,7 +10,7 @@
 Type TASTNode
 	Field parent:TASTNode
 	'Field class:Int
-	Field name:String
+	Field name:String		' Fallback to metadata "class"
 	'Field token:TToken
 	Field tokenid:Int		' This is the token id that created the node
 	Field value:String		' Used in leaf nodes
@@ -20,6 +20,7 @@ Type TASTNode
 	Field link:TLink		' Used in Compound nodes
 	
 	Field comment:TToken	' Trailing comment or Null
+	Field valid:Int = True	' Is node valid
 	
 	Method New( name:String )
 		Self.name  = name
@@ -70,11 +71,63 @@ Type TASTNode
 	
 	' Used for debugging tree structure
 	Method reveal:String( indent:String = "" )
-		Local block:String = indent+name
+		Local block:String = ["!","."][valid]+" "+indent+getname()
+		block :+ " " + Trim(showLeafText()) + "~n"
+		If descr<>"" block :+ "- "+indent+"  ("+descr+")~n"
+		Return block
+	End Method
+
+	' Debugging text (Name of node taken from metadata or name)
+	Method getname:String()
+		Local this:TTypeId = TTypeId.ForObject( Self )
+		Local class:String = this.metadata( "class" )
+		If class Return class
+		Return name
+	End Method
+	
+	' Debugging text (Leaf value)
+	Method showLeafText:String()
+		Return Replace(value,"~n","\n")
+	End Method
+	
+	' Confirm validity of a node
+	Method isValid:Int()
+		Return valid
+	End Method
+	
+	' Validate the node
+	Method validate:Int()
+		Return valid
+	End Method
+	
+End Type
+
+Type TASTError Extends TASTNode
+
+	Method New( name:String )
+		Self.name  = name
+		Self.valid = False	' INVALID BY DEFAULT
+	End Method
+
+	Method New( token:TToken )
+		consume( token )
+		Self.valid = False	' INVALID BY DEFAULT
+	End Method
+
+	Method New( name:String, token:TToken, desc:String = "" )
+		Self.name  = name
+		consume( token )
+		Self.descr = descr
+		Self.valid = False	' INVALID BY DEFAULT
+	End Method
+		
+	' Used for debugging tree structure
+	Method reveal:String( indent:String = "" )
+		Local block:String = ["!","."][valid]+" "+indent+name
 		If value<>"" block :+ " "+Replace(value,"~n","\n")
 		block :+ "~n"
 		If descr<>"" block :+ indent+"  ("+descr+")~n"
 		Return block
 	End Method
-	
+
 End Type

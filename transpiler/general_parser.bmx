@@ -1,5 +1,6 @@
 SuperStrict
 '	GENERAL PARSER
+'	(c) Copyright Si Dunford, July 2021, All Rights Reserved
 
 Framework brl.retro
 'Import brl.collections
@@ -27,6 +28,7 @@ Include "parser/TASTNode.bmx"
 Include "parser/TASTBinary.bmx"
 Include "parser/TASTCompound.bmx"
 Include "parser/TVisitor.bmx"
+Include "parser/TParseValidator.bmx"
 
 ' Exception handler for Parse errors
 Type TParseError Extends TException
@@ -87,18 +89,13 @@ Function test_file:Int( filepath:String, verbose:Int=False )
 		finish = MilliSecs()
 		Print( "BLITZMAX LEXER+PARSE TIME: "+(finish-start)+"ms" )
 
-		If Not ast
-			Print "Cannot transpile until syntax corrected"
-			Return False
-		End If
-
-		' SHOW AST STRICTURE
-		Print "~nAST STRICTURE:"
+		' SHOW AST STRUCTURE
+		Print "~nAST STRUCTURE:"
 		Print "------------------------------------------------------------"
+DebugStop
 		Print ast.reveal()
 		Print "------------------------------------------------------------"
-
-
+		
 		' SHOW AST STRICTURE
 		Print "~nLANGUAGE SERVER:"
 		Print "------------------------------------------------------------"
@@ -107,6 +104,11 @@ Function test_file:Int( filepath:String, verbose:Int=False )
 		Print "------------------------------------------------------------"
 
 		' Pretty print the AST back into BlitzMax (.transpile file)
+		If Not ast
+			Print "Cannot transpile until syntax corrected"
+			Return False
+		End If
+
 		Print "~nTRANSPILE AST TO BLITZMAX:"	
 
 		Local blitzmax:TTranspileBlitzMax = New TTranspileBlitzMax( ast )

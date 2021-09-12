@@ -37,13 +37,17 @@ Type TVisitor
 		'If node.name = "" invalid()	' Leave this to use "visit_" method
 		
 		' Use Reflection to call the visitor method (or an error)
+'DebugStop
 		Local this:TTypeId = TTypeId.ForObject( Self )
-		Local methd:TMethod = this.FindMethod( prefix+"_"+node.name )
+		' The visitor function is either defined in metadata or as node.name
+		Local class:String = this.metadata( "class" )
+		If class = "" class = node.name
+		Local methd:TMethod = this.FindMethod( prefix+"_"+class )
 		If methd
 			Local text:String = String( methd.invoke( Self, [New TVisitorArg(node,indent)] ))
 			Return text
 		EndIf
-		If exception_on_missing_method ; exception( prefix+"_"+node.name )
+		If exception_on_missing_method ; exception( prefix+"_"+class )
 		Return ""
 	End Method
 
@@ -57,7 +61,7 @@ Type TVisitor
 		Return text
 	End Method
 	
-	' This is called when node doesn't have a name...
+	' This is called when node doesn't have metadata or a name...
 	Method visit_:String( node:TASTNode, indent:String="" )
 		ThrowException( "Node '"+node.value+"' has no name!" )
 	End Method

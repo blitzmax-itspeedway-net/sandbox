@@ -78,7 +78,7 @@ DebugStop
 		'End If
 		'ast.add( Parse_ImportTEST() )		' IMPORT
 
-		Return ast
+'		Return ast
 		
 		' NEXT WE DEAL WITH PROGRAM BODY
 		'Local allow:Int[] = SYM_PROGRAMBODY
@@ -133,7 +133,7 @@ EndRem
 	'	ast			- The AST Node we are building
 	'	Token		- The Current Token
 	'	Allowed		- List of allowed tokens...
-	Method parseBlock:TASTCompound( BlockType:Int, ast:TASTCompound, token:TToken Var, allowed:Int[], syntaxfn( lexer:TLexer, start:Int,finish:Int) )	
+Rem	Method parseBlock:TASTCompound( BlockType:Int, ast:TASTCompound, token:TToken Var, allowed:Int[], syntaxfn( lexer:TLexer, start:Int,finish:Int) )	
 		
 		' Identify token that would close this block type
 		Local blockClose:Int = ClosingToken( BlockType )
@@ -210,9 +210,9 @@ DebugStop
 
 		'Return ast
 	End Method
+EndRem	
 	
-	
-	Method ParseContext:TASTNode( contains:Int[], optional:Int[], parent:TASTNode = Null )
+'	Method ParseContext:TASTNode( contains:Int[], optional:Int[], parent:TASTNode = Null )
 	
 		' Check identifier in "contains" or "optional"
 		' if expected identifier, call its geenrator function 
@@ -228,7 +228,7 @@ DebugStop
 		
 		
 	
-	End Method
+'	End Method
 
 	' Parse a sequence.
 	' The tokens MUST exist in order or not be present (Creating a missing token)
@@ -333,7 +333,7 @@ End Rem
 				ast.add( New TASTNode( "EOL" ) )
 				advance()
 			Case TK_COMMENT
-				ast.add( New TASTNode( "COMMENT", token ) )
+				ast.add( New TAST_Comment( token ) )
 				advance()
 				'Local temp:TToken = eat(TK_EOL)	' SKIP REQUIRED "EOL"
 			Case TK_REM
@@ -666,7 +666,9 @@ End Rem
 		Local ast:TAST_Include = New TAST_Include( "INCLUDE", token )
 		advance()
 		' Get module name
-		ast.value = eat( TK_QSTRING )
+		ast.major = eat( TK_ALPHA )
+		ast.dot = eat( TK_PERIOD )
+		ast.minor = eat( TK_ALPHA )
 		' Trailing comment is a description
 		ast.comment = eatOptional( [TK_COMMENT], True )
 		Return ast
