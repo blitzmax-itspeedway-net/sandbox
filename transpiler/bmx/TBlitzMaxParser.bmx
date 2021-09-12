@@ -61,11 +61,14 @@ Type TBlitzMaxParser Extends TParser
 		'Local ast:TASTCompound = New TASTCompound( "PROGRAM" )
 		'ast = parseHeader( ast, token )
 
-DebugStop		
+'DebugStop		
 		'Local ast:TASTCompound = New TASTCompound( "PROGRAM" )
 		'ast = parseHeader( ast )
 		
 		ast = parseSequence( "PROGRAM", SYM_HEADER+SYM_PROGRAMBODY )
+		' Mop up trailing Comments and EOL
+		'ParseCEOL( ast )
+		
 		' Capture Comments and EOL
 		'If parseCEOL( ast ) Return ast
 		'ast.add( Parse_Strictmode() )	' STRICTMODE
@@ -270,23 +273,47 @@ EndRem
 				
 					' Parse this token
 					Select token.id			
-					Case TK_FUNCTION
-						ast.add( New TAST_Function() )
-'					Case TK_METHOD
+					Case TK_Function
+'DebugStop
+						ast.add( Parse_Function() )
+					Case TK_Include
+						ast.add( Parse_Include() )
+'					Case TK_Method
 '						ast.add( New TAST_Method() )
-'					Case TK_TYPE
-'						ast.add( New TAST_Type() )
+					Case TK_Type
+						ast.add( Parse_Type() )
 					Default
-						ast.add( New TAST_Skipped( token, "Unexpected" ) )
+DebugStop
+						'Local skip:TAST_Skipped = New TAST_Skipped( token,  )
+						'advance()
+						'ast.add( skip )
+						Local skip:TToken = token
 						advance()
+						Local error:TASTCompound = eatUntil( options+[closing] )
+						error.consume( skip )
+						error.name = "SKIPPED"
+						'skip.value = token.value
+						error.descr = "Valid but not defined in parseSequence()"
+						ast.add( error )
+						
 					End Select
 		
 				Else	' TOKEN IS NOT IN THE OPTION LIST!
+DebugStop
 					' Ask parent if they know about it
 					'If parent.knows( token ) Return ast
 					' Mark token as ERROR and skip until we find a token we do understand.
-					ast.add( New TAST_Skipped( "ERROR", "" ) )
-					ast.add( eatUntil( options+[closing] ) )
+					'ast.add( New TAST_Skipped( "ERROR", token, "unexpected token" ) )
+					'ast.add( eatUntil( options+[closing] ) )
+
+					Local skip:TToken = token
+					advance()
+					Local error:TASTCompound = eatUntil( options+[closing] )
+					error.consume( skip )
+					error.name = "SKIPPED"
+					'skip.value = token.value
+					error.descr = skip.value + " was unexpected!"
+					ast.add( error )
 				
 				End If
 		
@@ -350,7 +377,7 @@ End Rem
 	
 	' Parses the application header into an EXISTING ast compound node
 	
-	Method parseHeader:TASTCompound( ast:TASTCompound )	
+Rem	Method parseHeader:TASTCompound( ast:TASTCompound )	
 		Const FSM_STRICTMODE:Int = 0
 		Const FSM_FRAMEWORK:Int = 1
 		Const FSM_MODULE:Int = 2
@@ -454,6 +481,7 @@ DebugStop
 
 		Return ast
 	End Method
+EndRem
 
 Rem
 	Method parseHeader:TASTCompound( ast:TASTCompound, token:TToken Var )	
@@ -632,7 +660,8 @@ End Rem
 		
 		' For the sake of simplicity at the moment, this will not parse the body
 		' ast.add( ParseBlock( [ TK_LOCAL, TK_GLOBAL, TK_REPEAT, etc] )
-		ast.body = eatUntil( [TK_EndFunction] )
+		'ast.body = eatUntil( [TK_EndFunction] )
+		ast.add( eatUntil( [TK_EndFunction] ) )
 Rem
 		Local finished:Int = False
 		Repeat
@@ -643,6 +672,8 @@ Rem
 			End If
 		Until token.id = TK_ENDFUNCTION Or finished
 End Rem
+		' End of block
+		ast.ending = eat( TK_EndFunction )
 		Return ast
 	End Method
 	
@@ -666,9 +697,7 @@ End Rem
 		Local ast:TAST_Include = New TAST_Include( "INCLUDE", token )
 		advance()
 		' Get module name
-		ast.major = eat( TK_ALPHA )
-		ast.dot = eat( TK_PERIOD )
-		ast.minor = eat( TK_ALPHA )
+		ast.value = eat( TK_QSTRING )
 		' Trailing comment is a description
 		ast.comment = eatOptional( [TK_COMMENT], True )
 		Return ast
@@ -693,7 +722,7 @@ End Rem
 		
 		' For the sake of simplicity at the moment, this will not parse the body
 		' ast.add( ParseBlock( [ TK_LOCAL, TK_GLOBAL, TK_REPEAT, etc] )
-		ast.body = eatUntil( [TK_EndMethod] )
+		ast.add( eatUntil( [TK_EndMethod] ) )
 Rem
 		Local finished:Int = False
 		Repeat
@@ -704,6 +733,8 @@ Rem
 			End If
 		Until token.id = TK_ENDFUNCTION Or finished
 End Rem
+		' End of block
+		ast.ending = eat( TK_EndMethod )
 		Return ast
 	End Method
 		
@@ -825,6 +856,31 @@ Rem	Method Parse_Type:TASTNode( token:TToken Var )
 	End Method
 End Rem
 
+	Method Parse_Type:TASTNode()
+'DebugStop
+		Local ast:TAST_Type = New TAST_Type( token )
+		advance()
+
+		' Get properties
+		ast.typename = eat( TK_ALPHA )
+		ast.extend = eatOptional( TK_Extends, True )
+		If ast.extend ast.supertype = eat( TK_ALPHA )
+
+		' Trailing comment is a description
+		ast.comment = eatOptional( [TK_COMMENT], True )
+		
+		' BODY OF THE TYPE
+		
+		' For the sake of simplicity at the moment, this will not parse the body
+		' ast.add( ParseBlock( [ TK_LOCAL, TK_GLOBAL, TK_REPEAT, etc] )
+		ast.add( eatUntil( [TK_EndType] ) )
+		'ListAddLast( ast.children, New TASTNode("ERROR" ) )
+
+		' End of block
+		ast.ending = eat( TK_EndType )
+		Return ast
+	End Method
+	
 	' Obtain closing token for a given blocktype
 	Method closingToken:Int( tokenid:Int )
 		Select tokenid

@@ -7,7 +7,17 @@
 
 ' A Compound AST Node with multiple children
 Type TASTCompound Extends TASTNode
-	Field children:TList = New TList()
+	Field children:TList
+
+	Method New( name:String )
+		name  = name
+		children = New TList()
+	End Method
+
+	Method New( token:TToken )
+		consume( token )
+		children = New TList()
+	End Method
 	
 	' Walk the tree to find left-most leaf
 	Method walkfirst:TASTNode()
@@ -33,10 +43,12 @@ Type TASTCompound Extends TASTNode
 
 	' Used for debugging tree structure
 	Method reveal:String( indent:String = "" )
-		Local block:String = ["!","."][valid]+" "+indent+name
-		If value<>"" block :+ " "+Replace(value,"~n","\n")
-		block :+ "~n"
-		If descr<>"" block :+ indent+"  ("+descr+")~n"
+		Local block:String = ["!","."][valid]+" "+indent+getname()
+		block :+ " " + Trim(showLeafText()) + "~n"
+		'If value<>"" block :+ " "+Replace(value,"~n","\n")
+		'block :+ "~n"
+		If descr<>"" block :+ " >"+indent+"  ("+descr+")~n"
+		If Not children Return block
 		For Local child:TASTNode = EachIn children
 			block :+ child.reveal( indent+"  " )
 		Next
@@ -48,6 +60,9 @@ Type TASTCompound Extends TASTNode
 	Method validate:Int()
 		If Not children Return True
 '		valid = True
+'DebugStop
+' Get a segmentation fault here in type TAST_Type
+'If children.isempty() Print "EMPTY!"
 		Local status:Int = True
 		For Local child:TASTNode = EachIn children
 			status = Min( status, child.validate() )

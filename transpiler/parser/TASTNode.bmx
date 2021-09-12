@@ -73,7 +73,7 @@ Type TASTNode
 	Method reveal:String( indent:String = "" )
 		Local block:String = ["!","."][valid]+" "+indent+getname()
 		block :+ " " + Trim(showLeafText()) + "~n"
-		If descr<>"" block :+ "- "+indent+"  ("+descr+")~n"
+		If descr<>"" block :+ " >"+indent+"  ("+descr+")~n"
 		Return block
 	End Method
 

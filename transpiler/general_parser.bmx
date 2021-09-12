@@ -84,7 +84,7 @@ Function test_file:Int( filepath:String, verbose:Int=False )
 	'DebugStop
 		parser = New TBlitzMaxParser( lexer )
 		start  = MilliSecs()
-	'DebugStop
+'DebugStop
 		ast    = parser.parse_ast()
 		finish = MilliSecs()
 		Print( "BLITZMAX LEXER+PARSE TIME: "+(finish-start)+"ms" )

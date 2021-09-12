@@ -102,7 +102,7 @@ Type TParser
 		Repeat
 			Local token:TToken = Self.token
 			If token.in( completion ) Or token.id=TK_EOF
-				advance()
+				'advance()
 				Return ast
 			End If
 'DebugStop
@@ -137,12 +137,13 @@ Type TParser
 		Local program:TASTNode = parse_program()
 		Publish( "PARSE-FINISH", Null )
 		
+		'program.
 		' Check that file parsing has completed successfully
-		Local after:TToken = lexer.peek()
-		If after.id <> TK_EOF ; ThrowParseError( "'"+after.value+"' unexpected past End", after.line, after.pos )
+		'Local after:TToken = lexer.peek()
+		'If after.id <> TK_EOF ; ThrowParseError( "'"+after.value+"' unexpected past End", after.line, after.pos )
 		
 		Print "~nSTARTING VALIDATION:"
-DebugStop
+'DebugStop
 		Local validator:TParseValidator = New TParseValidator( program )
 		Local valid:Int = validator.run()
 		Print "~nFINSIHED VALIDATION:"

@@ -57,13 +57,19 @@ Type TAST_Function Extends TASTCompound { class="FUNCTION" }
 	Field lparen:TToken
 	Field def:TASTCompound
 	Field rparen:TToken
-	Field body:TASTCompound
+	Field ending:TToken
+
+	' Used for debugging tree structure
+	Method showLeafText:String()
+		Return fnname.value
+	End Method
 	
 	Method validate:Int()
+'DebugStop
 		Local status:Int = Super.validate()
 		' RULE 1:	IS fnname UNIQUE
 		' RULE 2:	IS returntype VALID
-		If returntype.notin( [TK_Missing,TK_Int,TK_String,TK_Double,TK_Float] )
+		If returntype And returntype.notin( [TK_Int,TK_String,TK_Double,TK_Float] )
 			' Not a standard type, check against AST
 			' TODO
 		End If
@@ -76,7 +82,6 @@ Type TAST_Function Extends TASTCompound { class="FUNCTION" }
 		' () are required for functions, optional for procedures	
 		
 		'	Report back worst state
-Print LSet( name,15 ) + LSet(["FALSE","TRUE"][valid],7) + LSet(["FALSE","TRUE"][status],7)
 		Return Min( status, valid )
 	End Method
 End Type
@@ -94,13 +99,11 @@ Type TAST_Import Extends TASTNode { class="IMPORT" }
 End Type
 
 Type TAST_Include Extends TASTNode { class="INCLUDE" }
-	Field major:TToken
-	Field dot:TToken
-	Field minor:TToken
+	Field value:TToken
 	
 	' Used for debugging tree structure
 	Method showLeafText:String()
-		Return major.value +"." + minor.value
+		Return value.value
 	End Method
 	
 End Type
@@ -112,7 +115,12 @@ Type TAST_Method Extends TASTCompound { class="METHOD" }
 	Field lparen:TToken
 	Field def:TASTCompound
 	Field rparen:TToken
-	Field body:TASTCompound
+	Field ending:TToken
+
+	' Used for debugging tree structure
+	Method showLeafText:String()
+		Return methodname.value
+	End Method
 End Type
 
 Type TAST_Module Extends TASTCompound { class="MODULE" }
@@ -130,22 +138,21 @@ Type TAST_Rem Extends TASTNode { class="REMARK" }
 End Type
 
 Type TAST_StrictMode Extends TASTNode { class="STRICTMODE" }
-
-	Method New( token:TToken )
-		name = "STRICTMODE"
-		consume( token )
-	End Method
-
 End Type
 
-Type TAST_Type Extends TASTCompound { class="SEQUENCE" }
+Type TAST_Type Extends TASTCompound { class="TYPE" }
+	Field typename:TToken
+	Field extend:TToken
 	Field supertype:TToken
-
-	Method New( token:TToken )
-		name = "TYPE"
-		consume( token )
+	Field ending:TToken
+		
+	' Used for debugging tree structure
+	Method showLeafText:String()
+		Local name:String = typename.value
+		If extend name :+ "("+supertype.value+")"
+		Return name
 	End Method
-
+	
 End Type
 
 Rem Type TAST_Comment Extends TASTNode
