@@ -48,6 +48,16 @@ Type TAST_Framework Extends TASTNode { class="FRAMEWORK" }
 	Field major:TToken
 	Field dot:TToken
 	Field minor:TToken
+	
+	Method validate:Int()
+DebugStop
+		Local status:Int = Super.validate()
+		If Not major Or major.class <> TK_Alpha ; status = False
+		If Not dot Or dot.class <> TK_PERIOD ; status = False
+		If Not minor Or minor.class <> TK_Alpha ; status = False
+		'	Report back worst state
+		Return Min( status, valid )
+	End Method
 End Type
 
 Type TAST_Function Extends TASTCompound { class="FUNCTION" }

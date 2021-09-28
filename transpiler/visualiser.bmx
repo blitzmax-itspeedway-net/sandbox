@@ -4,17 +4,91 @@
 '	TOKEN & AST VISUALISATON TOOL
 
 SuperStrict
-Framework maxgui.drivers
+
+' REQUIRED FOR THE GUI
+Import maxgui.drivers
 Import brl.eventqueue
 Import brl.max2d
 Import brl.retro
 Import brl.timer
 Import brl.timerdefault
 
-'Import brl.Graphics
-'Import brl.reflection
+' REQUIRED FOR THE LANGUAGE SERVER
+Import brl.objectlist
+Import brl.reflection
+Import Text.RegEx
+
+' COMMENTED OUT BECAUSE WE ARE TESTING LOCAL COPIES
+'Import bmx.lexer
+'Import bmx.parser
+'Import bmx.blitzmaxparser
+'Import bmx.transpiler
+
+Include "bin/loadfile().bmx"
+
+' SANDBOX LEXER
+Include "lexer/TLexer.bmx"
+Include "lexer/TToken.bmx"
+Include "lexer/TException.bmx"
+
+' SANDBOX PARSER
+Include "parser/TParser.bmx"
+Include "parser/TASTNode.bmx"
+Include "parser/TASTBinary.bmx"
+Include "parser/TASTCompound.bmx"
+Include "parser/TVisitor.bmx"
+Include "parser/TParseValidator.bmx"
+
+' Exception handler for Parse errors
+Type TParseError Extends TException
+End Type
+
+Function ThrowParseError( message:String, line:Int=-1, pos:Int=-1 )
+	Throw( New TParseError( message, line, pos ) )
+End Function
+
+' SANDBOX BLITZMAX LEXER/PARSER
+Include "bmx/lexer-const-bmx.bmx"
+Include "bmx/TBlitzMaxAST.bmx"
+Include "bmx/TBlitzMaxLexer.bmx"
+Include "bmx/TBlitzMaxParser.bmx"
+
+' SANDBOX TRANSPILER
+Include "transpiler/TTranspiler.bmx"
+Include "transpiler/TTranspileBlitzMax.bmx"	' BlitzMax NG
+Include "transpiler/TTranspileCPP.bmx"			' C++
+Include "transpiler/TTranspileJava.bmx"		' Java
+'Include "src/TTranspileJavaScript.bmx"	' HTML/JavaScr
+
+'	DELIVERABLES
+Include "bin/TSymbolTable.bmx"
+Include "bin/TLanguageServerVisitor.bmx"
+
+'Include "bin/TException.bmx"
+'Include "bin/TToken.bmx"
+
+Incbin "bin/16x16.png"
+
+'	TYPES AND FUNCTIONS
+
+Function Publish:Int( event:String, data:Object=Null, extra:Object=Null )
+    Print "---> "+event + "; "+String( data )
+End Function
+
+'	VISUALISER
 
 Const CONFIG_FILE:String = "visualiser.config"
+Const WIN_MIN_HEIGHT:Int = 800
+Const WIN_MIN_WIDTH:Int = 1280
+
+Const ICON_GREY:Int = 0
+Const ICON_RED:Int = 1
+Const ICON_GREEN:Int = 2
+Const ICON_YELLOW:Int = 3
+Const ICON_BLUE:Int = 4
+Const ICON_PURPLE:Int = 5
+Const ICON_TEAL:Int = 6
+Const ICON_WHITE:Int = 7
 
 Global config:TConfig = New TConfig()
 
@@ -74,13 +148,27 @@ Type TControl
 	
 	Method resize( width:Int, height:Int ) Abstract
 
+	Method SaveWindow()
+Print("BYE")
+		' Save window location
+		config["top"] = String( GadgetX( window ))
+		config["left"] = String( GadgetY( window ))
+		config["width"] = String( GadgetWidth( window ))
+		config["height"] = String( GadgetHeight( window ))
+		config["minim"] = String( WindowMinimized( window ))
+		config["maxim"] = String( WindowMaximized( window ))
+		config.save(CONFIG_FILE)
+	End Method
+
 	' EVENT DISPATCHER
 
 	Method onEvent:Object( event:TEvent )
 		Select event.id
 			'Case EVENT_APPRESUME		' Do nothing
 			'Case EVENT_APPSUSPEND		' Do nothing
-			Case EVENT_APPTERMINATE		; End
+			Case EVENT_APPTERMINATE
+				SaveWindow()
+				End
 			Case EVENT_GADGETPAINT		' Do nothing	Return onPaint( event )
 			Case EVENT_GADGETSELECT 	; Return onGadgetSelect( event )
 			Case EVENT_GADGETLOSTFOCUS	' Do nothing
@@ -112,7 +200,7 @@ Type TControl
 	Method onGadgetSelect:Object( event:TEvent ) ;	Return event	;	End Method
 	Method onMenuAction:Object( event:TEvent )	;	Return event	;	End Method
 	Method onResize:Object( event:TEvent )
-'		resize( event.x, event.y )
+		resize( event.x, event.y )
 		Return event
 	End Method
 	Method onTick:Object( event:TEvent )		;	Return event	;	End Method
@@ -153,10 +241,26 @@ Type TVisualiser Extends TControl
 '	Field textarea:TGadget
 	
 	Method New()	
-		' CREATE WINDOW
 		
-		window = CreateWindow( "Visualisation Tool", 100, 100, 800, 400, Null, STYLE )	
-		'SetGadgetColor( window, 0,0,0, True )
+		' LOAD STATE
+		Local x:Int = Int( String(config["top"]) )
+		Local y:Int = Int( String(config["left"]) )
+		Local w:Int = Int( String(config["width"]) )
+		Local h:Int = Int( String(config["height"]) )
+		Local mn:Int = Int( String(config["minim"]) )
+		Local mx:Int = Int( String(config["maxim"]) )
+		Local filename:String = String( config["filename"] )
+
+		' CREATE WINDOW
+		If w<WIN_MIN_WIDTH ; w=WIN_MIN_WIDTH
+		If h<WIN_MIN_HEIGHT ; h=WIN_MIN_HEIGHT
+		
+		window = CreateWindow( "Visualisation Tool", x, y, w, h, Null, STYLE )
+		SetMinWindowSize( window, WIN_MIN_WIDTH, WIN_MIN_HEIGHT )
+		
+		If mn ; MinimizeWindow( window )
+		If mx ; MaximizeWindow( window )
+		
 
 		Local filemenu:TGadget = CreateMenu( "&File", 0, WindowMenu( window ))
 		CreateMenu( "&New",   FILE_NEW,   filemenu, KEY_N, MODIFIER_COMMAND )
@@ -178,9 +282,11 @@ Type TVisualiser Extends TControl
 		tokenview = New TTokenView( window )
 		ASTview = New TASTView( window )
 
-		' LOAD STATE
-		Local filename:String = String( config.valueforkey( "filename" ) )
-		If filename ; editor.fileOpen( filename )
+		' LOAD FILE
+		If filename
+			editor.fileOpen( filename )
+			parse()
+		End If
 
 		' CONNECT EVENT HANDLER
 		connect()
@@ -240,10 +346,27 @@ Type TVisualiser Extends TControl
 			'Case FILE_SAVEAS
 			'	editor.filesaveas()
 			Case FILE_EXIT
+				SaveWindow()
 				End
 			Case HELP_ABOUT
 				Notify "Visualiser~n(c) Copyright, Si Dunford, September 2021, All Rights Reserved"
 		End Select
+	End Method
+	
+	' LANGUAGE SERVER INTERFACE
+	Method parse()
+	
+		' PARSE THE SOURCE
+		Local lexer:TLexer   = New TBlitzMaxLexer( editor.filedata )
+		Local parser:TParser = New TBlitzMaxParser( lexer )
+		Local ast:TASTNode   = parser.parse_ast()
+		
+		' UPDATE LEXER TOKENS		
+		tokenview.update( lexer.tokens )
+		
+		' UPDATE AST
+		ASTview.update( ast )
+		
 	End Method
 	
 End Type
@@ -336,6 +459,7 @@ Type TTokenView Extends TControl
 		'timer = CreateTimer( 100 )
 		panel   = CreatePanel( 0, 0, 100, 100, window, PANEL_ACTIVE|PANEL_SUNKEN )
 		listbox = CreateListBox( 0, 0, 100,100, panel )
+		SetGadgetFont( listbox, LookupGuiFont( GUIFONT_MONOSPACED, 10 ), True )
 		SetGadgetLayout listbox, EDGE_RELATIVE, EDGE_RELATIVE, EDGE_RELATIVE, EDGE_RELATIVE
 		'SetGadgetColor( listbox, 0,0,0,True)		
 		resize( ClientWidth( window ), ClientHeight( window ) )
@@ -369,6 +493,26 @@ EndRem
 		SetGadgetShape( panel, third, 0, third, height )
 	End Method
 	
+	Method update( tokens:TObjectList )
+
+		' Clean down previous list
+		ClearGadgetItems( listbox )
+
+		' Display messge if there is nothing to display
+		If tokens.isempty() 
+			AddGadgetItem listbox, "(Nothing to display)"
+			Return
+		EndIf
+		
+		' Populate listbox
+		For Local token:TToken = EachIn tokens
+			Local line:String = ("("+token.line+","+token.pos+")")[..9] + token.class[..14] +" == " +token.value
+			'Print line
+			AddGadgetItem( listbox, Replace(line,"~n","\n") )
+		Next
+		
+	End Method
+
 	' EVENT HANDLERS
 
 	'Method onPaint:Object( event:TEvent )
@@ -384,30 +528,20 @@ EndRem
 End Type
 
 Type TASTView Extends TControl
-	Field tv:TGadget, root:TGadget
+	Field tv:TGadget, root:TGadget, icons:TIconStrip
 
 	' CONSTRUCTOR
 	
 	Method New( parent:TGadget )
 		Super.New( parent )
 		Print( "TASTView.new()" )
-		
-		tv     = CreateTreeView( 0, 0, 100, 100, window )
+
+		tv   = CreateTreeView( 0, 0, 100, 100, window )
 		root = TreeViewRoot( tv )
+
+		icons = LoadIconStrip( "incbin::bin/16x16.png" )
+		SetGadgetIconStrip( tv, icons )
 		
-
-
-Local help:TGadget=AddTreeViewNode("Help",root)
-AddTreeViewNode "Topic 1",help
-AddTreeViewNode "Topic 2",help
-AddTreeViewNode "Topic 3",help
-
-Local projects:TGadget=AddTreeViewNode("Projects",root)
-AddTreeViewNode("Sub Project",AddTreeViewNode("Project 1",projects))
-AddTreeViewNode("Project 2",projects)
-AddTreeViewNode("Project 3",projects)
-		
-		'SetGadgetLayout( tv, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
 		resize( ClientWidth( window ), ClientHeight( window ) )
 		
 	End Method
@@ -417,6 +551,18 @@ AddTreeViewNode("Project 3",projects)
 	Method resize( width:Int, height:Int )
 		Local third:Int = width/3
 		SetGadgetShape( tv, third*2, 0, third, height )
+	End Method
+	
+	Method update( ast:TASTNode )
+
+		' Clean down previous list
+		ClearTreeView( tv )
+		
+		' Populate 
+		Local visitor:TMotherInLaw = New TMotherInLaw( ast, root )
+'DebugStop
+		visitor.run()
+		
 	End Method
 				
 	' BEHAVIOUR
@@ -428,9 +574,168 @@ AddTreeViewNode("Project 3",projects)
 	
 End Type
 
+'	AST VISITOR
+
+Type TGift
+	Field node:TASTNode
+	Field gadget:TGadget
+	Method New( node:TASTNode, gadget:TGadget )
+		Self.node = node
+		Self.gadget = gadget
+	End Method
+End Type
+
+Type TMotherInLaw Extends TVisitor
+
+	Field ast:TASTNode
+	Field node:TGadget
+	
+	Method New( ast:TASTNode, node:TGadget )
+		Self.ast = ast
+		Self.node = node
+	End Method
+	
+	' Create source code from the AST
+	Method run()
 DebugStop
+		visit( ast, node, "visit" )
+	End Method
+	
+	Method visit( node:TASTNode, mother:TGadget, prefix:String = "visit" )
+'DebugStop
+		If Not node 
+			AddTreeViewNode( "NULL", mother, ICON_RED )
+			Return
+		End If
+
+		' Use Reflection to call the visitor method (or an error)
+		Local nodeid:TTypeId = TTypeId.ForObject( node )
+
+		
+		' Use Reflection to call the visitor method (or an error)
+		Local this:TTypeId = TTypeId.ForObject( Self )
+		' The visitor function is either defined in metadata or as node.name
+		Local class:String = nodeid.metadata( "class" )
+		If class = "" class = node.name
+		Local methd:TMethod = this.FindMethod( prefix+"_"+class )
+		If methd
+			methd.invoke( Self, [New TGift(node,mother)] )
+		Else
+			AddTreeViewNode( "** "+class+" - MISSING **", mother, ICON_RED )
+		EndIf
+		'If exception_on_missing_method ; exception( prefix+"_"+class )
+		'Return ""
+	End Method
+
+	Method visitChildren( node:TASTNode, mother:TGadget  )
+		Local compound:TASTCompound = TASTCompound( node )
+'DebugStop
+		If Not compound Return
+		For Local child:TASTNode = EachIn compound.children
+			visit( child, mother )
+		Next
+	End Method
+		
+	Method visit_( arg:TGift )
+'DebugStop
+'Local n:TASTNode = arg.node
+		Local mother:TGadget = AddTreeViewNode( "** UNNAMED **", arg.gadget, ICON_YELLOW )
+		visitChildren( arg.node, mother )
+		ExpandTreeViewNode( mother )
+	End Method
+
+	Method visit_EOL( arg:TGift )
+		AddTreeViewNode( "EOL", arg.gadget, ICON_WHITE )
+	End Method
+
+	Method visit_IGNORED( arg:TGift )
+		Local node:TASTNode = arg.node
+'DebugStop
+'Local n:TASTNode = arg.node
+		Local mother:TGadget = AddTreeViewNode( "** IGNORED **", arg.gadget, ICON_YELLOW )
+		AddTreeViewNode( node.descr, mother )
+		visitChildren( arg.node, mother )
+		'ExpandTreeViewNode( mother )
+	End Method
+
+	Method visit_SKIPPED( arg:TGift )
+		Local node:TASTNode = arg.node
+DebugStop
+		Local mother:TGadget = AddTreeViewNode( node.value+" ** SKIPPED **", arg.gadget, ICON_YELLOW )
+		AddTreeViewNode( node.descr, mother )
+		visitChildren( arg.node, mother )
+		'ExpandTreeViewNode( mother )
+	End Method
+
+	Method visit_comment( arg:TGift )
+		Local node:TASTNode = arg.node
+DebugStop
+		Local mother:TGadget = AddTreeViewNode( "COMMENT "+node.loc(), arg.gadget, ICON_WHITE )
+		Local child:TGadget = AddTreeViewNode( node.value, mother )
+		SetGadgetColor( child, $7f, $7f, $7f )
+		'AddTreeViewNode( arg.node.value, mother )
+	End Method
+
+	Method visit_framework( arg:TGift )
+		Local node:TAST_Framework = TAST_Framework( arg.node )
+DebugStop
+		Local icon:Int      = ICON_RED
+		Local detail:String = "** INVALID **"
+		If node.valid ; icon = ICON_WHITE
+		
+		If node.major And node.dot And node.minor
+			detail = node.major.value + "." + node.minor.value
+		End If
+		
+		AddTreeViewNode( "FRAMEWORK: "+detail, arg.gadget, icon )
+	End Method
+	
+	Method visit_function( arg:TGift )
+		Local node:TAST_Function = TAST_Function( arg.node )
+DebugStop
+		Local icon:Int      = ICON_RED
+		Local detail:String = "** INVALID **"
+		If arg.node.valid ; icon = ICON_WHITE
+
+		'If arg.node.major And arg.node.dot And arg.node.minor
+		'	detail = arg.node.major.value + "." + arg.node.minor.value
+		'End If
+
+		Local mother:TGadget = AddTreeViewNode( "FUNCTION "+detail, arg.gadget, icon )
+		visitChildren( arg.node, mother )
+		ExpandTreeViewNode( mother )
+	End Method
+
+	Method visit_strictmode( arg:TGift )
+'DebugStop
+'Local n:TASTNode = arg.node
+		Local icon:Int      = ICON_RED
+		Local detail:String = "** INVALID **"
+		If arg.node.valid ; icon = ICON_WHITE
+		AddTreeViewNode( "STRICTMODE: "+arg.node.value, arg.gadget, icon )
+	End Method
+
+	
+	Method visit_type( arg:TGift )
+DebugStop
+Local n:TASTNode = arg.node
+'		Local text:String = "Type "+arg.node.value
+'		Local compound:TAST_Type = TAST_Type( arg.node )
+'		If compound.supertype
+'			text :+ " extends "+compound.supertype.value
+'		EndIf
+'		If arg.node.descr text :+ " ' "+arg.node.descr
+'		text :+ "~n"+visitChildren( arg.node, "visit", arg.indent+TAB )
+'		text :+ "EndType~n"
+'		Return text
+	End Method
+	
+End Type
+
+'DebugStop
 config.Load( CONFIG_FILE )
 
 ' Create Visualiser
-New TVisualiser.Run()
+Global app:TVisualiser = New TVisualiser
+app.Run()
 

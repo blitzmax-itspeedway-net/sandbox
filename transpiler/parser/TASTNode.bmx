@@ -77,6 +77,11 @@ Type TASTNode
 		Return block
 	End Method
 
+	' Get string location
+	Method loc:String()
+		Return "["+line+","+pos+"]"
+	End Method
+	
 	' Debugging text (Name of node taken from metadata or name)
 	Method getname:String()
 		Local this:TTypeId = TTypeId.ForObject( Self )
