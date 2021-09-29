@@ -20,7 +20,8 @@ Type TASTNode
 	Field link:TLink		' Used in Compound nodes
 	
 	Field comment:TToken	' Trailing comment or Null
-	Field valid:Int = True	' Is node valid
+	Field valid:Int = False	' Is node valid
+	Field error:String		' The invalidation message
 	
 	Method New( name:String )
 		Self.name  = name
@@ -78,8 +79,8 @@ Type TASTNode
 	End Method
 
 	' Get string location
-	Method loc:String()
-		Return "["+line+","+pos+"]"
+	Method loc:String( Prefix:String = " " )
+		Return prefix+"["+line+","+pos+"]"
 	End Method
 	
 	' Debugging text (Name of node taken from metadata or name)
@@ -101,8 +102,10 @@ Type TASTNode
 	End Method
 	
 	' Validate the node
-	Method validate:Int()
-		Return valid
+	' By default it is invalid forcing a validate function to be added to node
+	Method validate()
+		valid = False
+		error = ""
 	End Method
 	
 End Type

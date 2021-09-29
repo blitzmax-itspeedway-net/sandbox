@@ -67,7 +67,7 @@ Include "bin/TLanguageServerVisitor.bmx"
 'Include "bin/TException.bmx"
 'Include "bin/TToken.bmx"
 
-Incbin "bin/16x16.png"
+Incbin "bin/icons.png"
 
 '	TYPES AND FUNCTIONS
 
@@ -89,6 +89,7 @@ Const ICON_BLUE:Int = 4
 Const ICON_PURPLE:Int = 5
 Const ICON_TEAL:Int = 6
 Const ICON_WHITE:Int = 7
+Const ICON_ERROR:Int = 8
 
 Global config:TConfig = New TConfig()
 
@@ -169,9 +170,11 @@ Print("BYE")
 			Case EVENT_APPTERMINATE
 				SaveWindow()
 				End
+			Case EVENT_GADGETCLOSE		' Do nothing
+			Case EVENT_GADGETLOSTFOCUS	' Do nothing
+			Case EVENT_GADGETOPEN		' Do nothing
 			Case EVENT_GADGETPAINT		' Do nothing	Return onPaint( event )
 			Case EVENT_GADGETSELECT 	; Return onGadgetSelect( event )
-			Case EVENT_GADGETLOSTFOCUS	' Do nothing
 			'Case EVENT_TIMERTICK		; Return onTick( event )
 			Case EVENT_MENUACTION		; Return onMenuAction( event )
 			Case EVENT_MOUSEDOWN		' Do nothing
@@ -310,6 +313,8 @@ Type TVisualiser Extends TControl
 		Until EventID()=EVENT_WINDOWCLOSE
 		Print( "EVENT LOOP QUIT" )
 		
+		SaveWindow()
+
 		' DISCONNECT EVENT HANDLERS
 		
 		'disconnect()
@@ -354,11 +359,11 @@ Type TVisualiser Extends TControl
 	End Method
 	
 	' LANGUAGE SERVER INTERFACE
-	Method parse()
-	
+	Method parse()	
 		' PARSE THE SOURCE
 		Local lexer:TLexer   = New TBlitzMaxLexer( editor.filedata )
 		Local parser:TParser = New TBlitzMaxParser( lexer )
+'DebugStop
 		Local ast:TASTNode   = parser.parse_ast()
 		
 		' UPDATE LEXER TOKENS		
@@ -539,7 +544,7 @@ Type TASTView Extends TControl
 		tv   = CreateTreeView( 0, 0, 100, 100, window )
 		root = TreeViewRoot( tv )
 
-		icons = LoadIconStrip( "incbin::bin/16x16.png" )
+		icons = LoadIconStrip( "incbin::bin/icons.png" )
 		SetGadgetIconStrip( tv, icons )
 		
 		resize( ClientWidth( window ), ClientHeight( window ) )
@@ -597,8 +602,20 @@ Type TMotherInLaw Extends TVisitor
 	
 	' Create source code from the AST
 	Method run()
-DebugStop
+'DebugStop
 		visit( ast, node, "visit" )
+	End Method
+
+	Method addNode:TGadget( node:TASTNode, parent:TGadget, detail:String )
+		Local gadget:TGadget = AddTreeViewNode( detail+node.loc(), parent, status( node ) )
+		If Not node.valid And node.error AddTreeViewNode( node.error, gadget, ICON_ERROR )
+		visitChildren( node, gadget )
+		Return gadget
+	End Method
+		
+	Method status:Int( node:TASTNode, isTrue:Int = ICON_WHITE, isFalse:Int = ICON_RED )
+		If node And node.valid Return isTrue
+		Return isFalse
 	End Method
 	
 	Method visit( node:TASTNode, mother:TGadget, prefix:String = "visit" )
@@ -617,6 +634,7 @@ DebugStop
 		' The visitor function is either defined in metadata or as node.name
 		Local class:String = nodeid.metadata( "class" )
 		If class = "" class = node.name
+'If class="" DebugStop
 		Local methd:TMethod = this.FindMethod( prefix+"_"+class )
 		If methd
 			methd.invoke( Self, [New TGift(node,mother)] )
@@ -637,40 +655,49 @@ DebugStop
 	End Method
 		
 	Method visit_( arg:TGift )
-'DebugStop
-'Local n:TASTNode = arg.node
-		Local mother:TGadget = AddTreeViewNode( "** UNNAMED **", arg.gadget, ICON_YELLOW )
+		Local mother:TGadget = AddTreeViewNode( "BLOCK", arg.gadget, ICON_GREY )
 		visitChildren( arg.node, mother )
 		ExpandTreeViewNode( mother )
 	End Method
 
+	' We don't need to show these!
 	Method visit_EOL( arg:TGift )
-		AddTreeViewNode( "EOL", arg.gadget, ICON_WHITE )
+		'Local node:TASTNode = arg.node
+		'AddTreeViewNode( "EOL"+node.loc(), arg.gadget, ICON_WHITE )
 	End Method
 
 	Method visit_IGNORED( arg:TGift )
 		Local node:TASTNode = arg.node
-'DebugStop
-'Local n:TASTNode = arg.node
-		Local mother:TGadget = AddTreeViewNode( "** IGNORED **", arg.gadget, ICON_YELLOW )
-		AddTreeViewNode( node.descr, mother )
+		Local mother:TGadget = AddTreeViewNode( node.value+node.loc(), arg.gadget, ICON_YELLOW )
+		If node.error ; AddTreeViewNode( node.error, mother, ICON_ERROR )
 		visitChildren( arg.node, mother )
 		'ExpandTreeViewNode( mother )
 	End Method
 
+	Method visit_MODULE( arg:TGift )
+		Local mother:TGadget = AddTreeViewNode( "MODULE", arg.gadget, ICON_WHITE )
+		visitChildren( arg.node, mother )
+		ExpandTreeViewNode( mother )
+	End Method
+
+	Method visit_PROGRAM( arg:TGift )
+		Local mother:TGadget = AddTreeViewNode( "PROGRAM", arg.gadget, ICON_WHITE )
+		visitChildren( arg.node, mother )
+		ExpandTreeViewNode( mother )
+	End Method
+	
 	Method visit_SKIPPED( arg:TGift )
 		Local node:TASTNode = arg.node
-DebugStop
-		Local mother:TGadget = AddTreeViewNode( node.value+" ** SKIPPED **", arg.gadget, ICON_YELLOW )
-		AddTreeViewNode( node.descr, mother )
+		Local mother:TGadget = AddTreeViewNode( node.value+node.loc(), arg.gadget, ICON_YELLOW )
+		If node.error ; AddTreeViewNode( node.error, mother, ICON_ERROR )
 		visitChildren( arg.node, mother )
 		'ExpandTreeViewNode( mother )
 	End Method
 
 	Method visit_comment( arg:TGift )
 		Local node:TASTNode = arg.node
-DebugStop
-		Local mother:TGadget = AddTreeViewNode( "COMMENT "+node.loc(), arg.gadget, ICON_WHITE )
+'DebugStop
+		Local mother:TGadget = AddTreeViewNode( "COMMENT"+node.loc(), arg.gadget, status(node) )
 		Local child:TGadget = AddTreeViewNode( node.value, mother )
 		SetGadgetColor( child, $7f, $7f, $7f )
 		'AddTreeViewNode( arg.node.value, mother )
@@ -678,47 +705,63 @@ DebugStop
 
 	Method visit_framework( arg:TGift )
 		Local node:TAST_Framework = TAST_Framework( arg.node )
-DebugStop
-		Local icon:Int      = ICON_RED
-		Local detail:String = "** INVALID **"
-		If node.valid ; icon = ICON_WHITE
+'DebugStop
+		'Local icon:Int      = ICON_RED
+		Local detail:String = "FRAMEWORK "
+		'If node.valid ; icon = ICON_WHITE
 		
 		If node.major And node.dot And node.minor
-			detail = node.major.value + "." + node.minor.value
+			detail :+ node.major.value + "." + node.minor.value
+		Else
+			detail :+ "?"
 		End If
 		
-		AddTreeViewNode( "FRAMEWORK: "+detail, arg.gadget, icon )
+		' Add node to tree
+		'Local mother:TGadget = 
+		AddNode( node, arg.gadget, detail )
+		'AddTreeViewNode( detail+node.loc(), arg.gadget, status( node ) )
 	End Method
 	
 	Method visit_function( arg:TGift )
 		Local node:TAST_Function = TAST_Function( arg.node )
 DebugStop
-		Local icon:Int      = ICON_RED
-		Local detail:String = "** INVALID **"
-		If arg.node.valid ; icon = ICON_WHITE
+		'Local icon:Int      = ICON_RED
+		Local detail:String  = "FUNCTION"
+		'If arg.node.valid ; icon = ICON_WHITE
 
-		'If arg.node.major And arg.node.dot And arg.node.minor
-		'	detail = arg.node.major.value + "." + arg.node.minor.value
-		'End If
+		If node.fnname ; detail :+ " "+node.fnname.value
+		detail :+ ":"
+		If node.returntype
+			If node.returntype.id = TK_MISSING
+				detail :+ "void"
+			Else
+				detail :+ node.returntype.value
+			End If
+		Else
+			detail :+ "void"
+		End If
+		detail :+ "()"
 
-		Local mother:TGadget = AddTreeViewNode( "FUNCTION "+detail, arg.gadget, icon )
-		visitChildren( arg.node, mother )
+		Local mother:TGadget = AddNode( node, arg.gadget, detail )
+		'AddTreeViewNode( detail+node.loc(), arg.gadget, status( node ) )
+		'adderrors( mother, node )
 		ExpandTreeViewNode( mother )
 	End Method
 
 	Method visit_strictmode( arg:TGift )
+		Local node:TASTNode = TASTNode( arg.node )
 'DebugStop
 'Local n:TASTNode = arg.node
-		Local icon:Int      = ICON_RED
-		Local detail:String = "** INVALID **"
-		If arg.node.valid ; icon = ICON_WHITE
-		AddTreeViewNode( "STRICTMODE: "+arg.node.value, arg.gadget, icon )
+		'Local icon:Int      = ICON_RED
+		'Local detail:String = "** INVALID **"
+		'If arg.node.valid ; icon = ICON_WHITE
+		AddTreeViewNode( "STRICTMODE="+node.value+node.loc(), arg.gadget, status( node ) )
 	End Method
 
 	
-	Method visit_type( arg:TGift )
-DebugStop
-Local n:TASTNode = arg.node
+'	Method visit_type( arg:TGift )
+'DebugStop
+'Local n:TASTNode = arg.node
 '		Local text:String = "Type "+arg.node.value
 '		Local compound:TAST_Type = TAST_Type( arg.node )
 '		If compound.supertype
@@ -728,7 +771,7 @@ Local n:TASTNode = arg.node
 '		text :+ "~n"+visitChildren( arg.node, "visit", arg.indent+TAB )
 '		text :+ "EndType~n"
 '		Return text
-	End Method
+'	End Method
 	
 End Type
 

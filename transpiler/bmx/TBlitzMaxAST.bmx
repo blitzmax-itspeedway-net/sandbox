@@ -20,6 +20,10 @@ Type TASTMissingOptional Extends TASTNode { class="diagnostic" }
 		
 End Type
 
+' Node for END OF LINE marker
+Type TAST_EOL Extends TASTNode { class="EOL" }
+End Type
+
 ' Diagnostics node used when an error has been found and a node has been skipped
 Type TAST_Skipped Extends TASTError { class="diagnostic" }
 	
@@ -42,6 +46,7 @@ Type TAST_Skipped Extends TASTError { class="diagnostic" }
 End Type
 
 Type TAST_Comment Extends TASTNode { class="COMMENT" }
+	Method validate() ; valid = True ; error = "" ; End Method
 End Type
 
 Type TAST_Framework Extends TASTNode { class="FRAMEWORK" }
@@ -49,14 +54,18 @@ Type TAST_Framework Extends TASTNode { class="FRAMEWORK" }
 	Field dot:TToken
 	Field minor:TToken
 	
-	Method validate:Int()
-DebugStop
-		Local status:Int = Super.validate()
-		If Not major Or major.class <> TK_Alpha ; status = False
-		If Not dot Or dot.class <> TK_PERIOD ; status = False
-		If Not minor Or minor.class <> TK_Alpha ; status = False
+	Method validate()
+'DebugStop
+		'Local status:Int = Super.validate()
+		valid = True
+		error = ""
+		If Not major Or major.id <> TK_Alpha ; valid = False
+		If Not dot Or dot.id <> TK_PERIOD ; valid = False
+		If Not minor Or minor.id <> TK_Alpha ; valid = False
+		If Not valid ; error :+ "Invalid module"
+		
 		'	Report back worst state
-		Return Min( status, valid )
+		'Return Min( status, valid )
 	End Method
 End Type
 
@@ -74,25 +83,33 @@ Type TAST_Function Extends TASTCompound { class="FUNCTION" }
 		Return fnname.value
 	End Method
 	
-	Method validate:Int()
-'DebugStop
-		Local status:Int = Super.validate()
+	Method validate()
+		Super.validate()
+DebugStop
 		' RULE 1:	IS fnname UNIQUE
 		' RULE 2:	IS returntype VALID
 		If returntype And returntype.notin( [TK_Int,TK_String,TK_Double,TK_Float] )
 			' Not a standard type, check against AST
 			' TODO
+			valid = False
+			error = "Invalid return type"
 		End If
 		' RULE 3:	Must have both "(" and ")" or neither
 		If lparen.id=TK_lparen 
-			If rparen.id<>TK_rparen valid = False
+			If rparen.id<>TK_rparen
+				valid = False
+				error = "Mismatching parenthesis"
+			End If
 		Else
-			If rparen.id=TK_rparen valid = False
+			If rparen.id=TK_rparen 
+				valid = False
+				error = "Mismatching parenthesis"
+			End If
 		End If
 		' () are required for functions, optional for procedures	
 		
 		'	Report back worst state
-		Return Min( status, valid )
+		'Return Min( status, valid )
 	End Method
 End Type
 
@@ -145,9 +162,13 @@ End Type
 
 Type TAST_Rem Extends TASTNode { class="REMARK" }
 	Field closing:TToken
+	Method validate() ; valid = True ; error = "" ; End Method
 End Type
 
 Type TAST_StrictMode Extends TASTNode { class="STRICTMODE" }
+
+	Method validate() ; valid = True ; error = "" ; End Method
+
 End Type
 
 Type TAST_Type Extends TASTCompound { class="TYPE" }

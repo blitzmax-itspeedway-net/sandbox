@@ -50,7 +50,7 @@ Type TBlitzMaxParser Extends TParser
 	' Every story starts, as they say, with a beginning...
 	Method parse_program:TASTNode()
 		Local fsm:Int = 0
-'DebugStop	
+DebugStop	
 		' Scan the tokens, creating children
 		token = lexer.reset()	' Starting position
 		'advance()
@@ -95,6 +95,9 @@ Type TBlitzMaxParser Extends TParser
 		'If token.id <> TK_EOF
 		'	ThrowParseError( "Unexpected characters past end of program", token.line, token.pos )
 		'End If
+		
+		' Validate the parsed AST
+		ast.validate()
 		
 		Return ast
 	End Method
@@ -283,7 +286,7 @@ EndRem
 					Case TK_Type
 						ast.add( Parse_Type() )
 					Default
-DebugStop
+'DebugStop
 						'Local skip:TAST_Skipped = New TAST_Skipped( token,  )
 						'advance()
 						'ast.add( skip )
@@ -293,13 +296,13 @@ DebugStop
 						error.consume( skip )
 						error.name = "SKIPPED"
 						'skip.value = token.value
-						error.descr = "Valid but not defined in parseSequence()"
+						error.error = "Valid but not defined in parseSequence()"
 						ast.add( error )
 						
 					End Select
 		
 				Else	' TOKEN IS NOT IN THE OPTION LIST!
-DebugStop
+'DebugStop
 					' Ask parent if they know about it
 					'If parent.knows( token ) Return ast
 					' Mark token as ERROR and skip until we find a token we do understand.
@@ -312,7 +315,7 @@ DebugStop
 					error.consume( skip )
 					error.name = "SKIPPED"
 					'skip.value = token.value
-					error.descr = skip.value + " was unexpected!"
+					error.error = skip.value + " was unexpected!"
 					ast.add( error )
 				
 				End If
@@ -357,7 +360,7 @@ End Rem
 			Case TK_EOF
 				Return True	
 			Case TK_EOL
-				ast.add( New TASTNode( "EOL" ) )
+				ast.add( New TAST_EOL( token ) )
 				advance()
 			Case TK_COMMENT
 				ast.add( New TAST_Comment( token ) )

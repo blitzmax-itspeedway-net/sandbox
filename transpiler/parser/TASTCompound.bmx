@@ -10,7 +10,7 @@ Type TASTCompound Extends TASTNode
 	Field children:TList
 
 	Method New( name:String )
-		name  = name
+		Self.name  = name
 		children = New TList()
 	End Method
 
@@ -56,18 +56,12 @@ Type TASTCompound Extends TASTNode
 	End Method
 	
 	' Validate the node and it's children
-	' Passes the child state back
-	Method validate:Int()
-		If Not children Return True
-'		valid = True
-'DebugStop
-' Get a segmentation fault here in type TAST_Type
-'If children.isempty() Print "EMPTY!"
-		Local status:Int = True
+	Method validate()
+		If Not children Return
 		For Local child:TASTNode = EachIn children
-			status = Min( status, child.validate() )
+			child.validate()
+			valid = Min( valid, child.valid )
 		Next
-		Return status
 	End Method
 	
 End Type
