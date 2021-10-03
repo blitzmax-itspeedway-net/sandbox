@@ -61,20 +61,22 @@ Type TBlitzMaxLexer Extends TLexer
 		Until id = 0
 	End Method
 
-	Method tokenise()
+'	Method tokenise()
 'DebugStop
-		Local token:TToken	' = nextToken()
-		'nextChar()			' Move to first character
-		previous = New TToken( TK_Invalid, "", 0,0, "" ) ' Beginning of file (Stops NUL)
-		Repeat
-			token = nextToken()
-			If token ; tokens.addlast( token )
-			previous = token
-		Until token And token.id = TK_EOF
-		' Set the token cursor to the first element
-		'tokpos = tokens.firstLink()
-		cursor = 0
-	End Method
+'		Local token:TToken	' = nextToken()
+'		'nextChar()			' Move to first character
+'		previous = New TToken( TK_Invalid, "", 0,0, "" ) ' Beginning of file (Stops NUL)
+'		Repeat
+'			token = nextToken()
+'If token ; Print token.reveal()
+'DebugStop
+'			If token ; tokens.addlast( token )
+'			previous = token
+'		Until token And token.id = TK_EOF
+'		' Set the token cursor to the first element
+'		'tokpos = tokens.firstLink()
+'		cursor = 0
+'	End Method
 	
 	' Language specific tokeniser
 	Method GetNextToken:TToken()
@@ -90,11 +92,12 @@ Type TBlitzMaxLexer Extends TLexer
 		Case Instr( SYM_NUMBER, char ) > 0	' Number
 			Return New TToken( TK_Number, ExtractNumber(), line, pos, "NUMBER" )
 		Case Instr( SYM_ALPHA, char )>0       	' Alphanumeric Identifier
-			Local text:String = ExtractIdent( SYM_ALPHA+"_" )
+			Local text:String = ExtractIdent( SYM_ALPHA+SYM_NUMBER+"_" )
 			' Check if this is a named-token or just an alpha
 			Local symbol:TSymbol = TSymbol( defined.valueforkey( Lower(text) ) )
 			If symbol
 'If Lower(text) = "end" DebugStop
+				Rem "End <BLOCK>" DETECTION HAS BEEN MOVED To LEXER
 				If previous.id = TK_END
 'DebugStop
 					Select symbol.id
@@ -108,6 +111,7 @@ Type TBlitzMaxLexer Extends TLexer
 					
 					' If we get here, then maybe it is just an "end" statement!
 				End If
+				End Rem
 				
 				' REM is a special case, multi-line statement
 				If symbol.id = TK_REM ; Return New TToken( symbol.id, ExtractRemark(), line, pos, symbol.class )
@@ -137,6 +141,19 @@ Type TBlitzMaxLexer Extends TLexer
 			Return New TToken( ascii, char, line, pos, "symbol" )
 		EndSelect
 	End Method
+	
+		' Pops next character moving the cursor forward
+    Method PopChar:String()
+		If cursor>=source.length Return ""
+        Local char:String = source[cursor..cursor+1]
+		linepos :+ 1
+		cursor :+ 1
+		If char="~n"
+			linenum :+ 1
+			linepos = 1
+		End If
+        Return char
+    End Method
 	
 	Method ExtractRemark:String()
         Local remark:String

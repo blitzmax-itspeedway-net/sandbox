@@ -226,6 +226,15 @@ Type TVisualiser Extends TControl
 	Field ASTview:TASTView
 	Field tabber:TGadget, tabs:TControl[], currenttab:TControl
 	
+	Field menu_edit_eol:TGadget
+	
+	'	LANGUAGE SERVER
+	Field lexer:TLexer
+	Field parser:TParser
+	Field ast:TASTNode   
+	
+	'	CONSTANTS
+	
 	Const STYLE:Int = WINDOW_TITLEBAR|WINDOW_CLIENTCOORDS|WINDOW_MENU|WINDOW_RESIZABLE|WINDOW_STATUS
 	
 	Const FILE_NEW:Int    = 101
@@ -238,6 +247,8 @@ Type TVisualiser Extends TControl
 	'Const EDIT_CUT:Int   = 201
 	'Const EDIT_COPY:Int  = 202
 	'Const EDIT_PASTE:Int = 203
+
+	Const VIEW_EOL:Int   = 301
 
 	Const HELP_ABOUT:Int  = 999
 	
@@ -266,7 +277,6 @@ Type TVisualiser Extends TControl
 		
 		If mn ; MinimizeWindow( window )
 		If mx ; MaximizeWindow( window )
-		
 
 		Local filemenu:TGadget = CreateMenu( "&File", 0, WindowMenu( window ))
 		CreateMenu( "&New",   FILE_NEW,   filemenu, KEY_N, MODIFIER_COMMAND )
@@ -277,10 +287,14 @@ Type TVisualiser Extends TControl
 		CreateMenu( "",       0,          filemenu )
 		CreateMenu( "E&xit",  FILE_EXIT,  filemenu, KEY_F4, MODIFIER_COMMAND )
 
+		Local viewmenu:TGadget = CreateMenu( "&View", 0, WindowMenu( window ))
+		menu_edit_eol = CreateMenu( "Show EOL",    VIEW_EOL,   viewmenu )
+		CheckMenu( menu_edit_eol )
+		
 		'Local editmenu:TGadget
 		Local helpmenu:TGadget = CreateMenu( "&Help", 0, WindowMenu( window ))
 		CreateMenu( "&About", HELP_ABOUT, helpmenu )
-
+		
 		UpdateWindowMenu( window )
 
 		' Split window horizontally
@@ -361,6 +375,7 @@ Type TVisualiser Extends TControl
 		If filename
 			editor.fileOpen( filename )
 			parse()
+			update()
 		End If
 
 		' CONNECT EVENT HANDLER
@@ -438,6 +453,7 @@ Print("BYE")
 					editor.fileopen( filename )
 					config.insert( "filename", filename )
 					parse()
+					update()
 				End If
 			'Case FILE_SAVE
 			'	editor.filesave()
@@ -446,17 +462,27 @@ Print("BYE")
 			Case FILE_EXIT
 				SaveWindow()
 				End
+			Case VIEW_EOL
+				If MenuChecked( menu_edit_eol )
+					UncheckMenu( menu_edit_eol )
+				Else
+					CheckMenu( menu_edit_eol )
+				End If
+				UpdateWindowMenu( window )
+				update()
 			Case HELP_ABOUT
 				Notify "Visualiser~n(c) Copyright, Si Dunford, September 2021, All Rights Reserved"
 		End Select
 	End Method
 	
 	Method onGadgetAction:Object( event:TEvent )
-'DebugStop
-		If event And event.source = tabber
-			HideGadget( currenttab.gadget )
-			currenttab = tabs[ event.data ]
-			ShowGadget( currenttab.gadget )
+		If event 
+			Select event.source
+			Case tabber
+				HideGadget( currenttab.gadget )
+				currenttab = tabs[ event.data ]
+				ShowGadget( currenttab.gadget )
+			End Select
 		EndIf
 		Return event
 	End Method
@@ -464,17 +490,20 @@ Print("BYE")
 	' LANGUAGE SERVER INTERFACE
 	Method parse()	
 		' PARSE THE SOURCE
-		Local lexer:TLexer   = New TBlitzMaxLexer( editor.filedata )
-		Local parser:TParser = New TBlitzMaxParser( lexer )
-DebugStop
-		Local ast:TASTNode   = parser.parse_ast()
-		
+		lexer = New TBlitzMaxLexer( editor.filedata )
+		parser = New TBlitzMaxParser( lexer )
+		ast = parser.parse_ast()
+	End Method
+	
+	Method update()
+
 		' UPDATE LEXER TOKENS	
 'DebugStop	
 		TTokenView(tabs[TAB_TOKENVIEW]).update( lexer )
 		
 		' UPDATE AST
-		ASTview.update( ast )
+'DebugStop
+		ASTview.update( ast, MenuChecked( menu_edit_eol ) )
 		
 		' Update Diagnostics
 		TDiagnostics( tabs[ TAB_DIAGNOSTICS ] ).update( ast )
@@ -585,13 +614,13 @@ Type TASTView Extends TControl
 	
 	' BEHAVIOUR
 	
-	Method update( ast:TASTNode )
+	Method update( ast:TASTNode, showEOL:Int  )
 
 		' Clean down previous list
 		ClearTreeView( tv )
 		
 		' Populate 
-		Local visitor:TMotherInLaw = New TMotherInLaw( ast, root )
+		Local visitor:TMotherInLaw = New TMotherInLaw( ast, root, showEOL )
 'DebugStop
 		visitor.run()
 		
@@ -722,10 +751,12 @@ Type TMotherInLaw Extends TVisitor
 
 	Field ast:TASTNode
 	Field node:TGadget
+	Field showEOL:Int = True
 	
-	Method New( ast:TASTNode, node:TGadget )
+	Method New( ast:TASTNode, node:TGadget, showEOL:Int )
 		Self.ast = ast
 		Self.node = node
+		Self.showEOL = showEOL
 	End Method
 	
 	' Create source code from the AST
@@ -790,8 +821,10 @@ Type TMotherInLaw Extends TVisitor
 
 	' We don't need to show these!
 	Method visit_EOL( arg:TGift )
-		'Local node:TASTNode = arg.node
-		'AddTreeViewNode( "EOL"+node.loc(), arg.gadget, ICON_WHITE )
+		If showEOL
+			Local node:TASTNode = arg.node
+			AddTreeViewNode( "EOL"+node.loc(), arg.gadget, ICON_WHITE )
+		End If
 	End Method
 
 	Method visit_IGNORED( arg:TGift )

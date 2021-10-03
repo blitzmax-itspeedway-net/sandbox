@@ -307,9 +307,11 @@ End Rem
 		previous = New TToken( TK_Invalid, "", 0,0, "" ) ' Beginning of file (Stops NUL)
 		Repeat
 			token = nextToken()
-			tokens.addlast( token )
+'If token ; Print token.reveal()
+'If token And token.line > 40 ; DebugStop
+			If token ; tokens.addlast( token )
 			previous = token
-		Until token.id = TK_EOF
+		Until token And token.id = TK_EOF
 		' Set the token cursor to the first element
 		'tokpos = tokens.firstLink()
 		cursor = 0
@@ -326,19 +328,24 @@ End Rem
 		' Pass everything else to language specific tokeniser
 'DebugStop
 'Print "["+linenum+","+linepos+"]"
-		Local char:String = PeekChar()
-		Select True
-		Case char = ""		' End of file
-			Return New TToken( TK_EOF, "EOF", linenum, linepos, "EOF" )
-		Case char = "~n"	' End of line
-			Local token:TToken = New TToken( TK_EOL, "EOL", linenum, linepos, "EOL" )
-			popChar()
-			Return token
-		Case char < " "	Or char > "~~"		' Throw away control codes
-			' Do nothing...
-		Default
-			Return getNextToken() ' char, linenum, linepos )
-		End Select	
+		Repeat
+			Local char:String = PeekChar()
+			Select True
+			Case char = ""						' End of file
+				Return New TToken( TK_EOF, "EOF", linenum, linepos, "EOF" )
+			Case char = "~n"					' End of line
+				Local token:TToken = New TToken( TK_EOL, "EOL", linenum, linepos, "EOL" )
+				popChar()
+				Return token
+			Case char = " "	Or char = "~t"		' Ignore whitespace between tokens
+				popChar()
+			Case char < " "	Or char > "~~"		' Throw away control codes
+				' Do nothing...
+				popchar()
+			Default
+				Return getNextToken() ' char, linenum, linepos )
+			End Select	
+		Forever
 	End Method
 	
 			
@@ -396,7 +403,8 @@ End Rem
 	Method getNextToken:TToken() Abstract
 	
     ' Skips leading whitespace and returns next character
-    Method PeekChar:String( IgnoredSymbols:String = SYM_WHITESPACE )
+    Method PeekChar:String( IgnoredSymbols:String )
+'    Method PeekChar:String( IgnoredSymbols:String = SYM_WHITESPACE )
 'DebugStop
 		If cursor>=source.length Return ""
 		Local pointer:Int = cursor
@@ -435,8 +443,14 @@ End Rem
         Return char
     End Method
 
+    Method PeekChar:String()
+		If cursor>=source.length Return ""
+		Return source[cursor..cursor+1]
+	End Method
+	
 	' Pops next character moving the cursor forward
-    Method PopChar:String( IgnoredSymbols:String = SYM_WHITESPACE )
+    Method PopChar:String( IgnoredSymbols:String )
+    'Method PopChar:String( IgnoredSymbols:String = SYM_WHITESPACE )
 'DebugStop
         'Local char:String
 		If cursor>=source.length Return ""
@@ -458,6 +472,9 @@ End Rem
                 linenum :+ 1
                 linepos = 1
                 cursor :+ 1
+            Case " ","~t"
+                linepos:+1
+				cursor :+1
             Default
                 linepos :+ 1
                 cursor :+ 1
@@ -486,13 +503,40 @@ End Rem
         Return char
     End Method
 
+	' Pops next character moving the cursor forward
+    Method PopChar:String()
+		If cursor>=source.length Return ""
+        Local char:String = source[cursor..cursor+1]
+
+		'
+		' Move the cursor forward
+		If char="~n"
+			linenum :+ 1
+			linepos = 1
+			cursor :+ 1
+		ElseIf char="\"	' ESCAPE CHARACTER
+'DebugStop
+			char = source[cursor..cursor+2]
+			If char="\u"	'HEX DIGIT
+				char = source[cursor..cursor+6]			
+				cursor :+ 6
+			Else
+				cursor :+ 2
+			End If
+		Else
+			linepos :+ 1
+			cursor :+ 1
+		End If
+        Return char
+    End Method
+
     Method ExtractIdent:String( bodySymbols:String = SYM_ALPHA )
 'DebugStop
         Local text:String
         Local char:String = peekChar()
         While Instr( bodySymbols, char ) And char<>""
             text :+ popChar()
-            char = PeekChar("")
+            char = PeekChar()
         Wend
         Return text
     End Method
