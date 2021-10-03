@@ -22,6 +22,11 @@ End Type
 
 ' Node for END OF LINE marker
 Type TAST_EOL Extends TASTNode { class="EOL" }
+	Method New( name:String, value:String )
+		Self.name  = name
+		Self.value = value
+		Self.valid = True	' EOL are always valid (unless unexpected I guess)
+	End Method
 End Type
 
 ' Diagnostics node used when an error has been found and a node has been skipped
@@ -85,7 +90,7 @@ Type TAST_Function Extends TASTCompound { class="FUNCTION" }
 	
 	Method validate()
 		Super.validate()
-DebugStop
+'DebugStop
 		' RULE 1:	IS fnname UNIQUE
 		' RULE 2:	IS returntype VALID
 		If returntype And returntype.notin( [TK_Int,TK_String,TK_Double,TK_Float] )

@@ -113,7 +113,7 @@ Type TParser
 		
 	Method parse_ast:TASTNode()
 '	Method testabnf:Int( rulename:String, path:String="" )
-'DebugStop
+DebugStop
 		Print "~nSTARTING LEXER:"
 		' First order of the day is to run the lexer...
 		Local start:Int, finish:Int
@@ -130,7 +130,7 @@ Type TParser
 		'If rulename="" Return Null' No starting node (Empty ABNF?)
 		'ast = walk_rule( rulename )
 
-'DebugStop
+DebugStop
 		Print "~nSTARTING PARSER:"
 		Publish( "PARSE-START", Null )		
 		lexer.reset()
@@ -143,7 +143,7 @@ Type TParser
 		'If after.id <> TK_EOF ; ThrowParseError( "'"+after.value+"' unexpected past End", after.line, after.pos )
 		
 		Print "~nSTARTING VALIDATION:"
-'DebugStop
+DebugStop
 		Local validator:TParseValidator = New TParseValidator( program )
 		Local valid:Int = validator.run()
 		Print "~nFINSIHED VALIDATION:"

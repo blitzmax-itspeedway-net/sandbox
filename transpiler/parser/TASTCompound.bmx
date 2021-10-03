@@ -18,7 +18,7 @@ Type TASTCompound Extends TASTNode
 		consume( token )
 		children = New TList()
 	End Method
-	
+		
 	' Walk the tree to find left-most leaf
 	Method walkfirst:TASTNode()
 		If children.isempty() Return Self
@@ -57,11 +57,27 @@ Type TASTCompound Extends TASTNode
 	
 	' Validate the node and it's children
 	Method validate()
+		valid = True	' Compound nodes are always valid!
 		If Not children Return
 		For Local child:TASTNode = EachIn children
 			child.validate()
-			valid = Min( valid, child.valid )
+			'valid = Min( valid, child.valid )
 		Next
 	End Method
 	
+	' TREE TRAVERSAL
+	' - INORDER   = LEFT, ROOT, RIGHT
+	' - PREORDER  = ROOT, LEFT, RIGHT
+	' - POSTORDER = LEFT, RIGHT, ROOT
+
+	Method inorder:Object( eval:Object( node:TASTNode, data:Object ), data:Object )
+		' Compound types are validated BEFORE children
+		'Print getname()
+		data = eval( Self, data )
+		For Local child:TASTNode = EachIn children
+			data = child.inorder( eval, data )
+		Next
+		Return data
+	End Method
+
 End Type

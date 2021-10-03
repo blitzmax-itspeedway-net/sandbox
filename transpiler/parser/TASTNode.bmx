@@ -49,6 +49,11 @@ Type TASTNode
 		Self.pos     = token.pos
 	End Method
 	
+	'Method walk:Object( evaluator( node:TASTNode, result:Object ), result:Object ) 
+	'	Local node:TASTNode = walkfirst()
+	'	evaluator( node, result )
+	'End Method
+	
 	' Walk the tree to find left-most leaf
 	Method walkfirst:TASTNode() 
 		Return Self
@@ -106,6 +111,16 @@ Type TASTNode
 	Method validate()
 		valid = False
 		error = ""
+	End Method
+	
+	' TREE TRAVERSAL
+	' - INORDER   = LEFT, ROOT, RIGHT
+	' - PREORDER  = ROOT, LEFT, RIGHT
+	' - POSTORDER = LEFT, RIGHT, ROOT
+	
+	Method inorder:Object( eval:Object( node:TASTNode, data:Object ), data:Object )
+		'Print getname()
+		Return eval( Self, data )
 	End Method
 	
 End Type

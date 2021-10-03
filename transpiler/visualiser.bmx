@@ -7,6 +7,7 @@ SuperStrict
 
 ' REQUIRED FOR THE GUI
 Import maxgui.drivers
+Import maxgui.proxygadgets
 Import brl.eventqueue
 Import brl.max2d
 Import brl.retro
@@ -91,6 +92,10 @@ Const ICON_TEAL:Int = 6
 Const ICON_WHITE:Int = 7
 Const ICON_ERROR:Int = 8
 
+Const TAB_TOKENVIEW:Int = 0
+Const TAB_DIAGNOSTICS:Int = 1
+Const TAB_MESSAGES:Int = 2
+
 Global config:TConfig = New TConfig()
 
 Type TConfig Extends TMap
@@ -126,8 +131,9 @@ Type TConfig Extends TMap
 End Type
 
 Type TControl
-	Field window:TGadget
-
+	Field parent:TGadget
+	Field gadget:TGadget
+	
 	'Method New()
 		'Print "TCONTROL.NEW()" + TTypeId.ForObject(Self).name
 		'connect()
@@ -135,7 +141,7 @@ Type TControl
 
 	Method New( parent:TGadget )
 		Print "TCONTROL.NEW( gad )" '+ TTypeId.ForObject(Self).name
-		window = parent
+		Self.parent = parent
 		connect()
 	End Method
 
@@ -146,30 +152,23 @@ Type TControl
 	Method disconnect()
 		RemoveHook( EmitEventHook, eventHook, Self )
 	End Method
-	
-	Method resize( width:Int, height:Int ) Abstract
 
-	Method SaveWindow()
-Print("BYE")
-		' Save window location
-		config["top"] = String( GadgetX( window ))
-		config["left"] = String( GadgetY( window ))
-		config["width"] = String( GadgetWidth( window ))
-		config["height"] = String( GadgetHeight( window ))
-		config["minim"] = String( WindowMinimized( window ))
-		config["maxim"] = String( WindowMaximized( window ))
-		config.save(CONFIG_FILE)
+	Method hide()
+		HideGadget( gadget )
+	End Method
+	
+	Method show()
+		ShowGadget( gadget )
 	End Method
 
 	' EVENT DISPATCHER
 
-	Method onEvent:Object( event:TEvent )
+	Method onEvent:Object( event:TEvent )		
 		Select event.id
 			'Case EVENT_APPRESUME		' Do nothing
 			'Case EVENT_APPSUSPEND		' Do nothing
-			Case EVENT_APPTERMINATE
-				SaveWindow()
-				End
+			Case EVENT_APPTERMINATE		; End
+			Case EVENT_GADGETACTION 	; Return onGadgetAction( event )
 			Case EVENT_GADGETCLOSE		' Do nothing
 			Case EVENT_GADGETLOSTFOCUS	' Do nothing
 			Case EVENT_GADGETOPEN		' Do nothing
@@ -185,7 +184,7 @@ Print("BYE")
 			Case EVENT_WINDOWACTIVATE	' Do nothing
 			Case EVENT_WINDOWCLOSE		; Return onClose( event )
 			Case EVENT_WINDOWMOVE		' Do nothing
-			Case EVENT_WINDOWSIZE		; Return onResize( event )
+			Case EVENT_WINDOWSIZE		' Do nothing
 			Default
 				Print Event.tostring()
 		EndSelect
@@ -200,12 +199,10 @@ Print("BYE")
 		RemoveHook( EmitEventHook, eventHook, Self )
 		Return event
 	End Method
+	Method onGadgetAction:Object( event:TEvent ) ;	Return event	;	End Method
 	Method onGadgetSelect:Object( event:TEvent ) ;	Return event	;	End Method
 	Method onMenuAction:Object( event:TEvent )	;	Return event	;	End Method
-	Method onResize:Object( event:TEvent )
-		resize( event.x, event.y )
-		Return event
-	End Method
+	Method onResize:Object( event:TEvent )		;	Return event	;	End Method
 	Method onTick:Object( event:TEvent )		;	Return event	;	End Method
 	
 	' EVENT HOOK
@@ -220,11 +217,16 @@ Print("BYE")
 End Type
 
 Type TVisualiser Extends TControl	
-	Field editor:TEditor
-	Field tokenview:TTokenView
-	Field ASTview:TASTView
+	Field window:TGadget
+	Field hsplitter:TSplitter, vsplitter:TSplitter
+	Field tsplit:TGadget, bsplit:TGadget, lsplit:TGadget, rsplit:TGadget	' Top, Bot, Lft, Rgt
 	
-	Const STYLE:Int = WINDOW_TITLEBAR|WINDOW_CLIENTCOORDS|WINDOW_MENU|WINDOW_RESIZABLE|WINDOW_CENTER| WINDOW_STATUS
+	Field editor:TEditor
+	'Field tokenview:TTokenView
+	Field ASTview:TASTView
+	Field tabber:TGadget, tabs:TControl[], currenttab:TControl
+	
+	Const STYLE:Int = WINDOW_TITLEBAR|WINDOW_CLIENTCOORDS|WINDOW_MENU|WINDOW_RESIZABLE|WINDOW_STATUS
 	
 	Const FILE_NEW:Int    = 101
 	Const FILE_OPEN:Int   = 102
@@ -259,6 +261,7 @@ Type TVisualiser Extends TControl
 		If h<WIN_MIN_HEIGHT ; h=WIN_MIN_HEIGHT
 		
 		window = CreateWindow( "Visualisation Tool", x, y, w, h, Null, STYLE )
+		SetGadgetLayout( window, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
 		SetMinWindowSize( window, WIN_MIN_WIDTH, WIN_MIN_HEIGHT )
 		
 		If mn ; MinimizeWindow( window )
@@ -280,10 +283,79 @@ Type TVisualiser Extends TControl
 
 		UpdateWindowMenu( window )
 
-		' CREATE COMPONENTS
-		editor = New TEditor( window )
-		tokenview = New TTokenView( window )
-		ASTview = New TASTView( window )
+		' Split window horizontally
+		hsplitter = CreateSplitter( 0, 0, ClientWidth(window), ClientHeight(window), window, SPLIT_HORIZONTAL, 15 )
+		SetGadgetLayout( hsplitter, 2, 2, 2, 2 )
+		SetSplitterPosition( hsplitter, ClientHeight(window)/2 )
+		SetGadgetColor( hsplitter, 0,0,0 )
+		tsplit = SplitterPanel( hsplitter, SPLITPANEL_MAIN )
+		bsplit = SplitterPanel( hsplitter, SPLITPANEL_SIDEPANE )
+		'SetGadgetLayout( tsplit, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
+		'SetGadgetLayout( bsplit, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
+		
+		' Split TOP panel vertically
+		vsplitter = CreateSplitter( 0, 0, ClientWidth(tsplit), ClientHeight(tsplit), tsplit, SPLIT_VERTICAL )
+		SetGadgetLayout( vsplitter, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
+		SetSplitterPosition( vsplitter, ClientWidth(tsplit)/2 )
+		SetGadgetColor( vsplitter, 0,0,0 )
+		lsplit = SplitterPanel( vsplitter, SPLITPANEL_MAIN )
+		rsplit = SplitterPanel( vsplitter, SPLITPANEL_SIDEPANE )
+		'SetGadgetLayout( lsplit, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
+		'SetGadgetLayout( rsplit, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
+		editor = New TEditor( window, lsplit )
+		ASTview = New TASTView( rsplit )
+		
+		' Create a tab-view in the bottom split
+		tabber = CreateTabber( 0, 0, ClientWidth( bsplit ), ClientHeight( bsplit ), bsplit )
+		SetGadgetLayout( tabber, 2, 2, 2, 2 )
+		
+		' TEST STUFF
+		
+		'Global t1:TGadget = CreateTextArea(0,0,ClientWidth(bsplit),ClientHeight(bsplit),bsplit,TEXTAREA_WORDWRAP)
+		'SetGadgetLayout(t1,EDGE_ALIGNED,EDGE_ALIGNED,EDGE_ALIGNED,EDGE_ALIGNED)
+		'AddTextAreaText(t1, "The quick brown fox jumped over the lazy dog.~n~n")
+		'AddTextAreaText(t1, "The quick brown fox jumped over the lazy dog.~n~n")
+
+		'Global t2:TGadget = CreateTextArea(0,0,ClientWidth(lsplit),ClientHeight(lsplit),lsplit,TEXTAREA_WORDWRAP)
+		'SetGadgetLayout(t2,EDGE_ALIGNED,EDGE_ALIGNED,EDGE_ALIGNED,EDGE_ALIGNED)
+		'AddTextAreaText(t2, "The quick brown rat jumped over the lazy cat.~n~n")
+		'AddTextAreaText(t2, "The quick brown rat jumped over the lazy cat.~n~n")
+
+		'Global t3:TGadget = CreateTextArea(0,0,ClientWidth(rsplit),ClientHeight(rsplit),rsplit,TEXTAREA_WORDWRAP)
+		'SetGadgetLayout(t3,EDGE_ALIGNED,EDGE_ALIGNED,EDGE_ALIGNED,EDGE_ALIGNED)
+		'AddTextAreaText(t3, "The quick brown pig jumped over the lazy bear.~n~n")
+		'AddTextAreaText(t3, "The quick brown pig jumped over the lazy bear.~n~n")
+		
+		AddGadgetItem( tabber, "Tokens" )
+		tabs :+ [New TTokenView( tabber )]
+		'SetGadgetLayout( tabs[TAB_TOKENVIEW], EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
+		
+		AddGadgetItem( tabber, "Diagnostics" )
+		tabs :+ [New TDiagnostics( tabber )]
+		'tabs[TAB_DIAGNOSTICS] = New TDiagnostics( bsplit )
+		'SetGadgetLayout( tabs[TAB_DIAGNOSTICS], EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
+		'HideGadget tabs[TAB_DIAGNOSTICS]
+
+		AddGadgetItem( tabber, "Messages" )
+		tabs :+ [New TMessages( tabber )]
+		'tabs[TAB_MESSAGES] = New TMessages( bsplit )
+		'SetGadgetLayout( tabs[TAB_MESSAGES], EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
+		'HideGadget tabs[TAB_MESSAGES]
+
+		AddGadgetItem( tabber, "Transpile" )
+		tabs :+ [New TViewBMax( tabber )]
+
+		AddGadgetItem( tabber, "C++" )
+		tabs :+ [New TViewCPP( tabber )]
+
+		AddGadgetItem( tabber, "Java" )
+		tabs :+ [New TViewJava( tabber )]
+
+		' Select SECOND tab to bypass bug in event handler when using tabber on linux
+		currenttab = tabs[TAB_DIAGNOSTICS] 
+		SelectGadgetItem(tabber:TGadget,1)
+		ShowGadget( currenttab.gadget )
+		EnableGadget( currenttab.gadget )
 
 		' LOAD FILE
 		If filename
@@ -325,11 +397,30 @@ Type TVisualiser Extends TControl
 	End Method
 
 	' BEHAVIOUR
-	
-	Method resize( width:Int, height:Int )
-	End Method
 
+	Method SaveWindow()
+Print("BYE")
+		' Save window location
+		config["top"] = String( GadgetX( window ))
+		config["left"] = String( GadgetY( window ))
+		config["width"] = String( GadgetWidth( window ))
+		config["height"] = String( GadgetHeight( window ))
+		config["minim"] = String( WindowMinimized( window ))
+		config["maxim"] = String( WindowMaximized( window ))
+		config.save(CONFIG_FILE)
+	End Method
 	'Method 
+
+'	Method selectTab( tab:Int )
+'		For Local n:Int = 0 Until tabs.length
+'			If n=tab
+'				tabs[n].show()
+'			Else
+'				tabs[n].hide()
+'			End If
+'		Next
+'		currenttab = tabs[tab].gadget
+'	End Method
 
 	' EVENT HANDLERS
 	
@@ -343,8 +434,10 @@ Type TVisualiser Extends TControl
 				Local filter:String = "Source code:bmx;All Files:*"
 				Local filename:String = RequestFile( "Select file to open",filter )
 				If filename 
+'DebugStop
 					editor.fileopen( filename )
 					config.insert( "filename", filename )
+					parse()
 				End If
 			'Case FILE_SAVE
 			'	editor.filesave()
@@ -358,58 +451,77 @@ Type TVisualiser Extends TControl
 		End Select
 	End Method
 	
+	Method onGadgetAction:Object( event:TEvent )
+'DebugStop
+		If event And event.source = tabber
+			HideGadget( currenttab.gadget )
+			currenttab = tabs[ event.data ]
+			ShowGadget( currenttab.gadget )
+		EndIf
+		Return event
+	End Method
+	
 	' LANGUAGE SERVER INTERFACE
 	Method parse()	
 		' PARSE THE SOURCE
 		Local lexer:TLexer   = New TBlitzMaxLexer( editor.filedata )
 		Local parser:TParser = New TBlitzMaxParser( lexer )
-'DebugStop
+DebugStop
 		Local ast:TASTNode   = parser.parse_ast()
 		
-		' UPDATE LEXER TOKENS		
-		tokenview.update( lexer.tokens )
+		' UPDATE LEXER TOKENS	
+'DebugStop	
+		TTokenView(tabs[TAB_TOKENVIEW]).update( lexer )
 		
 		' UPDATE AST
 		ASTview.update( ast )
+		
+		' Update Diagnostics
+		TDiagnostics( tabs[ TAB_DIAGNOSTICS ] ).update( ast )
 		
 	End Method
 	
 End Type
 
 Type TEditor Extends TControl
-	Field textarea:TGadget
+	Field window:TGadget
 	
 	Field filename:String
 	Field filedata:String
 	
 	' CONSTRUCTOR
-	Method New( parent:TGadget )
+	Method New( window:TGadget, parent:TGadget )
 		Super.New( parent )
+		Self.window = window
+		
 		Print( "TEditor.new()" )
 
 		' CREATE COMPONENT
 		
-		textarea = CreateTextArea( 0, 0, 100, 100, window )
-		SetGadgetLayout( textarea, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
-		filedata = "Just an example~nuntil we load"
-		SetGadgetText( textarea, filedata )
-		ActivateGadget( textarea )
+		gadget = CreateTextArea( 2, 2, ClientWidth(parent)-2, ClientWidth(parent)-2, parent )
+
+		'Local monospacefont:TGuiFont = LookupGuiFont( GUIFONT_MONOSPACED, 11 ) 
+		'Print FontName( monospacefont )
 		
-		resize( ClientWidth( window ), ClientHeight( window ) )
+		Local monospacefont:TGuiFont = LoadGuiFont( "FreeMono", 11 ) 
+		Print FontName( monospacefont )
+		If Not monospacefont monospacefont = LookupGuiFont( GUIFONT_MONOSPACED, 11 ) 
 		
-		SetStatusText( window, "Line: 0 Char: 0" )
+		SetTextAreaFont( gadget, monospacefont )
+		SetGadgetLayout( gadget, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
+
+		'SetGadgetText( gadget, "EDITOR" )
+		ActivateGadget( gadget )
+		
+		SetStatusText( parent, "Line: 0 Char: 0" )
 	End Method
 	
 	' BEHAVIOUR
 	
-	Method resize( width:Int, height:Int )
-		SetGadgetShape( textarea, 0, 0, width/3, height )
-	End Method
-	
 	Method fileClose()
 		filename = ""
 		filedata = ""
-		SetGadgetText( textarea, filedata )
+		SetGadgetText( gadget, filedata )
 	End Method
 
 	Method fileNew()
@@ -427,7 +539,7 @@ Type TEditor Extends TControl
 			Wend
 			CloseStream file
 		EndIf
-		SetGadgetText( textarea, filedata )
+		SetGadgetText( gadget, filedata )
 		'
 		config["filename"]=name
 		config.save( CONFIG_FILE )		
@@ -442,93 +554,13 @@ Type TEditor Extends TControl
 	' EVENT HANDLERS
 
 	Method onGadgetSelect:Object( event:TEvent )
-		Print( "EDITOR:~n"+event.toString()) 
-		Local line:Int = TextAreaCursor( textarea, TEXTAREA_LINES )
-		Local char:Int = TextAreaCursor( textarea, TEXTAREA_CHARS )
-		SetStatusText( window, "Line: "+line+" Char: "+char )
+		If event.source = gadget
+			Print( "EDITOR:~n"+event.toString()) 
+			Local line:Int = TextAreaCursor( gadget, TEXTAREA_LINES )
+			Local char:Int = TextAreaCursor( gadget, TEXTAREA_CHARS )
+			SetStatusText( window, "Line: "+line+" Char: "+char )
+		End If
 	End Method
-	
-End Type
-
-Type TTokenView Extends TControl
-
-	Field panel:TGadget, listbox:TGadget
-	'Field timer:TTimer
-	
-	' CONSTRUCTOR
-
-	Method New( parent:TGadget )
-		Super.New( parent )
-		Print( "TTokenView.new()" )
-		
-		'timer = CreateTimer( 100 )
-		panel   = CreatePanel( 0, 0, 100, 100, window, PANEL_ACTIVE|PANEL_SUNKEN )
-		listbox = CreateListBox( 0, 0, 100,100, panel )
-		SetGadgetFont( listbox, LookupGuiFont( GUIFONT_MONOSPACED, 10 ), True )
-		SetGadgetLayout listbox, EDGE_RELATIVE, EDGE_RELATIVE, EDGE_RELATIVE, EDGE_RELATIVE
-		'SetGadgetColor( listbox, 0,0,0,True)		
-		resize( ClientWidth( window ), ClientHeight( window ) )
-		
-		AddGadgetItem listbox, "New", False, 0, "Create something."
-		AddGadgetItem listbox, "Open", False, 1, "Open something."
-		AddGadgetItem listbox, "Save", False, 2, "Save something.", "Extra Item Object!"
-		AddGadgetItem listbox, "No Icon", False, -1, "This should not have an icon set."
-	
-		
-	End Method
-
-	' BEHAVIOUR
-	
-	Rem
-	Method draw()
-		SetGraphics CanvasGraphics( Canvas )
-		SetClsColor( 0,0,0 )
-		Cls
-		For Local x:Int = 0 To 4
-			For Local y:Int = 0 To 4
-				'DrawRect( x*10,y*10,9,9)
-			Next
-		Next
-		Flip
-	End Method
-EndRem
-
-	Method resize( width:Int, height:Int )
-		Local third:Int = width/3
-		SetGadgetShape( panel, third, 0, third, height )
-	End Method
-	
-	Method update( tokens:TObjectList )
-
-		' Clean down previous list
-		ClearGadgetItems( listbox )
-
-		' Display messge if there is nothing to display
-		If tokens.isempty() 
-			AddGadgetItem listbox, "(Nothing to display)"
-			Return
-		EndIf
-		
-		' Populate listbox
-		For Local token:TToken = EachIn tokens
-			Local line:String = ("("+token.line+","+token.pos+")")[..9] + token.class[..14] +" == " +token.value
-			'Print line
-			AddGadgetItem( listbox, Replace(line,"~n","\n") )
-		Next
-		
-	End Method
-
-	' EVENT HANDLERS
-
-	'Method onPaint:Object( event:TEvent )
-	'	Print( "TTokenView.onPaint()" )
-	'	draw()
-	'End Method
-	
-	'Method onTick:Object( event:TEvent )
-'	'	Print( "TTokenView.onTick()" )
-	'	Return onPaint( event )
-	'End Method
 	
 End Type
 
@@ -541,22 +573,17 @@ Type TASTView Extends TControl
 		Super.New( parent )
 		Print( "TASTView.new()" )
 
-		tv   = CreateTreeView( 0, 0, 100, 100, window )
+		tv   = CreateTreeView( 0, 0, ClientWidth(parent), ClientHeight(parent), parent )
 		root = TreeViewRoot( tv )
+
+		SetGadgetLayout( tv, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
 
 		icons = LoadIconStrip( "incbin::bin/icons.png" )
 		SetGadgetIconStrip( tv, icons )
 		
-		resize( ClientWidth( window ), ClientHeight( window ) )
-		
 	End Method
 	
 	' BEHAVIOUR
-	
-	Method resize( width:Int, height:Int )
-		Local third:Int = width/3
-		SetGadgetShape( tv, third*2, 0, third, height )
-	End Method
 	
 	Method update( ast:TASTNode )
 
@@ -574,9 +601,110 @@ Type TASTView Extends TControl
 
 	' EVENT HANDLERS
 
-'	Method onResize:Object( event:TEvent )
-'	End Method
+End Type
+
+Type TTokenView Extends TControl
 	
+	' CONSTRUCTOR
+
+	Method New( parent:TGadget )
+		Super.New( parent )
+		Print( "TTokenView.new()" )
+		
+		gadget = CreateTextArea( 0, 0, ClientWidth(parent), ClientHeight(parent), parent )
+		SetGadgetLayout( gadget, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
+		
+		SetGadgetText( gadget, "THIS IS AN EXAMPLE" )
+		'ActivateGadget( gadget )
+		
+	End Method
+
+	' BEHAVIOUR
+		
+	Method update( lexer:TLexer )
+
+		SetGadgetText( gadget, lexer.reveal() )
+		
+	End Method
+
+	' EVENT HANDLERS
+	
+End Type
+
+Type TDiagnostics Extends TControl
+	Method New( parent:TGadget )
+		Super.New( parent )
+		gadget = CreateTextArea( 0, 0, ClientWidth(parent), ClientHeight(parent), parent, TEXTAREA_READONLY )
+		SetGadgetLayout( gadget, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
+		SetGadgetText( gadget, "DIAGNOSTICS VIEWER" )
+		'ActivateGadget( gadget )
+		HideGadget( gadget )
+	End Method
+	
+	Method update( ast:TASTNode )
+		Local diags:String
+		
+		' Walk the AST Tree "In-Order"
+		'DebugStop
+		'Print "INORDER TREE WALKER"
+		Local result:String = String( ast.inorder( GetDiagnostic, "" ) )
+		
+		SetGadgetText( gadget, result )
+		
+		Function GetDiagnostic:Object( node:TASTNode, data:Object )
+'DebugStop
+			If node.valid Return data
+			' Convert data into a string and append to it
+			Local result:String = String( data )
+			Return result+ "["+node.line+","+node.pos+"] "+node.getname() +node.error+"~n"
+		End Function
+		
+	End Method
+	
+End Type
+
+Type TMessages Extends TControl
+	Method New( parent:TGadget )
+		Super.New( parent )
+		gadget = CreateTextArea( 0, 0, ClientWidth(parent), ClientHeight(parent), parent, TEXTAREA_READONLY )
+		SetGadgetLayout( gadget, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
+		SetGadgetText( gadget, "MESSAGE VIEWER" )
+		'ActivateGadget( gadget )
+		HideGadget( gadget )
+	End Method
+End Type
+
+Type TViewBMax Extends TControl
+	Method New( parent:TGadget )
+		Super.New( parent )
+		gadget = CreateTextArea( 0, 0, ClientWidth(parent), ClientHeight(parent), parent, TEXTAREA_READONLY )
+		SetGadgetLayout( gadget, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
+		SetGadgetText( gadget, "BlitzMax" )
+		'ActivateGadget( gadget )
+		HideGadget( gadget )
+	End Method
+End Type
+
+Type TViewCPP Extends TControl
+	Method New( parent:TGadget )
+		Super.New( parent )
+		gadget = CreateTextArea( 0, 0, ClientWidth(parent), ClientHeight(parent), parent, TEXTAREA_READONLY )
+		SetGadgetLayout( gadget, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
+		SetGadgetText( gadget, "C++" )
+		'ActivateGadget( gadget )
+		HideGadget( gadget )
+	End Method
+End Type
+
+Type TViewJava Extends TControl
+	Method New( parent:TGadget )
+		Super.New( parent )
+		gadget = CreateTextArea( 0, 0, ClientWidth(parent), ClientHeight(parent), parent, TEXTAREA_READONLY )
+		SetGadgetLayout( gadget, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
+		SetGadgetText( gadget, "JAVA" )
+		'ActivateGadget( gadget )
+		HideGadget( gadget )
+	End Method
 End Type
 
 '	AST VISITOR
@@ -668,7 +796,7 @@ Type TMotherInLaw Extends TVisitor
 
 	Method visit_IGNORED( arg:TGift )
 		Local node:TASTNode = arg.node
-		Local mother:TGadget = AddTreeViewNode( node.value+node.loc(), arg.gadget, ICON_YELLOW )
+		Local mother:TGadget = AddTreeViewNode( "IGNORED: "+node.value+node.loc(), arg.gadget, ICON_YELLOW )
 		If node.error ; AddTreeViewNode( node.error, mother, ICON_ERROR )
 		visitChildren( arg.node, mother )
 		'ExpandTreeViewNode( mother )
@@ -688,7 +816,7 @@ Type TMotherInLaw Extends TVisitor
 	
 	Method visit_SKIPPED( arg:TGift )
 		Local node:TASTNode = arg.node
-		Local mother:TGadget = AddTreeViewNode( node.value+node.loc(), arg.gadget, ICON_YELLOW )
+		Local mother:TGadget = AddTreeViewNode( "SKIPPED: "+node.value+node.loc(), arg.gadget, ICON_YELLOW )
 		If node.error ; AddTreeViewNode( node.error, mother, ICON_ERROR )
 		visitChildren( arg.node, mother )
 		'ExpandTreeViewNode( mother )
@@ -724,7 +852,7 @@ Type TMotherInLaw Extends TVisitor
 	
 	Method visit_function( arg:TGift )
 		Local node:TAST_Function = TAST_Function( arg.node )
-DebugStop
+'DebugStop
 		'Local icon:Int      = ICON_RED
 		Local detail:String  = "FUNCTION"
 		'If arg.node.valid ; icon = ICON_WHITE

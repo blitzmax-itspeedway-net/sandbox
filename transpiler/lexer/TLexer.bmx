@@ -324,13 +324,16 @@ End Rem
 		
 		' Catch end of file, end of line and control codes
 		' Pass everything else to language specific tokeniser
+'DebugStop
+'Print "["+linenum+","+linepos+"]"
 		Local char:String = PeekChar()
 		Select True
 		Case char = ""		' End of file
 			Return New TToken( TK_EOF, "EOF", linenum, linepos, "EOF" )
 		Case char = "~n"	' End of line
+			Local token:TToken = New TToken( TK_EOL, "EOL", linenum, linepos, "EOL" )
 			popChar()
-			Return New TToken( TK_EOL, "EOL", linenum, linepos, "EOL" )
+			Return token
 		Case char < " "	Or char > "~~"		' Throw away control codes
 			' Do nothing...
 		Default
@@ -396,7 +399,8 @@ End Rem
     Method PeekChar:String( IgnoredSymbols:String = SYM_WHITESPACE )
 'DebugStop
 		If cursor>=source.length Return ""
-        Local char:String = source[cursor..cursor+1]
+		Local pointer:Int = cursor
+		Local char:String = source[pointer..pointer+1]
 
         'Local ascii:Int = source[cursor]
 		'Local ch:String = Chr( ascii )
@@ -407,25 +411,25 @@ End Rem
             'char = source[cursor..cursor+1]
             Select char
             Case "~r"   ' CR
-				cursor :+1
+				pointer :+1
             Case "~n"   ' LF
-                linenum :+1
-                linepos = 1
-				cursor :+1
+'                linenum :+1
+'                linepos = 1
+				pointer :+1
             Case " ","~t"
-                linepos:+1
-				cursor :+1
+'                linepos:+1
+				pointer :+1
 			Case "\"	' ESCAPE CHARACTER
-				char = source[cursor..(cursor+1)]
+				char = source[cursor..(pointer+1)]
 				If char="\u"	'HEX DIGIT
-					char = source[cursor..(cursor+5)]					
-					cursor :+ 6
+					char = source[pointer..(pointer+5)]					
+					pointer :+ 6
 				Else
-					cursor :+ 2
+					pointer :+ 2
 				End If
             End Select
 			' Next character:
-			char = source[cursor..cursor+1]
+			char = source[pointer..pointer+1]
         'Until Not Instr( IgnoredSymbols, char )
 		Wend
         Return char

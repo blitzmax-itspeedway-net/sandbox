@@ -40,4 +40,13 @@ Type TASTBinary Extends TASTNode
 		Return block
 	End Method
 
+	Method inorder:Object( eval:Object( node:TASTNode, data:Object ), data:Object )
+		' Binary types are validated BETWEEN children
+		data = lnode.inorder( eval, data )
+		'Print getname()
+		data = eval( Self, data )
+		data = rnode.inorder( eval, data)
+		Return data
+	End Method
+	
 End Type

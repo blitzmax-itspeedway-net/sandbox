@@ -50,7 +50,7 @@ Type TBlitzMaxParser Extends TParser
 	' Every story starts, as they say, with a beginning...
 	Method parse_program:TASTNode()
 		Local fsm:Int = 0
-DebugStop	
+'DebugStop	
 		' Scan the tokens, creating children
 		token = lexer.reset()	' Starting position
 		'advance()
