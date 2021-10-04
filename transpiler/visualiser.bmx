@@ -160,6 +160,8 @@ Type TControl
 	Method show()
 		ShowGadget( gadget )
 	End Method
+	
+	Method update( ast:TASTNode ) ; End Method
 
 	' EVENT DISPATCHER
 
@@ -227,6 +229,7 @@ Type TVisualiser Extends TControl
 	Field tabber:TGadget, tabs:TControl[], currenttab:TControl
 	
 	Field menu_edit_eol:TGadget
+	Field menu_edit_comments:TGadget
 	
 	'	LANGUAGE SERVER
 	Field lexer:TLexer
@@ -248,7 +251,8 @@ Type TVisualiser Extends TControl
 	'Const EDIT_COPY:Int  = 202
 	'Const EDIT_PASTE:Int = 203
 
-	Const VIEW_EOL:Int   = 301
+	Const VIEW_EOL:Int      = 301
+	Const VIEW_COMMENTS:Int = 302
 
 	Const HELP_ABOUT:Int  = 999
 	
@@ -258,7 +262,8 @@ Type TVisualiser Extends TControl
 	
 	Method New()	
 		
-		' LOAD STATE
+		'	LOAD STATE
+		
 		Local x:Int = Int( String(config["top"]) )
 		Local y:Int = Int( String(config["left"]) )
 		Local w:Int = Int( String(config["width"]) )
@@ -267,7 +272,8 @@ Type TVisualiser Extends TControl
 		Local mx:Int = Int( String(config["maxim"]) )
 		Local filename:String = String( config["filename"] )
 
-		' CREATE WINDOW
+		'	CREATE WINDOW
+		
 		If w<WIN_MIN_WIDTH ; w=WIN_MIN_WIDTH
 		If h<WIN_MIN_HEIGHT ; h=WIN_MIN_HEIGHT
 		
@@ -277,6 +283,8 @@ Type TVisualiser Extends TControl
 		
 		If mn ; MinimizeWindow( window )
 		If mx ; MaximizeWindow( window )
+
+		'	CREATE MENU
 
 		Local filemenu:TGadget = CreateMenu( "&File", 0, WindowMenu( window ))
 		CreateMenu( "&New",   FILE_NEW,   filemenu, KEY_N, MODIFIER_COMMAND )
@@ -289,7 +297,9 @@ Type TVisualiser Extends TControl
 
 		Local viewmenu:TGadget = CreateMenu( "&View", 0, WindowMenu( window ))
 		menu_edit_eol = CreateMenu( "Show EOL",    VIEW_EOL,   viewmenu )
+		menu_edit_comments = CreateMenu( "Show comments",    VIEW_COMMENTS,   viewmenu )
 		CheckMenu( menu_edit_eol )
+		CheckMenu( menu_edit_comments )
 		
 		'Local editmenu:TGadget
 		Local helpmenu:TGadget = CreateMenu( "&Help", 0, WindowMenu( window ))
@@ -297,33 +307,42 @@ Type TVisualiser Extends TControl
 		
 		UpdateWindowMenu( window )
 
+		'	CREATE HORIZONTAL SPLITTER
+		
 		' Split window horizontally
 		hsplitter = CreateSplitter( 0, 0, ClientWidth(window), ClientHeight(window), window, SPLIT_HORIZONTAL, 15 )
-		SetGadgetLayout( hsplitter, 2, 2, 2, 2 )
+		SetGadgetLayout( hsplitter, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
 		SetSplitterPosition( hsplitter, ClientHeight(window)/2 )
-		SetGadgetColor( hsplitter, 0,0,0 )
+		'SetGadgetColor( hsplitter, 0,0,0 )
 		tsplit = SplitterPanel( hsplitter, SPLITPANEL_MAIN )
 		bsplit = SplitterPanel( hsplitter, SPLITPANEL_SIDEPANE )
 		'SetGadgetLayout( tsplit, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
 		'SetGadgetLayout( bsplit, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
 		
+		'	CREATE VERTICAL SPLITTER IN TOP
+		
 		' Split TOP panel vertically
 		vsplitter = CreateSplitter( 0, 0, ClientWidth(tsplit), ClientHeight(tsplit), tsplit, SPLIT_VERTICAL )
 		SetGadgetLayout( vsplitter, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
 		SetSplitterPosition( vsplitter, ClientWidth(tsplit)/2 )
-		SetGadgetColor( vsplitter, 0,0,0 )
+		'SetGadgetColor( vsplitter, 0,0,0 )
 		lsplit = SplitterPanel( vsplitter, SPLITPANEL_MAIN )
 		rsplit = SplitterPanel( vsplitter, SPLITPANEL_SIDEPANE )
 		'SetGadgetLayout( lsplit, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
 		'SetGadgetLayout( rsplit, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
-		editor = New TEditor( window, lsplit )
+		
+		'	CREATE TOP COMPONENTS
+		
+		editor = New TEditor( lsplit )
 		ASTview = New TASTView( rsplit )
+		
+		'	CREATE TAB BAR
 		
 		' Create a tab-view in the bottom split
 		tabber = CreateTabber( 0, 0, ClientWidth( bsplit ), ClientHeight( bsplit ), bsplit )
-		SetGadgetLayout( tabber, 2, 2, 2, 2 )
+		SetGadgetLayout( tabber, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
 		
-		' TEST STUFF
+		'	TEST STUFF
 		
 		'Global t1:TGadget = CreateTextArea(0,0,ClientWidth(bsplit),ClientHeight(bsplit),bsplit,TEXTAREA_WORDWRAP)
 		'SetGadgetLayout(t1,EDGE_ALIGNED,EDGE_ALIGNED,EDGE_ALIGNED,EDGE_ALIGNED)
@@ -339,6 +358,8 @@ Type TVisualiser Extends TControl
 		'SetGadgetLayout(t3,EDGE_ALIGNED,EDGE_ALIGNED,EDGE_ALIGNED,EDGE_ALIGNED)
 		'AddTextAreaText(t3, "The quick brown pig jumped over the lazy bear.~n~n")
 		'AddTextAreaText(t3, "The quick brown pig jumped over the lazy bear.~n~n")
+		
+		'	ADD TABBER COMPONENTS
 		
 		AddGadgetItem( tabber, "Tokens" )
 		tabs :+ [New TTokenView( tabber )]
@@ -365,6 +386,9 @@ Type TVisualiser Extends TControl
 		AddGadgetItem( tabber, "Java" )
 		tabs :+ [New TViewJava( tabber )]
 
+		AddGadgetItem( tabber, "HTML" )
+		tabs :+ [New TViewJava( tabber )]
+		
 		' Select SECOND tab to bypass bug in event handler when using tabber on linux
 		currenttab = tabs[TAB_DIAGNOSTICS] 
 		SelectGadgetItem(tabber:TGadget,1)
@@ -470,6 +494,14 @@ Print("BYE")
 				End If
 				UpdateWindowMenu( window )
 				update()
+			Case VIEW_COMMENTS
+				If MenuChecked( menu_edit_comments )
+					UncheckMenu( menu_edit_comments )
+				Else
+					CheckMenu( menu_edit_comments )
+				End If
+				UpdateWindowMenu( window )
+				update()
 			Case HELP_ABOUT
 				Notify "Visualiser~n(c) Copyright, Si Dunford, September 2021, All Rights Reserved"
 		End Select
@@ -487,11 +519,21 @@ Print("BYE")
 		Return event
 	End Method
 	
+	Method onGadgetSelect:Object( event:TEvent )
+		If event.source = editor.gadget
+			Print( "EDITOR:~n"+event.toString()) 
+			Local line:Int = TextAreaCursor( editor.gadget, TEXTAREA_LINES )
+			Local char:Int = TextAreaCursor( editor.gadget, TEXTAREA_CHARS )
+			SetStatusText( window, "Line: "+(line+1)+" Char: "+char )
+		End If
+	End Method
+		
 	' LANGUAGE SERVER INTERFACE
 	Method parse()	
 		' PARSE THE SOURCE
 		lexer = New TBlitzMaxLexer( editor.filedata )
 		parser = New TBlitzMaxParser( lexer )
+	
 		ast = parser.parse_ast()
 	End Method
 	
@@ -503,46 +545,54 @@ Print("BYE")
 		
 		' UPDATE AST
 'DebugStop
-		ASTview.update( ast, MenuChecked( menu_edit_eol ) )
+		Local options:Int[] = [MenuChecked( menu_edit_eol ), MenuChecked( menu_edit_comments )]
+		ASTview.update( ast, options )
 		
 		' Update Diagnostics
-		TDiagnostics( tabs[ TAB_DIAGNOSTICS ] ).update( ast )
+		'TDiagnostics( tabs[ TAB_DIAGNOSTICS ] ).update( ast )
+		
+		' Transpiler
+		For Local tab:TControl = EachIn tabs
+			tab.update( ast )
+		Next
 		
 	End Method
 	
 End Type
 
 Type TEditor Extends TControl
-	Field window:TGadget
+	'Field window:TGadget
 	
 	Field filename:String
 	Field filedata:String
 	
 	' CONSTRUCTOR
-	Method New( window:TGadget, parent:TGadget )
+	Method New( parent:TGadget )
 		Super.New( parent )
-		Self.window = window
 		
 		Print( "TEditor.new()" )
 
 		' CREATE COMPONENT
-		
-		gadget = CreateTextArea( 2, 2, ClientWidth(parent)-2, ClientWidth(parent)-2, parent )
+		gadget = CreateTextArea( 0, 0, ClientWidth(parent), ClientHeight(parent), parent )
+		SetGadgetLayout( gadget, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
 
+		'	SET GADGET FONT
+		'	(DOESN'T WORK)
+		
 		'Local monospacefont:TGuiFont = LookupGuiFont( GUIFONT_MONOSPACED, 11 ) 
 		'Print FontName( monospacefont )
 		
-		Local monospacefont:TGuiFont = LoadGuiFont( "FreeMono", 11 ) 
+		Local monospacefont:TGuiFont = LoadGuiFont( "Courier New", 11 ) 
+		'Local monospacefont:TGuiFont = LoadGuiFont( "FreeMono", 11 ) 
 		Print FontName( monospacefont )
 		If Not monospacefont monospacefont = LookupGuiFont( GUIFONT_MONOSPACED, 11 ) 
-		
+
 		SetTextAreaFont( gadget, monospacefont )
-		SetGadgetLayout( gadget, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
 
 		'SetGadgetText( gadget, "EDITOR" )
 		ActivateGadget( gadget )
 		
-		SetStatusText( parent, "Line: 0 Char: 0" )
+		'SetStatusText( parent, "Line: 0 Char: 0" )
 	End Method
 	
 	' BEHAVIOUR
@@ -582,14 +632,7 @@ Type TEditor Extends TControl
 	
 	' EVENT HANDLERS
 
-	Method onGadgetSelect:Object( event:TEvent )
-		If event.source = gadget
-			Print( "EDITOR:~n"+event.toString()) 
-			Local line:Int = TextAreaCursor( gadget, TEXTAREA_LINES )
-			Local char:Int = TextAreaCursor( gadget, TEXTAREA_CHARS )
-			SetStatusText( window, "Line: "+line+" Char: "+char )
-		End If
-	End Method
+
 	
 End Type
 
@@ -614,13 +657,13 @@ Type TASTView Extends TControl
 	
 	' BEHAVIOUR
 	
-	Method update( ast:TASTNode, showEOL:Int  )
+	Method update( ast:TASTNode, options:Int[]  )
 
 		' Clean down previous list
 		ClearTreeView( tv )
 		
 		' Populate 
-		Local visitor:TMotherInLaw = New TMotherInLaw( ast, root, showEOL )
+		Local visitor:TMotherInLaw = New TMotherInLaw( ast, root, options:Int[] )
 'DebugStop
 		visitor.run()
 		
@@ -682,10 +725,10 @@ Type TDiagnostics Extends TControl
 		
 		Function GetDiagnostic:Object( node:TASTNode, data:Object )
 'DebugStop
-			If node.valid Return data
+			If node.error = "" Return data
 			' Convert data into a string and append to it
 			Local result:String = String( data )
-			Return result+ "["+node.line+","+node.pos+"] "+node.getname() +node.error+"~n"
+			Return result+ "["+node.line+","+node.pos+"] "+node.error+" ("+node.getname()+")~n"
 		End Function
 		
 	End Method
@@ -712,6 +755,31 @@ Type TViewBMax Extends TControl
 		'ActivateGadget( gadget )
 		HideGadget( gadget )
 	End Method
+	
+	Method update( ast:TASTNode )
+		
+		Local result:String 
+		Try
+			Local transpiler:TTranspileBlitzMax = New TTranspileBlitzMax( ast )
+			result = transpiler.run()
+			
+		Catch e:Object
+			Local typ:TTypeId = TTypeId.ForObject( e )
+			result =  typ.name + "~n"
+			
+			Local exception:TException = TException( e )
+			Local blitzexception:TBlitzException = TBlitzException( e )
+			Local runtime:TRuntimeException = TRuntimeException( e )
+			Local text:String = String( e )
+			If exception 		;	result :+ "TException:~n"+exception.toString()
+			If blitzexception	;	result :+ "TBlitzException:~n"+blitzexception.toString()
+			If runtime			;	result :+ "TException:~n"+runtime.toString()
+			If text				;	result :+ text
+		End Try
+		
+		SetGadgetText( gadget, result )
+		
+	End Method
 End Type
 
 Type TViewCPP Extends TControl
@@ -722,6 +790,31 @@ Type TViewCPP Extends TControl
 		SetGadgetText( gadget, "C++" )
 		'ActivateGadget( gadget )
 		HideGadget( gadget )
+	End Method
+	
+	Method update( ast:TASTNode )
+		
+		Local result:String 
+		Try
+			Local transpiler:TTranspileCPP = New TTranspileCPP( ast )
+			result = transpiler.run()
+			
+		Catch e:Object
+			Local typ:TTypeId = TTypeId.ForObject( e )
+			result =  typ.name + "~n"
+			
+			Local exception:TException = TException( e )
+			Local blitzexception:TBlitzException = TBlitzException( e )
+			Local runtime:TRuntimeException = TRuntimeException( e )
+			Local text:String = String( e )
+			If exception 		;	result :+ "TException:~n"+exception.toString()
+			If blitzexception	;	result :+ "TBlitzException:~n"+blitzexception.toString()
+			If runtime			;	result :+ "TException:~n"+runtime.toString()
+			If text				;	result :+ text
+		End Try
+		
+		SetGadgetText( gadget, result )
+	
 	End Method
 End Type
 
@@ -734,6 +827,47 @@ Type TViewJava Extends TControl
 		'ActivateGadget( gadget )
 		HideGadget( gadget )
 	End Method
+	
+	Method update( ast:TASTNode )
+		
+		Local result:String 
+		Try
+			Local transpiler:TTranspileJava = New TTranspileJava( ast )
+			result = transpiler.run()
+			
+		Catch e:Object
+			Local typ:TTypeId = TTypeId.ForObject( e )
+			result =  typ.name + "~n"
+			
+			Local exception:TException = TException( e )
+			Local blitzexception:TBlitzException = TBlitzException( e )
+			Local runtime:TRuntimeException = TRuntimeException( e )
+			Local text:String = String( e )
+			If exception 		;	result :+ "TException:~n"+exception.toString()
+			If blitzexception	;	result :+ "TBlitzException:~n"+blitzexception.toString()
+			If runtime			;	result :+ "TException:~n"+runtime.toString()
+			If text				;	result :+ text
+		End Try
+		
+		SetGadgetText( gadget, result )
+	
+	End Method
+End Type
+
+Type TViewJavaScript Extends TControl
+
+	Method New( parent:TGadget )
+		Super.New( parent )
+		gadget = CreateTextArea( 0, 0, ClientWidth(parent), ClientHeight(parent), parent, TEXTAREA_READONLY )
+		SetGadgetLayout( gadget, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
+		HideGadget( gadget )
+	End Method
+	
+	Method update( ast:TASTNode )
+		Local template:String = "<!DOCTYPE html>~n<html>~n<head>~n<title>{appname}</title>~n</head>~n<body>~n</body>~n</html>"
+		SetGadgetText( gadget, template )
+	End Method
+	
 End Type
 
 '	AST VISITOR
@@ -751,17 +885,17 @@ Type TMotherInLaw Extends TVisitor
 
 	Field ast:TASTNode
 	Field node:TGadget
-	Field showEOL:Int = True
+	Field options:Int[2]
 	
-	Method New( ast:TASTNode, node:TGadget, showEOL:Int )
+	Method New( ast:TASTNode, node:TGadget, options:Int[] )
 		Self.ast = ast
 		Self.node = node
-		Self.showEOL = showEOL
+		Self.options = options
 	End Method
 	
 	' Create source code from the AST
 	Method run()
-'DebugStop
+DebugStop
 		visit( ast, node, "visit" )
 	End Method
 
@@ -786,19 +920,18 @@ Type TMotherInLaw Extends TVisitor
 
 		' Use Reflection to call the visitor method (or an error)
 		Local nodeid:TTypeId = TTypeId.ForObject( node )
-
 		
 		' Use Reflection to call the visitor method (or an error)
 		Local this:TTypeId = TTypeId.ForObject( Self )
 		' The visitor function is either defined in metadata or as node.name
 		Local class:String = nodeid.metadata( "class" )
 		If class = "" class = node.name
-'If class="" DebugStop
+'DebugStop
 		Local methd:TMethod = this.FindMethod( prefix+"_"+class )
 		If methd
 			methd.invoke( Self, [New TGift(node,mother)] )
 		Else
-			AddTreeViewNode( "** "+class+" - MISSING **", mother, ICON_RED )
+			AddTreeViewNode( "** VISUALISER METHOD MISSING: "+prefix+"_"+class+"()", mother, ICON_RED )
 		EndIf
 		'If exception_on_missing_method ; exception( prefix+"_"+class )
 		'Return ""
@@ -819,9 +952,17 @@ Type TMotherInLaw Extends TVisitor
 		ExpandTreeViewNode( mother )
 	End Method
 
+	' Missing optional 
+	Method visit_missingoptional( arg:TGift )
+'DebugStop
+		Local node:TASTNode = arg.node
+		Local detail:String = "OPTIONAL: "+node.name
+		Local mother:TGadget = AddTreeViewNode( detail, arg.gadget, ICON_GREY )
+	End Method
+
 	' We don't need to show these!
 	Method visit_EOL( arg:TGift )
-		If showEOL
+		If options[0]
 			Local node:TASTNode = arg.node
 			AddTreeViewNode( "EOL"+node.loc(), arg.gadget, ICON_WHITE )
 		End If
@@ -829,7 +970,7 @@ Type TMotherInLaw Extends TVisitor
 
 	Method visit_IGNORED( arg:TGift )
 		Local node:TASTNode = arg.node
-		Local mother:TGadget = AddTreeViewNode( "IGNORED: "+node.value+node.loc(), arg.gadget, ICON_YELLOW )
+		Local mother:TGadget = AddTreeViewNode( "IGNORED TOKENS:", arg.gadget, ICON_YELLOW )
 		If node.error ; AddTreeViewNode( node.error, mother, ICON_ERROR )
 		visitChildren( arg.node, mother )
 		'ExpandTreeViewNode( mother )
@@ -856,12 +997,14 @@ Type TMotherInLaw Extends TVisitor
 	End Method
 
 	Method visit_comment( arg:TGift )
-		Local node:TASTNode = arg.node
-'DebugStop
-		Local mother:TGadget = AddTreeViewNode( "COMMENT"+node.loc(), arg.gadget, status(node) )
-		Local child:TGadget = AddTreeViewNode( node.value, mother )
-		SetGadgetColor( child, $7f, $7f, $7f )
-		'AddTreeViewNode( arg.node.value, mother )
+		If options[1]
+			Local node:TASTNode = arg.node
+	'DebugStop
+			Local mother:TGadget = AddTreeViewNode( "COMMENT"+node.loc(), arg.gadget, status(node) )
+			Local child:TGadget = AddTreeViewNode( node.value, mother )
+			SetGadgetColor( child, $7f, $7f, $7f )
+			'AddTreeViewNode( arg.node.value, mother )
+		End If
 	End Method
 
 	Method visit_framework( arg:TGift )
@@ -901,14 +1044,22 @@ Type TMotherInLaw Extends TVisitor
 		Else
 			detail :+ "void"
 		End If
-		detail :+ "()"
 
 		Local mother:TGadget = AddNode( node, arg.gadget, detail )
-		'AddTreeViewNode( detail+node.loc(), arg.gadget, status( node ) )
-		'adderrors( mother, node )
+		visitChildren( node, mother )
 		ExpandTreeViewNode( mother )
 	End Method
 
+	Method visit_remark( arg:TGift )
+		If options[1]
+			Local node:TASTNode = arg.node
+	'DebugStop
+			Local mother:TGadget = AddTreeViewNode( "REMARK"+node.loc(), arg.gadget, status(node) )
+			Local text:String = Replace( Replace( node.value, "~n", "\n" ), "~t", "\t" )
+			Local child:TGadget = AddTreeViewNode( text, mother )
+		End If
+	End Method
+	
 	Method visit_strictmode( arg:TGift )
 		Local node:TASTNode = TASTNode( arg.node )
 'DebugStop
@@ -919,20 +1070,14 @@ Type TMotherInLaw Extends TVisitor
 		AddTreeViewNode( "STRICTMODE="+node.value+node.loc(), arg.gadget, status( node ) )
 	End Method
 
-	
-'	Method visit_type( arg:TGift )
-'DebugStop
-'Local n:TASTNode = arg.node
-'		Local text:String = "Type "+arg.node.value
-'		Local compound:TAST_Type = TAST_Type( arg.node )
-'		If compound.supertype
-'			text :+ " extends "+compound.supertype.value
-'		EndIf
-'		If arg.node.descr text :+ " ' "+arg.node.descr
-'		text :+ "~n"+visitChildren( arg.node, "visit", arg.indent+TAB )
-'		text :+ "EndType~n"
-'		Return text
-'	End Method
+	Method visit_type( arg:TGift )
+		Local node:TAST_Type = TAST_Type( arg.node )
+		Local detail:String  = "TYPE "+node.typename.value
+		If node.extend And node.supertype ; detail :+ " Extends "+node.supertype.value
+		Local mother:TGadget = AddNode( node, arg.gadget, detail )
+		visitChildren( node, mother )
+		ExpandTreeViewNode( mother )
+	End Method
 	
 End Type
 

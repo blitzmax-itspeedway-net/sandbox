@@ -47,7 +47,7 @@ Type TASTCompound Extends TASTNode
 		block :+ " " + Trim(showLeafText()) + "~n"
 		'If value<>"" block :+ " "+Replace(value,"~n","\n")
 		'block :+ "~n"
-		If descr<>"" block :+ " >"+indent+"  ("+descr+")~n"
+		If error<>"" block :+ " >"+indent+"  ("+error+")~n"
 		If Not children Return block
 		For Local child:TASTNode = EachIn children
 			block :+ child.reveal( indent+"  " )
@@ -57,7 +57,7 @@ Type TASTCompound Extends TASTNode
 	
 	' Validate the node and it's children
 	Method validate()
-		valid = True	' Compound nodes are always valid!
+		valid = ( error = "" ) ' Only valid if there is no error!
 		If Not children Return
 		For Local child:TASTNode = EachIn children
 			child.validate()
@@ -71,12 +71,11 @@ Type TASTCompound Extends TASTNode
 	' - POSTORDER = LEFT, RIGHT, ROOT
 
 	Method inorder:Object( eval:Object( node:TASTNode, data:Object ), data:Object )
-		' Compound types are validated BEFORE children
-		'Print getname()
-		data = eval( Self, data )
 		For Local child:TASTNode = EachIn children
 			data = child.inorder( eval, data )
 		Next
+		'Print getname()
+		data = eval( Self, data )
 		Return data
 	End Method
 

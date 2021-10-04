@@ -7,15 +7,18 @@
 '	V1.1	22 AUG 21	Added TAST_Function(), TAST_Method() and TAST_Type()
 
 ' Diagnostics node used when an optional token is missing
-Type TASTMissingOptional Extends TASTNode { class="diagnostic" }
+Type TASTMissingOptional Extends TASTNode { class="missingoptional" }
 	
 	' descr field should hold some detail used by the language server to
 	' help user recreate this, or force it
 	' default value needs to be included so it can be "fixed"
 
 	Method New( name:String, value:String )
-		Self.name  = name
-		Self.value = value
+'DebugStop
+		Self.name   = name
+		Self.value  = value
+		Self.error  = "Optional ~q"+name+"~q has not been used"
+		Self.status = AST_NODE_WARNING
 	End Method
 		
 End Type
@@ -25,12 +28,12 @@ Type TAST_EOL Extends TASTNode { class="EOL" }
 	Method New( name:String, value:String )
 		Self.name  = name
 		Self.value = value
-		Self.valid = True	' EOL are always valid (unless unexpected I guess)
 	End Method
+	Method validate() ; valid = True ; error = "" ; End Method
 End Type
 
 ' Diagnostics node used when an error has been found and a node has been skipped
-Type TAST_Skipped Extends TASTError { class="diagnostic" }
+Type TAST_Skipped Extends TASTError { class="skipped" }
 	
 	' descr field should hold some detail used by the language server to
 	' help user recreate this, or force it
@@ -42,9 +45,9 @@ Type TAST_Skipped Extends TASTError { class="diagnostic" }
 		Self.valid = False
 	End Method
 
-	Method New( token:TToken, value:String )
+	Method New( token:TToken, error:String )
 		consume( token )
-		Self.descr = value
+		Self.error = error
 		Self.valid = False
 	End Method	
 		

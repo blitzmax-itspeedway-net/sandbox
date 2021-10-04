@@ -14,7 +14,7 @@ Type TTranspileJava Extends TTranspiler
 
 	Method visit_framework:String( arg:TVisitorArg ) 'node:TASTNode, indent:String="" )
 		Local text:String = "// Framework "+arg.node.value
-		If arg.node.descr text :+ " ' "+arg.node.descr
+		'If arg.node.descr text :+ " ' "+arg.node.descr
 		Return text + "~n"
 	End Method
 	
@@ -29,14 +29,14 @@ Type TTranspileJava Extends TTranspiler
 			text = "void "
 		EndIf
 		text :+ arg.node.value+"() {~n"
-		If arg.node.descr text :+ TAB+"// "+arg.node.descr +"~n"
+		'If arg.node.descr text :+ TAB+"// "+arg.node.descr +"~n"
 		text :+ arg.indent+"}~n"
 		Return text
 	End Method
 
 	Method visit_import:String( arg:TVisitorArg ) 'node:TASTNode, indent:String="" )
 		Local text:String = "// Import "+arg.node.value
-		If arg.node.descr text :+ " ' "+arg.node.descr
+		'If arg.node.descr text :+ " ' "+arg.node.descr
 		Return text + "~n"
 	End Method
 	
@@ -46,7 +46,7 @@ Type TTranspileJava Extends TTranspiler
 
 	Method visit_include:String( arg:TVisitorArg ) 'node:TASTNode, indent:String="" )
 		Local text:String = "// Include "+arg.node.value
-		If arg.node.descr text :+ " ' "+arg.node.descr
+		'If arg.node.descr text :+ " ' "+arg.node.descr
 		Return text + "~n"
 	End Method
 
@@ -61,7 +61,7 @@ Type TTranspileJava Extends TTranspiler
 			text :+ "void "
 		EndIf
 		text :+ arg.node.value+"() {~n"
-		If arg.node.descr text :+ TAB+"// "+arg.node.descr +"~n"
+		'If arg.node.descr text :+ TAB+"// "+arg.node.descr +"~n"
 		text :+ arg.indent+"}~n"
 		Return text
 	End Method
@@ -81,7 +81,7 @@ Type TTranspileJava Extends TTranspiler
 			text :+ " extends "+compound.supertype.value
 		EndIf
 		text :+ " {~n"
-		If arg.node.descr text :+ TAB+"// "+arg.node.descr +"~n"
+		'If arg.node.descr text :+ TAB+"// "+arg.node.descr +"~n"
 		text :+ visitChildren( arg.node, "visit", arg.indent+TAB )
 		text :+ "}~n"
 		Return text

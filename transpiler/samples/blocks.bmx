@@ -1,6 +1,6 @@
-superstrict
+superstrict ' da da
 
-type mytype1
+type mytype1        ' THINGY
 
     local x:int
 

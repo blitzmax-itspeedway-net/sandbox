@@ -95,10 +95,12 @@ Type TParser
 	End Method
 
 	' Eat all the tokens until we hit a completion (or EOF)
-	Method eatUntil:TASTCompound( completion:Int[] )
+	Method eatUntil:TASTCompound( completion:Int[], start:TToken )
 'DebugStop
 		Local ast:TASTCompound = New TASTCompound( "IGNORED" )
-		ast.valid = False
+		'ast.error 	= "block ignored by parser"
+		ast.line    = start.line
+		ast.pos     = start.pos
 		Repeat
 			Local token:TToken = Self.token
 			If token.in( completion ) Or token.id=TK_EOF
@@ -106,7 +108,7 @@ Type TParser
 				Return ast
 			End If
 'DebugStop
-			ast.add( New TASTError( "IGNORED", token ))
+			ast.add( New TASTError( "SKIPPED", token ) )
 			advance()
 		Forever
 	End Method
@@ -114,51 +116,56 @@ Type TParser
 	Method parse_ast:TASTNode()
 '	Method testabnf:Int( rulename:String, path:String="" )
 DebugStop
-		Print "~nSTARTING LEXER:"
+		'	RUN THE LEXER
+		
+		'Print "~nSTARTING LEXER:"
 		' First order of the day is to run the lexer...
-		Local start:Int, finish:Int
-		start = MilliSecs()
+		'Local start:Int, finish:Int
+		'start = MilliSecs()
 		lexer.run()
-		finish = MilliSecs()
-		Print( "LEXER.TIME: "+(finish-start)+"ms" )
+		'finish = MilliSecs()
+		'Print( "LEXER.TIME: "+(finish-start)+"ms" )
 	
-		Print( "STARTING LEXER DEBUG:")
-		Print( lexer.reveal() )
+		'Print( "STARTING LEXER DEBUG:")
+		'Print( lexer.reveal() )
 'DebugStop
 		' If no rulename passed, then use first rule in ANBF		
 		'If rulename="" rulename = abnf.first()
 		'If rulename="" Return Null' No starting node (Empty ABNF?)
 		'ast = walk_rule( rulename )
 
+		'	RUN THE PARSER
 DebugStop
-		Print "~nSTARTING PARSER:"
-		Publish( "PARSE-START", Null )		
+		'Print "~nSTARTING PARSER:"
+		'Publish( "PARSE-START", Null )		
 		lexer.reset()
 		Local program:TASTNode = parse_program()
-		Publish( "PARSE-FINISH", Null )
+		'Publish( "PARSE-FINISH", Null )
 		
 		'program.
 		' Check that file parsing has completed successfully
 		'Local after:TToken = lexer.peek()
 		'If after.id <> TK_EOF ; ThrowParseError( "'"+after.value+"' unexpected past End", after.line, after.pos )
 		
-		Print "~nSTARTING VALIDATION:"
+		'	RUN VALIDATION
+		
+		'Print "~nSTARTING VALIDATION:"
 DebugStop
 		Local validator:TParseValidator = New TParseValidator( program )
 		Local valid:Int = validator.run()
-		Print "~nFINSIHED VALIDATION:"
+		'Print "~nFINSIHED VALIDATION:"
+		
 		
 		' Print state and return value
 'DebugStop
-		If program And valid
-			Print "PARSING SUCCESS"
-			'Return program
-		Else
-			Print "PARSING FAILURE"
-			'Return Null
-		End If
+		'If program And valid
+		'	Print "PARSING SUCCESS"
+		'	'Return program
+		'Else
+		'	Print "PARSING FAILURE"
+		'	'Return Null
+		'End If
 		Return program
-		
 	End Method
 
 	' Internal event handler

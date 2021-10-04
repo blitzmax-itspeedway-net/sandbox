@@ -14,7 +14,7 @@ Type TTranspileBlitzMax Extends TTranspiler
 
 	Method visit_framework:String( arg:TVisitorArg ) 'node:TASTNode, indent:String="" )
 		Local text:String = "Framework "+arg.node.value
-		If arg.node.descr text :+ " ' "+arg.node.descr
+		'If arg.node.error text :+ " ' "+arg.node.error
 		Return text + "~n"
 	End Method
 	
@@ -27,14 +27,14 @@ Type TTranspileBlitzMax Extends TTranspiler
 			text :+ ":"+compound.returntype.value
 		EndIf
 		text :+ "()"
-		If arg.node.descr text :+ " ' "+arg.node.descr
+		'If arg.node.descr text :+ " ' "+arg.node.descr
 		text :+ "~nEndFunction~n"
 		Return text
 	End Method
 
 	Method visit_import:String( arg:TVisitorArg ) 'node:TASTNode, indent:String="" )
 		Local text:String = "Import "+arg.node.value
-		If arg.node.descr text :+ " ' "+arg.node.descr
+		'If arg.node.descr text :+ " ' "+arg.node.descr
 		Return text + "~n"
 	End Method
 	
@@ -44,7 +44,7 @@ Type TTranspileBlitzMax Extends TTranspiler
 
 	Method visit_include:String( arg:TVisitorArg ) 'node:TASTNode, indent:String="" )
 		Local text:String = "Include "+arg.node.value
-		If arg.node.descr text :+ " ' "+arg.node.descr
+		'If arg.node.descr text :+ " ' "+arg.node.descr
 		Return text + "~n"
 	End Method
 
@@ -57,7 +57,7 @@ Type TTranspileBlitzMax Extends TTranspiler
 			text :+ ":"+compound.returntype.value
 		EndIf
 		text :+ "()"
-		If arg.node.descr text :+ " ' "+arg.node.descr
+		'If arg.node.descr text :+ " ' "+arg.node.descr
 		text :+ "~n"+arg.indent+"EndMethod~n"
 		Return text
 	End Method
@@ -70,7 +70,7 @@ Type TTranspileBlitzMax Extends TTranspiler
 'DebugStop
 		If Not arg.node ThrowException( "Invalid node in visit_strictmode" ) 
 		Local text:String = arg.node.value
-		If arg.node.comment text :+ " ' "+arg.node.comment.value+"~n"
+		'If arg.node.comment text :+ " ' "+arg.node.comment.value+"~n"
 		Return text
 	End Method
 
@@ -81,7 +81,7 @@ Type TTranspileBlitzMax Extends TTranspiler
 		If compound.supertype
 			text :+ " extends "+compound.supertype.value
 		EndIf
-		If arg.node.descr text :+ " ' "+arg.node.descr
+		'If arg.node.descr text :+ " ' "+arg.node.descr
 		text :+ "~n"+visitChildren( arg.node, "visit", arg.indent+TAB )
 		text :+ "EndType~n"
 		Return text

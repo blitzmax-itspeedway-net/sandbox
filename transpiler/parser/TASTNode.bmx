@@ -6,21 +6,27 @@
 '	V1.0	07 AUG 21	Initial version
 '	V1.1	17 AUG 21	Added consume()
 
+Const AST_NODE_UNKNOWN:Int	= 0		' GREY
+Const AST_NODE_OK:Int		= 1		' GREEN
+Const AST_NODE_WARNING:Int	= 2		' YELLOW
+Const AST_NODE_ERROR:Int	= 3		' RED
+
 ' An Abstract Syntax Tree Leaf Node
 Type TASTNode
 	Field parent:TASTNode
 	'Field class:Int
-	Field name:String		' Fallback to metadata "class"
+	Field name:String		' Fallback from metadata "class"
 	'Field token:TToken
 	Field tokenid:Int		' This is the token id that created the node
 	Field value:String		' Used in leaf nodes
 	Field line:Int, pos:Int	' Not normally held in an AST, but needed for language server
 	'Field definition:String	' Block comment (before) used to describe meaning
-	Field descr:String		' Optional Trailing "line" comment
+	'Field descr:String		' Optional Trailing "line" comment
 	Field link:TLink		' Used in Compound nodes
 	
-	Field comment:TToken	' Trailing comment or Null
+	'Field comment:TToken	' Trailing comment or Null
 	Field valid:Int = False	' Is node valid
+	Field status:Int = 0	'	0=Unknown (GREY), 1=OK, 1=Warning, 2=Error
 	Field error:String		' The invalidation message
 	
 	Method New( name:String )
@@ -31,10 +37,10 @@ Type TASTNode
 		consume( token )
 	End Method
 
-	Method New( name:String, token:TToken, desc:String = "" )
+	Method New( name:String, token:TToken )
 		Self.name  = name
 		consume( token )
-		Self.descr = descr
+		'Self.descr = descr
 	End Method
 
 	Method class:String()
@@ -79,7 +85,7 @@ Type TASTNode
 	Method reveal:String( indent:String = "" )
 		Local block:String = ["!","."][valid]+" "+indent+getname()
 		block :+ " " + Trim(showLeafText()) + "~n"
-		If descr<>"" block :+ " >"+indent+"  ("+descr+")~n"
+		If error<>"" block :+ " >"+indent+"  ("+error+")~n"
 		Return block
 	End Method
 
@@ -108,10 +114,7 @@ Type TASTNode
 	
 	' Validate the node
 	' By default it is invalid forcing a validate function to be added to node
-	Method validate()
-		valid = False
-		error = ""
-	End Method
+	Method validate() ; End Method
 	
 	' TREE TRAVERSAL
 	' - INORDER   = LEFT, ROOT, RIGHT
@@ -137,10 +140,10 @@ Type TASTError Extends TASTNode
 		Self.valid = False	' INVALID BY DEFAULT
 	End Method
 
-	Method New( name:String, token:TToken, desc:String = "" )
+	Method New( name:String, token:TToken )
 		Self.name  = name
 		consume( token )
-		Self.descr = descr
+		'Self.descr = descr
 		Self.valid = False	' INVALID BY DEFAULT
 	End Method
 		
@@ -149,7 +152,7 @@ Type TASTError Extends TASTNode
 		Local block:String = ["!","."][valid]+" "+indent+name
 		If value<>"" block :+ " "+Replace(value,"~n","\n")
 		block :+ "~n"
-		If descr<>"" block :+ indent+"  ("+descr+")~n"
+		If error<>"" block :+ indent+"  ("+error+")~n"
 		Return block
 	End Method
 

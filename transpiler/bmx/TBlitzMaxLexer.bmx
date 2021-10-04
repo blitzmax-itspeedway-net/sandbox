@@ -97,7 +97,6 @@ Type TBlitzMaxLexer Extends TLexer
 			Local symbol:TSymbol = TSymbol( defined.valueforkey( Lower(text) ) )
 			If symbol
 'If Lower(text) = "end" DebugStop
-				Rem "End <BLOCK>" DETECTION HAS BEEN MOVED To LEXER
 				If previous.id = TK_END
 'DebugStop
 					Select symbol.id
@@ -111,7 +110,6 @@ Type TBlitzMaxLexer Extends TLexer
 					
 					' If we get here, then maybe it is just an "end" statement!
 				End If
-				End Rem
 				
 				' REM is a special case, multi-line statement
 				If symbol.id = TK_REM ; Return New TToken( symbol.id, ExtractRemark(), line, pos, symbol.class )

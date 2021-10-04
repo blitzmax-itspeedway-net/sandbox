@@ -244,6 +244,7 @@ EndRem
 		
 		' TRY HEADER
 		If closing = TK_EOF
+'DebugStop
 			ParseCEOL( ast )
 			ast.add( Parse_Strictmode() )
 			ParseCEOL( ast )
@@ -292,7 +293,7 @@ EndRem
 						'ast.add( skip )
 						Local skip:TToken = token
 						advance()
-						Local error:TASTCompound = eatUntil( options+[closing] )
+						Local error:TASTCompound = eatUntil( options+[closing], skip )
 						error.consume( skip )
 						error.name = "SKIPPED"
 						'skip.value = token.value
@@ -311,11 +312,11 @@ EndRem
 
 					Local skip:TToken = token
 					advance()
-					Local error:TASTCompound = eatUntil( options+[closing] )
+					Local error:TASTCompound = eatUntil( options+[closing], skip )
 					error.consume( skip )
 					error.name = "SKIPPED"
 					'skip.value = token.value
-					error.error = skip.value + " was unexpected!"
+					error.error = "~q"+skip.value + "~q was unexpected!"
 					ast.add( error )
 				
 				End If
@@ -622,7 +623,7 @@ End Rem
 		Local ast:TASTNode = New TASTNode( "END", token )
 		advance()
 		' Trailing comment is a description
-		ast.comment = eatOptional( [TK_COMMENT], True )
+		'ast.comment = eatOptional( [TK_COMMENT], True )
 		Return ast
 	End Method
 	
@@ -640,7 +641,7 @@ End Rem
 		ast.dot = eat( TK_PERIOD )
 		ast.minor = eat( TK_ALPHA )
 		' Trailing comment is a description
-		ast.comment = eatOptional( [TK_COMMENT], True )
+		'ast.comment = eatOptional( [TK_COMMENT], True )
 		Return ast
 	End Method
 
@@ -654,17 +655,17 @@ End Rem
 		ast.colon = eatOptional( TK_COLON, True )
 		If ast.colon ast.returntype = eat( TK_ALPHA )
 		ast.lparen = eat( TK_lparen )
-		ast.def = eatUntil( [TK_rparen] )
+		ast.def = eatUntil( [TK_rparen], token)
 		ast.rparen = eat( TK_rparen )
 		' Trailing comment is a description
-		ast.comment = eatOptional( [TK_COMMENT], True )
+		'ast.comment = eatOptional( [TK_COMMENT], True )
 		
 		' BODY OF THE FUNCTION
 		
 		' For the sake of simplicity at the moment, this will not parse the body
 		' ast.add( ParseBlock( [ TK_LOCAL, TK_GLOBAL, TK_REPEAT, etc] )
 		'ast.body = eatUntil( [TK_EndFunction] )
-		ast.add( eatUntil( [TK_EndFunction] ) )
+		ast.add( eatUntil( [TK_EndFunction], token ) )
 Rem
 		Local finished:Int = False
 		Repeat
@@ -690,7 +691,7 @@ End Rem
 		ast.dot = eat( TK_PERIOD )
 		ast.minor = eat( TK_ALPHA )
 		' Trailing comment is a description
-		ast.comment = eatOptional( [TK_COMMENT], True )
+		'ast.comment = eatOptional( [TK_COMMENT], True )
 		Return ast
 	End Method
 
@@ -702,7 +703,7 @@ End Rem
 		' Get module name
 		ast.value = eat( TK_QSTRING )
 		' Trailing comment is a description
-		ast.comment = eatOptional( [TK_COMMENT], True )
+		'ast.comment = eatOptional( [TK_COMMENT], True )
 		Return ast
 	End Method
 
@@ -716,16 +717,16 @@ End Rem
 		ast.colon = eatOptional( TK_COLON, True )
 		If ast.colon ast.returntype = eat( TK_ALPHA )
 		ast.lparen = eat( TK_lparen )
-		ast.def = eatUntil( [TK_rparen] )
+		ast.def = eatUntil( [TK_rparen], token )
 		ast.rparen = eat( TK_rparen )
 		' Trailing comment is a description
-		ast.comment = eatOptional( [TK_COMMENT], True )
+		'ast.comment = eatOptional( [TK_COMMENT], True )
 		
 		' BODY OF THE FUNCTION
 		
 		' For the sake of simplicity at the moment, this will not parse the body
 		' ast.add( ParseBlock( [ TK_LOCAL, TK_GLOBAL, TK_REPEAT, etc] )
-		ast.add( eatUntil( [TK_EndMethod] ) )
+		ast.add( eatUntil( [TK_EndMethod], ast.rparen ) )
 Rem
 		Local finished:Int = False
 		Repeat
@@ -752,7 +753,7 @@ End Rem
 		ast.dot = eat( TK_PERIOD )
 		ast.minor = eat( TK_ALPHA )
 		' Trailing comment is a description
-		ast.comment = eatOptional( [TK_COMMENT], True )
+		'ast.comment = eatOptional( [TK_COMMENT], True )
 		Return ast
 	End Method
 
@@ -765,7 +766,7 @@ End Rem
 		' Get module name
 		ast.value = eat( TK_QSTRING )
 		' Trailing comment is a description
-		ast.comment = eatOptional( [TK_COMMENT], True )
+		'ast.comment = eatOptional( [TK_COMMENT], True )
 		Return ast
 	End Method
 	
@@ -806,11 +807,11 @@ EndRem
 		If token.id = TK_MISSINGOPT
 			Return New TASTMissingOptional( "STRICTMODE", "superstrict~n" )
 		EndIf
-
+'DebugStop
 		Local ast:TAST_Strictmode = New TAST_Strictmode( token )
-		advance()
+		'advance()
 		' Trailing comment is a description
-		ast.comment = eatOptional( [TK_COMMENT], True )
+		'ast.comment = eatOptional( [TK_COMMENT], True )
 		Return ast
 	End Method
 	
@@ -870,13 +871,13 @@ End Rem
 		If ast.extend ast.supertype = eat( TK_ALPHA )
 
 		' Trailing comment is a description
-		ast.comment = eatOptional( [TK_COMMENT], True )
+		'ast.comment = eatOptional( [TK_COMMENT], True )
 		
 		' BODY OF THE TYPE
 		
 		' For the sake of simplicity at the moment, this will not parse the body
 		' ast.add( ParseBlock( [ TK_LOCAL, TK_GLOBAL, TK_REPEAT, etc] )
-		ast.add( eatUntil( [TK_EndType] ) )
+		ast.add( eatUntil( [TK_EndType], token ) )
 		'ListAddLast( ast.children, New TASTNode("ERROR" ) )
 
 		' End of block

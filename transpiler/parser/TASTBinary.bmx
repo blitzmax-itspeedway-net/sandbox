@@ -36,7 +36,7 @@ Type TASTBinary Extends TASTNode
 		Else
 			block :+ "NULL~n"
 		End If
-		If descr<>"" block :+ indent+"  ("+descr+")~n"
+		If error<>"" block :+ indent+"  ("+error+")~n"
 		Return block
 	End Method
 
