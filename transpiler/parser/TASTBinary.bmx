@@ -7,7 +7,7 @@
 
 ' A binary AST Node (TRUE/FALSE, LEFT/RIGHT etc)
 Type TASTBinary Extends TASTNode
-	Field lnode:TASTNode, rnode:TASTNode
+	Field lnode:TASTNode, join:Int, rnode:TASTNode
 	
 	' Walk the tree to find left-most leaf
 	Method walkfirst:TASTNode()

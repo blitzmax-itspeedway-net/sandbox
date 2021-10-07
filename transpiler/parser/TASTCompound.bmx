@@ -71,9 +71,11 @@ Type TASTCompound Extends TASTNode
 	' - POSTORDER = LEFT, RIGHT, ROOT
 
 	Method inorder:Object( eval:Object( node:TASTNode, data:Object ), data:Object )
-		For Local child:TASTNode = EachIn children
-			data = child.inorder( eval, data )
-		Next
+		If children
+			For Local child:TASTNode = EachIn children
+				data = child.inorder( eval, data )
+			Next
+		End if
 		'Print getname()
 		data = eval( Self, data )
 		Return data

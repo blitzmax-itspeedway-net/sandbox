@@ -24,13 +24,22 @@ PROGRAM
 	
 End Rem
 
+Rem THINGS TO DO
+* Move sequence caller into a reflection caller instead of large select-case
+* Parse_Local(), Parse_Global() and ParseField() are all similar, combine them
+End Rem
 
 Global SYM_HEADER:Int[] = [ TK_STRICT, TK_SUPERSTRICT, TK_FRAMEWORK, TK_MODULE, TK_IMPORT, TK_MODULEINFO ]
 
+Global SYM_BLOCK_KEYWORDS:Int[] = [ TK_FOR, TK_REPEAT, TK_WHILE ]
+
 Global SYM_PROGRAMBODY:Int[] = [ TK_INCLUDE, TK_LOCAL, TK_GLOBAL, TK_FUNCTION, TK_TYPE ]
 Global SYM_METHODBODY:Int[] = [ TK_INCLUDE, TK_LOCAL, TK_GLOBAL ]
+Global SYM_FUNCTIONBODY:Int[] = [ TK_INCLUDE, TK_LOCAL, TK_GLOBAL, TK_ALPHA ]+SYM_BLOCK_KEYWORDS
 Global SYM_TYPEBODY:Int[] = [ TK_INCLUDE, TK_FIELD, TK_GLOBAL, TK_METHOD, TK_FUNCTION ]
 Global SYM_MODULEBODY:Int[] = [ TK_INCLUDE, TK_MODULEINFO, TK_LOCAL, TK_GLOBAL, TK_FUNCTION, TK_TYPE ]
+
+Global SYM_DATATYPES:Int[] = [ TK_BYTE, TK_DOUBLE, TK_FLOAT, TK_INT, TK_LONG, TK_SHORT, TK_STRING ]
 
 Type TBlitzMaxParser Extends TParser
 	
@@ -65,7 +74,8 @@ Type TBlitzMaxParser Extends TParser
 		'Local ast:TASTCompound = New TASTCompound( "PROGRAM" )
 		'ast = parseHeader( ast )
 		
-		ast = parseSequence( "PROGRAM", SYM_HEADER+SYM_PROGRAMBODY )
+		' Program block contains HEADER, PROGRAMBODY and APLNUMERIC TOKENS (Function names etc)
+		ast = parseSequence( "PROGRAM", SYM_HEADER+SYM_PROGRAMBODY+[TK_ALPHA] )	
 		' Mop up trailing Comments and EOL
 		'ParseCEOL( ast )
 		
@@ -238,7 +248,7 @@ EndRem
 
 	' Parse a sequence.
 	' The tokens MUST exist in order or not be present (Creating a missing token)
-	Method parseSequence:TASTCompound( name:String, options:Int[], closing:Int=TK_EOF )
+	Method parseSequence:TASTCompound( name:String, options:Int[], closing:Int=TK_EOF, parent:Int[]=Null )
 
 		Local ast:TASTCompound = New TASTCompound( name )
 		
@@ -278,26 +288,33 @@ EndRem
 					' Parse this token
 					Select token.id			
 					Case TK_Function
-'DebugStop
-						ast.add( Parse_Function() )
+						ast.add( Parse_Function( options ) )
+					Case TK_Global
+						ast.add( Parse_Global() )
 					Case TK_Include
 						ast.add( Parse_Include() )
+					Case TK_Local
+						ast.add( Parse_Local() )
 '					Case TK_Method
 '						ast.add( New TAST_Method() )
 					Case TK_Type
 						ast.add( Parse_Type() )
 					Default
 'DebugStop
+						' ALL OPTIONS SHOULD BE ACCOUNTED FOR IN SELECT CASE
+						' IF WE GET HERE, WE HAVE A BUG
+						' SKIP UNNTIL END OF LINE AND TRY TO RECOVER
 						'Local skip:TAST_Skipped = New TAST_Skipped( token,  )
 						'advance()
 						'ast.add( skip )
 						Local skip:TToken = token
 						advance()
-						Local error:TASTCompound = eatUntil( options+[closing], skip )
+						Local error:TASTCompound = eatUntil( [TK_EOL,TK_EOF], skip )
 						error.consume( skip )
 						error.name = "SKIPPED"
 						'skip.value = token.value
-						error.error = "Valid but not defined in parseSequence()"
+						error.error = "Internal error: Parser did not process ~q"+skip.value+"~q"
+						error.status = AST_NODE_ERROR
 						ast.add( error )
 						
 					End Select
@@ -309,6 +326,9 @@ EndRem
 					' Mark token as ERROR and skip until we find a token we do understand.
 					'ast.add( New TAST_Skipped( "ERROR", token, "unexpected token" ) )
 					'ast.add( eatUntil( options+[closing] ) )
+					
+					'DebugStop
+					If parent And token.in(parent) Return ast
 
 					Local skip:TToken = token
 					advance()
@@ -623,49 +643,61 @@ End Rem
 		Local ast:TASTNode = New TASTNode( "END", token )
 		advance()
 		' Trailing comment is a description
-		'ast.comment = eatOptional( [TK_COMMENT], True )
+		'ast.comment = eatOptional( [TK_COMMENT], Null )
+		Return ast
+	End Method
+
+	Method Parse_Field:TASTNode()
+		Local ast:TASTBinary = New TASTBinary( token )	' LOCAL, GLOBAL or FIELD
+		ast.name = "vardecl"
+'DebugStop
+		advance()
+		ast.lnode = New TASTNode( token )
+		
+'TODO: Implement variable definition
+		ast.join  = eat( TK_Equals ).id
+		ast.rnode = eatUntil( [TK_EOL], token )
 		Return ast
 	End Method
 	
 	'	framework = framework ALPHA PERIOD ALPHA [COMMENT] EOL
 	Method Parse_Framework:TASTNode()
-		Local token:TToken = eatOptional( TK_FRAMEWORK )
-		If token.id = TK_MISSINGOPT
-			Return New TASTMissingOptional( "FRAMEWORK", "Framework" )
-		EndIf
+'DebugStop
+		Local token:TToken = eatOptional( TK_FRAMEWORK, Null )
+		If Not token Return New TASTMissingOptional( "FRAMEWORK", "Framework" )
 		'
 		Local ast:TAST_Framework = New TAST_Framework( token )
-		advance()
+		'advance()
 		' Get properties
 		ast.major = eat( TK_ALPHA )
 		ast.dot = eat( TK_PERIOD )
 		ast.minor = eat( TK_ALPHA )
 		' Trailing comment is a description
-		'ast.comment = eatOptional( [TK_COMMENT], True )
+		'ast.comment = eatOptional( [TK_COMMENT], Null )
 		Return ast
 	End Method
 
 	'	function = function [ ":" <vartype> ] "(" [<args>] ")" [COMMENT] EOL
-	Method Parse_Function:TASTNode()
+	Method Parse_Function:TASTNode( parent:Int[] )
 		Local ast:TAST_Function = New TAST_Function( token )
 		advance()
 
 		' Get properties
 		ast.fnname = eat( TK_ALPHA )
-		ast.colon = eatOptional( TK_COLON, True )
+		ast.colon = eatOptional( TK_COLON, Null )
 		If ast.colon ast.returntype = eat( TK_ALPHA )
 		ast.lparen = eat( TK_lparen )
 		ast.def = eatUntil( [TK_rparen], token)
 		ast.rparen = eat( TK_rparen )
 		' Trailing comment is a description
-		'ast.comment = eatOptional( [TK_COMMENT], True )
+		'ast.comment = eatOptional( [TK_COMMENT], Null )
 		
 		' BODY OF THE FUNCTION
-		
+DebugStop
+		Local body:TASTCompound = parseSequence( "BODY", SYM_FUNCTIONBODY+[TK_ALPHA], TK_EndFunction, parent )	
 		' For the sake of simplicity at the moment, this will not parse the body
-		' ast.add( ParseBlock( [ TK_LOCAL, TK_GLOBAL, TK_REPEAT, etc] )
-		'ast.body = eatUntil( [TK_EndFunction] )
-		ast.add( eatUntil( [TK_EndFunction], token ) )
+		'ast.add( eatUntil( [TK_EndFunction], token ) )
+		ast.add( body )
 Rem
 		Local finished:Int = False
 		Repeat
@@ -680,7 +712,18 @@ End Rem
 		ast.ending = eat( TK_EndFunction )
 		Return ast
 	End Method
-	
+
+	Method Parse_Global:TASTNode()
+		Local ast:TASTBinary = New TASTBinary( token )	' LOCAL, GLOBAL or FIELD
+		ast.name = "vardecl"
+'DebugStop
+		advance()
+		ast.lnode = New TASTNode( token )
+'TODO: Implement variable definition
+		ast.rnode = eatUntil( [TK_EOL], token )
+		Return ast
+	End Method
+		
 	'	Create an AST Node for Import containing all imported modules as children
 	'	import = import ALPHA PERIOD ALPHA [COMMENT] EOL
 	Method Parse_Import:TASTNode()
@@ -691,7 +734,7 @@ End Rem
 		ast.dot = eat( TK_PERIOD )
 		ast.minor = eat( TK_ALPHA )
 		' Trailing comment is a description
-		'ast.comment = eatOptional( [TK_COMMENT], True )
+		'ast.comment = eatOptional( [TK_COMMENT], Null )
 		Return ast
 	End Method
 
@@ -703,10 +746,23 @@ End Rem
 		' Get module name
 		ast.value = eat( TK_QSTRING )
 		' Trailing comment is a description
-		'ast.comment = eatOptional( [TK_COMMENT], True )
+		'ast.comment = eatOptional( [TK_COMMENT], Null )
 		Return ast
 	End Method
 
+	Method Parse_Local:TASTNode()
+		Local ast:TASTBinary = New TASTBinary( token )	' LOCAL, GLOBAL or FIELD
+		ast.name = "vardefinition"
+'DebugStop
+		advance()
+		ast.lnode = Parse_VarDecl()
+		'advance()
+		ast.join  = eat( TK_Equals ).id
+'TODO: Implement variable definition
+		ast.rnode = eatUntil( [TK_EOL], token )
+		Return ast
+	End Method
+	
 	'	method = method [ ":" <vartype> ] "(" [<args>] ")" [COMMENT] EOL
 	Method Parse_Method:TAST_Method()
 		Local ast:TAST_Method = New TAST_Method( token )
@@ -714,13 +770,13 @@ End Rem
 
 		' Get properties
 		ast.methodname = eat( TK_ALPHA )
-		ast.colon = eatOptional( TK_COLON, True )
+		ast.colon = eatOptional( TK_COLON, Null )
 		If ast.colon ast.returntype = eat( TK_ALPHA )
 		ast.lparen = eat( TK_lparen )
 		ast.def = eatUntil( [TK_rparen], token )
 		ast.rparen = eat( TK_rparen )
 		' Trailing comment is a description
-		'ast.comment = eatOptional( [TK_COMMENT], True )
+		'ast.comment = eatOptional( [TK_COMMENT], Null )
 		
 		' BODY OF THE FUNCTION
 		
@@ -743,7 +799,7 @@ End Rem
 	End Method
 		
 	Method Parse_Module:TAST_Module()
-		Local token:TToken = eatOptional( TK_MODULE, True )
+		Local token:TToken = eatOptional( TK_MODULE, Null )
 		If Not token Return Null
 		'
 		Local ast:TAST_Module = New TAST_Module( token )
@@ -753,12 +809,12 @@ End Rem
 		ast.dot = eat( TK_PERIOD )
 		ast.minor = eat( TK_ALPHA )
 		' Trailing comment is a description
-		'ast.comment = eatOptional( [TK_COMMENT], True )
+		'ast.comment = eatOptional( [TK_COMMENT], Null )
 		Return ast
 	End Method
 
 	Method Parse_ModuleInfo:TASTNode()
-		Local token:TToken = eatOptional( TK_MODULEINFO, True )
+		Local token:TToken = eatOptional( TK_MODULEINFO, Null )
 		If Not token Return Null
 		'
 		Local ast:TAST_ModuleInfo = New TAST_ModuleInfo( token )
@@ -766,7 +822,7 @@ End Rem
 		' Get module name
 		ast.value = eat( TK_QSTRING )
 		' Trailing comment is a description
-		'ast.comment = eatOptional( [TK_COMMENT], True )
+		'ast.comment = eatOptional( [TK_COMMENT], Null )
 		Return ast
 	End Method
 	
@@ -803,15 +859,13 @@ EndRem
 
 	'	strictmode = (strict|superstrict) [COMMENT] EOL
 	Method Parse_Strictmode:TASTNode()
-		Local token:TToken = eatOptional( [TK_STRICT, TK_SUPERSTRICT] )
-		If token.id = TK_MISSINGOPT
-			Return New TASTMissingOptional( "STRICTMODE", "superstrict~n" )
-		EndIf
+		Local token:TToken = eatOptional( [TK_STRICT, TK_SUPERSTRICT], Null )
+		If Not token Return New TASTMissingOptional( "STRICTMODE", "superstrict~n" )
 'DebugStop
 		Local ast:TAST_Strictmode = New TAST_Strictmode( token )
 		'advance()
 		' Trailing comment is a description
-		'ast.comment = eatOptional( [TK_COMMENT], True )
+		'ast.comment = eatOptional( [TK_COMMENT], Null )
 		Return ast
 	End Method
 	
@@ -867,11 +921,11 @@ End Rem
 
 		' Get properties
 		ast.typename = eat( TK_ALPHA )
-		ast.extend = eatOptional( TK_Extends, True )
+		ast.extend = eatOptional( TK_Extends, Null )
 		If ast.extend ast.supertype = eat( TK_ALPHA )
 
 		' Trailing comment is a description
-		'ast.comment = eatOptional( [TK_COMMENT], True )
+		'ast.comment = eatOptional( [TK_COMMENT], Null )
 		
 		' BODY OF THE TYPE
 		
@@ -884,7 +938,43 @@ End Rem
 		ast.ending = eat( TK_EndType )
 		Return ast
 	End Method
-	
+
+
+	Rem PARSES
+	Local X:Int = 25
+	Local X:Int = 10*a
+	Local X( y:Int ) = something
+	Local X:Int( y:Int ) = something
+	End Rem
+	Method Parse_VarDecl:TASTNode()
+'DebugStop
+		Local ltoken:TTOken = eat( TK_ALPHA )
+		Local colon:TToken = eatOptional( TK_Colon, Null )
+		Local vartype:TTOken
+		If colon vartype = eat( SYM_DATATYPES+[TK_ALPHA] )
+		Local paren:TToken = eatOptional( TK_LParen, Null )
+		
+		' Identify Function variable declaration
+		If paren
+			Local ast:TAST_Function = New TAST_Function()
+			advance()
+			ast.fnname = ltoken
+			ast.colon = colon
+			ast.returntype = vartype
+			ast.lparen = paren
+			ast.def = eatUntil( [TK_rparen], token)
+			ast.rparen = eat( TK_rparen )		
+			Return ast
+		End If
+
+		' Standard Variable declaration
+		Local ast:TASTBinary = New TASTBinary( "vardefinition" )
+		ast.lnode = New TASTNode( ltoken )
+		ast.join = colon.id
+		ast.rnode = New TASTNode( vartype )
+		Return ast
+	End Method
+		
 	' Obtain closing token for a given blocktype
 	Method closingToken:Int( tokenid:Int )
 		Select tokenid

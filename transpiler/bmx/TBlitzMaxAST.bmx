@@ -53,6 +53,10 @@ Type TAST_Skipped Extends TASTError { class="skipped" }
 		
 End Type
 
+' This AST Node is used for LOCAL, GLOBAL and FIELD definitions
+'Type TAST_VariableDeclaration Extends TASTBinary { class="VariableDeclaration" }
+'End Type
+
 Type TAST_Comment Extends TASTNode { class="COMMENT" }
 	Method validate() ; valid = True ; error = "" ; End Method
 End Type

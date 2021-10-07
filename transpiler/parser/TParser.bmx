@@ -55,7 +55,16 @@ Type TParser
 		token = lexer.getNext()
 	End Method
 	
-	' Consume a symbol.
+	' Consume any symbol.
+	' Used where anything could happen; the parser will validate if it is correct.
+'	Method eat:TToken()
+'		'If cursor> tokens.count Return Create_EOF_Token()
+'		Local token:TToken = Self.token
+'		advance()
+'		Return token
+'	End Method
+	
+	' Consume an expected symbol.
 	' If symbol does not exist, create a missing node in it's place
 	Method eat:TToken( expectation:Int )
 		'If cursor> tokens.count Return Create_EOF_Token()
@@ -68,21 +77,9 @@ Type TParser
 		Return New TToken( TK_MISSING, "", token.line, token.pos, "MISSING" )
 	End Method
 
-	' Consume an optional symbol.
-	Method eatOptional:TToken( expectation:Int, usenull:Int = False )
-		'If cursor> tokens.count Return Create_EOF_Token()
-		Local token:TToken = Self.token
-		If token.id = expectation
-			advance()
-			Return token
-		End If
-		' Optional token not found, so return a placeholder
-		If usenull Return Null
-		Return New TToken( TK_MISSINGOPT, "", token.line, token.pos, "MISSING-OPTIONAL" )
-	End Method
-
-	' Consume an optional symbol.
-	Method eatOptional:TToken( expectation:Int[], usenull:Int = False )
+	' Consume an expected symbol.
+	' If symbol does not exist, create a missing node in it's place
+	Method eat:TToken( expectation:Int[] )
 		'If cursor> tokens.count Return Create_EOF_Token()
 		Local token:TToken = Self.token
 		If token.in( expectation )
@@ -90,8 +87,33 @@ Type TParser
 			Return token
 		End If
 		' Optional token not found, so return a placeholder
-		If usenull Return Null
-		Return New TToken( TK_MISSINGOPT, "", token.line, token.pos, "MISSING-OPTIONAL" )
+		Return New TToken( TK_MISSING, "", token.line, token.pos, "MISSING" )
+	End Method
+	
+	' Consume an optional symbol.
+	Method eatOptional:TToken( expectation:Int, useclass:String = True )
+		'If cursor> tokens.count Return Create_EOF_Token()
+		Local token:TToken = Self.token
+		If token.id = expectation
+			advance()
+			Return token
+		End If
+		' Optional token not found, so return a placeholder
+		If useclass Return New TToken( TK_MISSINGOPT, "", token.line, token.pos, "MISSING-OPTIONAL" )
+		Return Null
+	End Method
+
+	' Consume an optional symbol.
+	Method eatOptional:TToken( expectation:Int[], useclass:Int = True )
+		'If cursor> tokens.count Return Create_EOF_Token()
+		Local token:TToken = Self.token
+		If token.in( expectation )
+			advance()
+			Return token
+		End If
+		' Optional token not found, so return a placeholder
+		If useclass Return New TToken( TK_MISSINGOPT, "", token.line, token.pos, "MISSING-OPTIONAL" )
+		Return Null
 	End Method
 
 	' Eat all the tokens until we hit a completion (or EOF)
@@ -115,7 +137,7 @@ Type TParser
 		
 	Method parse_ast:TASTNode()
 '	Method testabnf:Int( rulename:String, path:String="" )
-DebugStop
+'DebugStop
 		'	RUN THE LEXER
 		
 		'Print "~nSTARTING LEXER:"
@@ -135,7 +157,7 @@ DebugStop
 		'ast = walk_rule( rulename )
 
 		'	RUN THE PARSER
-DebugStop
+'DebugStop
 		'Print "~nSTARTING PARSER:"
 		'Publish( "PARSE-START", Null )		
 		lexer.reset()
@@ -150,7 +172,7 @@ DebugStop
 		'	RUN VALIDATION
 		
 		'Print "~nSTARTING VALIDATION:"
-DebugStop
+'DebugStop
 		Local validator:TParseValidator = New TParseValidator( program )
 		Local valid:Int = validator.run()
 		'Print "~nFINSIHED VALIDATION:"

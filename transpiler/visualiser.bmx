@@ -98,6 +98,8 @@ Const TAB_MESSAGES:Int = 2
 
 Global config:TConfig = New TConfig()
 
+AppTitle = "Visualisation Tool"
+
 Type TConfig Extends TMap
 
 	Method Load( filename:String )
@@ -277,7 +279,7 @@ Type TVisualiser Extends TControl
 		If w<WIN_MIN_WIDTH ; w=WIN_MIN_WIDTH
 		If h<WIN_MIN_HEIGHT ; h=WIN_MIN_HEIGHT
 		
-		window = CreateWindow( "Visualisation Tool", x, y, w, h, Null, STYLE )
+		window = CreateWindow( AppTitle, x, y, w, h, Null, STYLE )
 		SetGadgetLayout( window, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
 		SetMinWindowSize( window, WIN_MIN_WIDTH, WIN_MIN_HEIGHT )
 		
@@ -514,6 +516,11 @@ Print("BYE")
 				HideGadget( currenttab.gadget )
 				currenttab = tabs[ event.data ]
 				ShowGadget( currenttab.gadget )
+			Case editor.gadget
+				'DebugStop
+				'editor.filedata = TextAreaText( editor.gadget )
+				parse()
+				update()
 			End Select
 		EndIf
 		Return event
@@ -521,7 +528,6 @@ Print("BYE")
 	
 	Method onGadgetSelect:Object( event:TEvent )
 		If event.source = editor.gadget
-			Print( "EDITOR:~n"+event.toString()) 
 			Local line:Int = TextAreaCursor( editor.gadget, TEXTAREA_LINES )
 			Local char:Int = TextAreaCursor( editor.gadget, TEXTAREA_CHARS )
 			SetStatusText( window, "Line: "+(line+1)+" Char: "+char )
@@ -530,17 +536,27 @@ Print("BYE")
 		
 	' LANGUAGE SERVER INTERFACE
 	Method parse()	
+		Local source:String = TextAreaText(editor.gadget)
+		If source = "" Return
 		' PARSE THE SOURCE
-		lexer = New TBlitzMaxLexer( editor.filedata )
+		lexer = New TBlitzMaxLexer( source )
 		parser = New TBlitzMaxParser( lexer )
-	
+'DebugStop	
 		ast = parser.parse_ast()
+'Print( "PARSED" )
 	End Method
 	
 	Method update()
 
+		' Reset the visualiser title
+		If editor And editor.filename	
+			SetGadgetText( window, AppTitle + ":" + StripDir(editor.filename) )
+		Else
+			SetGadgetText( window, AppTitle )
+		End If
+		
 		' UPDATE LEXER TOKENS	
-'DebugStop	
+
 		TTokenView(tabs[TAB_TOKENVIEW]).update( lexer )
 		
 		' UPDATE AST
@@ -632,7 +648,14 @@ Type TEditor Extends TControl
 	
 	' EVENT HANDLERS
 
-
+'	Method onGadgetAction:Object( event:TEvent )
+'		Local data:String = GadgetText( gadget )
+'		If filedata=data Print "SAME" Else Print "DIFF"
+'		filedata = data
+'		If event.source = gadget
+'		End If
+'		Return event
+'	End Method
 	
 End Type
 
@@ -895,7 +918,7 @@ Type TMotherInLaw Extends TVisitor
 	
 	' Create source code from the AST
 	Method run()
-DebugStop
+'DebugStop
 		visit( ast, node, "visit" )
 	End Method
 
@@ -947,7 +970,10 @@ DebugStop
 	End Method
 		
 	Method visit_( arg:TGift )
-		Local mother:TGadget = AddTreeViewNode( "BLOCK", arg.gadget, ICON_GREY )
+'DebugStop
+		Local node:TASTNode = arg.node
+		Local name:String = "~q"+node.name+"~q ("+node.value+") is Not defined in visualiser"
+		Local mother:TGadget = AddTreeViewNode( name, arg.gadget, ICON_RED )
 		visitChildren( arg.node, mother )
 		ExpandTreeViewNode( mother )
 	End Method
@@ -959,7 +985,7 @@ DebugStop
 		Local detail:String = "OPTIONAL: "+node.name
 		Local mother:TGadget = AddTreeViewNode( detail, arg.gadget, ICON_GREY )
 	End Method
-
+	
 	' We don't need to show these!
 	Method visit_EOL( arg:TGift )
 		If options[0]
@@ -1077,6 +1103,20 @@ DebugStop
 		Local mother:TGadget = AddNode( node, arg.gadget, detail )
 		visitChildren( node, mother )
 		ExpandTreeViewNode( mother )
+	End Method
+
+	Method visit_vardefinition( arg:TGift )
+		Local node:TASTBinary = TASTBinary( arg.node )
+'DebugStop
+		Local detail:String = Upper( node.value )+" "
+		If node.lnode 
+			' LNODE is the definition which contains <ALPHA> <COLON> <KEYWORD|ALPHA>
+			Local def:TASTBinary = TASTBinary( node.lnode )
+			If def And def.lnode detail :+ def.lnode.value
+		End If
+		Local mother:TGadget = AddNode( node, arg.gadget, detail )
+		visit( node.rnode, mother )
+		'ExpandTreeViewNode( mother )		
 	End Method
 	
 End Type

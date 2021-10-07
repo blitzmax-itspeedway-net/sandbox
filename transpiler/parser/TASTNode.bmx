@@ -33,6 +33,11 @@ Type TASTNode
 		Self.name  = name
 	End Method
 
+'	Method New( name:String, id:Int )
+'		Self.name    = name
+'		Self.tokenid = id
+'	End Method
+
 	Method New( token:TToken )
 		consume( token )
 	End Method
