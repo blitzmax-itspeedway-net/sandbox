@@ -410,6 +410,92 @@ End Rem
 		Forever
 	End Method
 	
+	Method ParseExpression:TASTNode()
+DebugStop
+        Local ast:TASTNode = ParseTerm()
+
+		While token.in([ TK_PLUS, TK_hyphen ])
+			Local operation:TToken = eat( [TK_PLUS,TK_hyphen] )
+			ast = New TASTBinary( ast, operation, ParseTerm() )
+		Wend
+			
+        Return ast
+Rem
+        """
+        expr   : term ((PLUS | MINUS) term)*
+        term   : factor ((MUL | DIV) factor)*
+        factor : INTEGER | LPAREN expr RPAREN
+        """
+        node = self.term()
+
+        while self.current_token.type in (PLUS, MINUS):
+            token = self.current_token
+            if token.type == PLUS:
+                self.eat(PLUS)
+            elif token.type == MINUS:
+                self.eat(MINUS)
+
+            node = BinOp(left=node, op=token, right=self.term())
+
+        return node
+End Rem
+	End Method
+	
+	Method ParseFactor:TASTNode()
+		Select token.id
+		Case TK_Number
+			Local ast:TASTNumber = New TASTNumber( token )
+			advance()
+			Return ast
+		Case TK_Alpha
+			Local ast:TASTVariable = New TASTVariable( token )
+			advance()
+			Return ast
+		Case TK_LParen
+DebugStop
+			advance()
+			Local ast:TASTNode = ParseExpression()
+			Local rparen:TToken = eat( TK_RParen )
+			Return ast
+		EndSelect
+Rem
+       """factor : INTEGER | LPAREN expr RPAREN"""
+        token = self.current_token
+        if token.type == INTEGER:
+            self.eat(INTEGER)
+            return Num(token)
+        elif token.type == LPAREN:
+            self.eat(LPAREN)
+            node = self.expr()
+            self.eat(RPAREN)
+            return node
+EndRem			
+	End Method
+	
+	Method ParseTerm:TASTNode()
+		Local ast:TASTNode = ParseFactor()
+		While token.in( [TK_asterisk, TK_solidus] )					' MULTIPLY, DIVIDE
+			Local operation:TToken = eat( [TK_asterisk, TK_solidus] )
+			ast = New TASTBinary( ast, operation, ParseFactor() )
+		Wend
+		Return ast
+Rem
+        """term : factor ((MUL | DIV) factor)*"""
+        node = self.factor()
+
+        while self.current_token.type in (MUL, DIV):
+            token = self.current_token
+            if token.type == MUL:
+                self.eat(MUL)
+            elif token.type == DIV:
+                self.eat(DIV)
+
+            node = BinOp(left=node, op=token, right=self.factor())
+
+        return node
+End Rem
+	End Method 
+	
 	' Parses the application header into an EXISTING ast compound node
 	
 Rem	Method parseHeader:TASTCompound( ast:TASTCompound )	
@@ -666,7 +752,7 @@ End Rem
 		ast.lnode = New TASTNode( token )
 		
 'TODO: Implement variable definition
-		ast.join  = eat( TK_Equals ).id
+		ast.operation  = eat( TK_Equals )
 		ast.rnode = eatUntil( [TK_EOL], token )
 		Return ast
 	End Method
@@ -804,9 +890,12 @@ End Rem
 		advance()
 		ast.lnode = Parse_VarDecl()
 		'advance()
-		ast.join  = eat( TK_Equals ).id
+		ast.operation  = eat( TK_Equals )
+DebugStop
+		ast.rnode = ParseExpression()
+
 'TODO: Implement variable definition
-		ast.rnode = eatUntil( [TK_EOL], token )
+		'ast.rnode = eatUntil( [TK_EOL], token )
 		Return ast
 	End Method
 	
@@ -1017,7 +1106,7 @@ End Rem
 		' Standard Variable declaration
 		Local ast:TASTBinary = New TASTBinary( "vardefinition" )
 		ast.lnode = New TASTNode( ltoken )
-		ast.join = colon.id
+		ast.operation = colon
 		ast.rnode = New TASTNode( vartype )
 		Return ast
 	End Method

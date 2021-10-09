@@ -24,6 +24,18 @@ Type TASTMissingOptional Extends TASTNode { class="missingoptional" }
 		
 End Type
 
+Type TASTNumber Extends TASTNode	{ class="number" }
+	Method New( token:TTOken )
+		consume( token )
+	End Method
+End Type
+
+Type TASTVariable Extends TASTNode	{ class="variable" }
+	Method New( token:TTOken )
+		consume( token )
+	End Method
+End Type
+
 ' Node for END OF LINE marker
 Type TAST_EOL Extends TASTNode { class="EOL" }
 	Method New( name:String, value:String )
