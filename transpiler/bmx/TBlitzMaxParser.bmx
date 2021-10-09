@@ -33,11 +33,11 @@ Global SYM_HEADER:Int[] = [ TK_STRICT, TK_SUPERSTRICT, TK_FRAMEWORK, TK_MODULE, 
 
 Global SYM_BLOCK_KEYWORDS:Int[] = [ TK_FOR, TK_REPEAT, TK_WHILE ]
 
-Global SYM_PROGRAMBODY:Int[] = [ TK_INCLUDE, TK_LOCAL, TK_GLOBAL, TK_FUNCTION, TK_TYPE ]
-Global SYM_METHODBODY:Int[] = [ TK_INCLUDE, TK_LOCAL, TK_GLOBAL ]
-Global SYM_FUNCTIONBODY:Int[] = [ TK_INCLUDE, TK_LOCAL, TK_GLOBAL, TK_ALPHA ]+SYM_BLOCK_KEYWORDS
-Global SYM_TYPEBODY:Int[] = [ TK_INCLUDE, TK_FIELD, TK_GLOBAL, TK_METHOD, TK_FUNCTION ]
-Global SYM_MODULEBODY:Int[] = [ TK_INCLUDE, TK_MODULEINFO, TK_LOCAL, TK_GLOBAL, TK_FUNCTION, TK_TYPE ]
+Global SYM_PROGRAM_BODY:Int[] = [ TK_INCLUDE, TK_LOCAL, TK_GLOBAL, TK_FUNCTION, TK_TYPE ]
+Global SYM_METHOD_BODY:Int[] = [ TK_INCLUDE, TK_LOCAL, TK_GLOBAL, TK_ALPHA, TK_FUNCTION ]+SYM_BLOCK_KEYWORDS
+Global SYM_FUNCTION_BODY:Int[] = [ TK_INCLUDE, TK_LOCAL, TK_GLOBAL, TK_ALPHA, TK_FUNCTION ]+SYM_BLOCK_KEYWORDS
+Global SYM_TYPE_BODY:Int[] = [ TK_INCLUDE, TK_FIELD, TK_GLOBAL, TK_METHOD, TK_FUNCTION ]
+Global SYM_MODULE_BODY:Int[] = [ TK_INCLUDE, TK_MODULEINFO, TK_LOCAL, TK_GLOBAL, TK_FUNCTION, TK_TYPE ]
 
 Global SYM_DATATYPES:Int[] = [ TK_BYTE, TK_DOUBLE, TK_FLOAT, TK_INT, TK_LONG, TK_SHORT, TK_STRING ]
 
@@ -75,7 +75,7 @@ Type TBlitzMaxParser Extends TParser
 		'ast = parseHeader( ast )
 		
 		' Program block contains HEADER, PROGRAMBODY and APLNUMERIC TOKENS (Function names etc)
-		ast = parseSequence( "PROGRAM", SYM_HEADER+SYM_PROGRAMBODY+[TK_ALPHA] )	
+		ast = parseSequence( "PROGRAM", SYM_HEADER+SYM_PROGRAM_BODY+[TK_ALPHA] )	
 		' Mop up trailing Comments and EOL
 		'ParseCEOL( ast )
 		
@@ -248,12 +248,18 @@ EndRem
 
 	' Parse a sequence.
 	' The tokens MUST exist in order or not be present (Creating a missing token)
-	Method parseSequence:TASTCompound( name:String, options:Int[], closing:Int=TK_EOF, parent:Int[]=Null )
-
+	Method parseSequence:TASTCompound( name:String, options:Int[], closing:Int[]=Null, parent:Int[]=Null )
 		Local ast:TASTCompound = New TASTCompound( name )
+		Return parseSequence( ast, options, closing, parent )
+	End Method
 		
+	' The tokens MUST exist in order Or Not be present (Creating a missing token)
+	Method parseSequence:TASTCompound( ast:TASTCompound, options:Int[], closing:Int[]=Null, parent:Int[]=Null )
+
+		'If closing = Null
+
 		' TRY HEADER
-		If closing = TK_EOF
+		If closing = Null
 'DebugStop
 			ParseCEOL( ast )
 			ast.add( Parse_Strictmode() )
@@ -282,7 +288,7 @@ EndRem
 			Try
 				' Process EOL/Comments and Return at EOF
 				If Not token Or parseCEOL( ast ) Return ast
-				
+'DebugStop				
 				If token.in( options )
 				
 					' Parse this token
@@ -303,7 +309,8 @@ EndRem
 'DebugStop
 						' ALL OPTIONS SHOULD BE ACCOUNTED FOR IN SELECT CASE
 						' IF WE GET HERE, WE HAVE A BUG
-						' SKIP UNNTIL END OF LINE AND TRY TO RECOVER
+						' SKIP UNTIL END OF LINE TO TRY TO RECOVER
+						
 						'Local skip:TAST_Skipped = New TAST_Skipped( token,  )
 						'advance()
 						'ast.add( skip )
@@ -311,14 +318,18 @@ EndRem
 						advance()
 						Local error:TASTCompound = eatUntil( [TK_EOL,TK_EOF], skip )
 						error.consume( skip )
-						error.name = "SKIPPED"
+						error.name = "ERROR"
 						'skip.value = token.value
-						error.error = "Internal error: Parser did not process ~q"+skip.value+"~q"
+						error.errors.addlast( New TDiagnostic( "Unexpected symbol '"+skip.value+"'", DiagnosticSeverity.Warning ) )
 						error.status = AST_NODE_ERROR
 						ast.add( error )
 						
 					End Select
 		
+				ElseIf closing And token.in(closing)
+					' WE HAVE HIT THE CLOSING TOKEN
+					Return ast
+				
 				Else	' TOKEN IS NOT IN THE OPTION LIST!
 'DebugStop
 					' Ask parent if they know about it
@@ -332,11 +343,11 @@ EndRem
 
 					Local skip:TToken = token
 					advance()
-					Local error:TASTCompound = eatUntil( options+[closing], skip )
+					Local error:TASTCompound = eatUntil( options+closing, skip )
 					error.consume( skip )
 					error.name = "SKIPPED"
 					'skip.value = token.value
-					error.error = "~q"+skip.value + "~q was unexpected!"
+					error.errors.addlast( New TDiagnostic( "~q"+skip.value + "~q was unexpected!", DiagnosticSeverity.Warning ) )
 					ast.add( error )
 				
 				End If
@@ -682,22 +693,55 @@ End Rem
 		Local ast:TAST_Function = New TAST_Function( token )
 		advance()
 
-		' Get properties
-		ast.fnname = eat( TK_ALPHA )
-		ast.colon = eatOptional( TK_COLON, Null )
-		If ast.colon ast.returntype = eat( TK_ALPHA )
-		ast.lparen = eat( TK_lparen )
-		ast.def = eatUntil( [TK_rparen], token)
-		ast.rparen = eat( TK_rparen )
-		' Trailing comment is a description
-		'ast.comment = eatOptional( [TK_COMMENT], Null )
+		' PROPERTIES
 		
-		' BODY OF THE FUNCTION
-DebugStop
-		Local body:TASTCompound = parseSequence( "BODY", SYM_FUNCTIONBODY+[TK_ALPHA], TK_EndFunction, parent )	
+		ast.fnname = eat( TK_ALPHA, Null )
+		ast.colon = eatOptional( TK_COLON, Null )
+		If ast.colon ast.returntype = eat( TK_ALPHA, Null )
+		ast.lparen = eat( TK_lparen, Null )
+		ast.def = eatUntil( [TK_rparen,TK_EOL], token)
+		ast.rparen = eat( TK_rparen, Null )
+		
+		' VALIDATION
+'DebugStop
+
+		'Local valid:Int = True
+		'valid = valid & (ast.fnname<>Null) & (ast.lparen<>Null) & (ast.rparen<>Null)
+
+		'	VALIDATE FUNCTION NAME
+		
+'TODO: Must be unique and not a keyword
+
+		'	VALIDATE RETURN TYPE
+
+		If ast.returntype And ast.returntype.notin( [TK_Int,TK_String,TK_Double,TK_Float] )
+			' Not a standard type, check against AST
+			' TODO
+			'valid = False
+			ast.errors.addlast( New TDiagnostic( "Invalid return type", DiagnosticSeverity.Warning )  )
+		End If
+
+		'	VALIDATE PARENTHESIS
+
+		If Not ast.lparen 
+			ast.errors.addlast( New TDiagnostic( "Missing parenthesis", DiagnosticSeverity.Warning ) )
+		ElseIf Not ast.rparen 
+			ast.errors.addlast( New TDiagnostic( "Missing parenthesis", DiagnosticSeverity.Warning ) )
+		ElseIf ast.lparen<>ast.rparen	' Mismatch "(" and NULL or Null and ")"
+			ast.errors.addlast( New TDiagnostic( "Mismatching parenthesis", DiagnosticSeverity.Warning ) )
+		End If
+
+		'	READ BODY
+
+		If ast.fnname And ast.lparen And ast.rparen
+			'Local body:TASTCompound 
+			ast.body = parseSequence( "BODY", SYM_FUNCTION_BODY+[TK_ALPHA], [TK_EndFunction], parent )	
+		Else
+			ast.errors.addlast( New TDiagnostic( "Invalid function definition", DiagnosticSeverity.Warning ) )
+		End If
 		' For the sake of simplicity at the moment, this will not parse the body
 		'ast.add( eatUntil( [TK_EndFunction], token ) )
-		ast.add( body )
+		'ast.add( body )
 Rem
 		Local finished:Int = False
 		Repeat
@@ -709,6 +753,9 @@ Rem
 		Until token.id = TK_ENDFUNCTION Or finished
 End Rem
 		' End of block
+		
+		' CLOSING KEYWORD
+		
 		ast.ending = eat( TK_EndFunction )
 		Return ast
 	End Method

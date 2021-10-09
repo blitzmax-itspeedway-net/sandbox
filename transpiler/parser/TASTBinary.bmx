@@ -36,7 +36,11 @@ Type TASTBinary Extends TASTNode
 		Else
 			block :+ "NULL~n"
 		End If
-		If error<>"" block :+ indent+"  ("+error+")~n"
+		If errors
+			For Local err:TDiagnostic = EachIn errors
+				block :+ " >"+indent+"  ("+err.reveal()+")~n"
+			Next
+		End If
 		Return block
 	End Method
 

@@ -17,8 +17,9 @@ Type TASTMissingOptional Extends TASTNode { class="missingoptional" }
 'DebugStop
 		Self.name   = name
 		Self.value  = value
-		Self.error  = "Optional ~q"+name+"~q has not been used"
+		'Self.errors = New TList()
 		Self.status = AST_NODE_WARNING
+		errors.addlast( New TDiagnostic( "Optional ~q"+name+"~q has not been used", DiagnosticSeverity.Hint ))
 	End Method
 		
 End Type
@@ -29,7 +30,6 @@ Type TAST_EOL Extends TASTNode { class="EOL" }
 		Self.name  = name
 		Self.value = value
 	End Method
-	Method validate() ; valid = True ; error = "" ; End Method
 End Type
 
 ' Diagnostics node used when an error has been found and a node has been skipped
@@ -42,13 +42,13 @@ Type TAST_Skipped Extends TASTError { class="skipped" }
 	Method New( name:String, value:String )
 		Self.name  = name
 		Self.value = value
-		Self.valid = False
+		'Self.valid = False
 	End Method
 
 	Method New( token:TToken, error:String )
 		consume( token )
-		Self.error = error
-		Self.valid = False
+		errors.addlast( New TDiagnostic( error, DiagnosticSeverity.Warning ) )
+		'Self.valid = False
 	End Method	
 		
 End Type
@@ -58,7 +58,7 @@ End Type
 'End Type
 
 Type TAST_Comment Extends TASTNode { class="COMMENT" }
-	Method validate() ; valid = True ; error = "" ; End Method
+'	Method validate() ; valid = True ; error = [] ; End Method
 End Type
 
 Type TAST_Framework Extends TASTNode { class="FRAMEWORK" }
@@ -69,19 +69,18 @@ Type TAST_Framework Extends TASTNode { class="FRAMEWORK" }
 	Method validate()
 'DebugStop
 		'Local status:Int = Super.validate()
-		valid = True
-		error = ""
+		Local valid:Int = True
 		If Not major Or major.id <> TK_Alpha ; valid = False
 		If Not dot Or dot.id <> TK_PERIOD ; valid = False
 		If Not minor Or minor.id <> TK_Alpha ; valid = False
-		If Not valid ; error :+ "Invalid module"
+		If Not valid ; errors.addlast( New TDiagnostic( "Invalid module", DiagnosticSeverity.Error ) )
 		
 		'	Report back worst state
 		'Return Min( status, valid )
 	End Method
 End Type
 
-Type TAST_Function Extends TASTCompound { class="FUNCTION" }
+Type TAST_Function Extends TASTNode { class="FUNCTION" }
 	Field fnname:TToken
 	Field colon:TTOken
 	Field returntype:TToken
@@ -89,40 +88,21 @@ Type TAST_Function Extends TASTCompound { class="FUNCTION" }
 	Field def:TASTCompound
 	Field rparen:TToken
 	Field ending:TToken
+	Field body:TASTCompound
 
 	' Used for debugging tree structure
 	Method showLeafText:String()
 		Return fnname.value
 	End Method
 	
-	Method validate()
-		Super.validate()
+	'Method validate()
+		'Super.validate()
 'DebugStop
-		' RULE 1:	IS fnname UNIQUE
-		' RULE 2:	IS returntype VALID
-		If returntype And returntype.notin( [TK_Int,TK_String,TK_Double,TK_Float] )
-			' Not a standard type, check against AST
-			' TODO
-			valid = False
-			error = "Invalid return type"
-		End If
-		' RULE 3:	Must have both "(" and ")" or neither
-		If lparen.id=TK_lparen 
-			If rparen.id<>TK_rparen
-				valid = False
-				error = "Mismatching parenthesis"
-			End If
-		Else
-			If rparen.id=TK_rparen 
-				valid = False
-				error = "Mismatching parenthesis"
-			End If
-		End If
-		' () are required for functions, optional for procedures	
+		
 		
 		'	Report back worst state
 		'Return Min( status, valid )
-	End Method
+	'End Method
 End Type
 
 Type TAST_Import Extends TASTNode { class="IMPORT" }
@@ -174,12 +154,12 @@ End Type
 
 Type TAST_Rem Extends TASTNode { class="REMARK" }
 	Field closing:TToken
-	Method validate() ; valid = True ; error = "" ; End Method
+	'Method validate() ; valid = True ; error = [] ; End Method
 End Type
 
 Type TAST_StrictMode Extends TASTNode { class="STRICTMODE" }
 
-	Method validate() ; valid = True ; error = "" ; End Method
+	'Method validate() ; valid = True ; error = [] ; End Method
 
 End Type
 

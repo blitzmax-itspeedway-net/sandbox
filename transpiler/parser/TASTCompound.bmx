@@ -43,11 +43,15 @@ Type TASTCompound Extends TASTNode
 
 	' Used for debugging tree structure
 	Method reveal:String( indent:String = "" )
-		Local block:String = ["!","."][valid]+" "+indent+getname()
+		Local block:String = ["!","."][errors.isempty()]+" "+indent+getname()
 		block :+ " " + Trim(showLeafText()) + "~n"
 		'If value<>"" block :+ " "+Replace(value,"~n","\n")
 		'block :+ "~n"
-		If error<>"" block :+ " >"+indent+"  ("+error+")~n"
+		If errors
+			For Local err:TDiagnostic = EachIn errors
+				block :+ " >"+indent+"  ("+err.reveal()+")~n"
+			Next
+		End If
 		If Not children Return block
 		For Local child:TASTNode = EachIn children
 			block :+ child.reveal( indent+"  " )
@@ -57,7 +61,7 @@ Type TASTCompound Extends TASTNode
 	
 	' Validate the node and it's children
 	Method validate()
-		valid = ( error = "" ) ' Only valid if there is no error!
+		'valid = ( error.length=0 ) ' Only valid if there is no error!
 		If Not children Return
 		For Local child:TASTNode = EachIn children
 			child.validate()
@@ -75,7 +79,7 @@ Type TASTCompound Extends TASTNode
 			For Local child:TASTNode = EachIn children
 				data = child.inorder( eval, data )
 			Next
-		End if
+		End If
 		'Print getname()
 		data = eval( Self, data )
 		Return data

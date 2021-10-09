@@ -66,7 +66,7 @@ Type TParser
 	
 	' Consume an expected symbol.
 	' If symbol does not exist, create a missing node in it's place
-	Method eat:TToken( expectation:Int )
+	Method eat:TToken( expectation:Int, useclass:String = True )
 		'If cursor> tokens.count Return Create_EOF_Token()
 		Local token:TToken = Self.token
 		If token.id = expectation
@@ -74,12 +74,13 @@ Type TParser
 			Return token
 		End If
 		' Optional token not found, so return a placeholder
-		Return New TToken( TK_MISSING, "", token.line, token.pos, "MISSING" )
+		If useclass Return New TToken( TK_MISSING, "", token.line, token.pos, "MISSING" )
+		Return Null
 	End Method
 
 	' Consume an expected symbol.
 	' If symbol does not exist, create a missing node in it's place
-	Method eat:TToken( expectation:Int[] )
+	Method eat:TToken( expectation:Int[], useclass:String = True )
 		'If cursor> tokens.count Return Create_EOF_Token()
 		Local token:TToken = Self.token
 		If token.in( expectation )
@@ -87,7 +88,8 @@ Type TParser
 			Return token
 		End If
 		' Optional token not found, so return a placeholder
-		Return New TToken( TK_MISSING, "", token.line, token.pos, "MISSING" )
+		If useclass Return New TToken( TK_MISSING, "", token.line, token.pos, "MISSING" )
+		Return Null
 	End Method
 	
 	' Consume an optional symbol.

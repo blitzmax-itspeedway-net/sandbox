@@ -13,7 +13,7 @@ Type TParseValidator Extends TVisitor
 	
 	Method run:Int()
 		If Not ast Return False
-		Return ast.valid
+		Return (ast.errors<>Null)
 	End Method
 	
 End Type

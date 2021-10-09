@@ -25,9 +25,9 @@ Type TASTNode
 	Field link:TLink		' Used in Compound nodes
 	
 	'Field comment:TToken	' Trailing comment or Null
-	Field valid:Int = False	' Is node valid
+	'Field valid:Int = False	' Is node valid
 	Field status:Int = 0	'	0=Unknown (GREY), 1=OK, 1=Warning, 2=Error
-	Field error:String		' The invalidation message
+	Field errors:TList = New TList()	' Invalidation messages
 	
 	Method New( name:String )
 		Self.name  = name
@@ -88,9 +88,13 @@ Type TASTNode
 	
 	' Used for debugging tree structure
 	Method reveal:String( indent:String = "" )
-		Local block:String = ["!","."][valid]+" "+indent+getname()
+		Local block:String = ["!","."][errors.isempty()]+" "+indent+getname()
 		block :+ " " + Trim(showLeafText()) + "~n"
-		If error<>"" block :+ " >"+indent+"  ("+error+")~n"
+		If errors
+			For Local err:TDiagnostic = EachIn errors
+				block :+ " >"+indent+"  ("+err.reveal()+")~n"
+			Next
+		End If
 		Return block
 	End Method
 
@@ -114,7 +118,7 @@ Type TASTNode
 	
 	' Confirm validity of a node
 	Method isValid:Int()
-		Return valid
+		Return (errors=Null)
 	End Method
 	
 	' Validate the node
@@ -137,27 +141,31 @@ Type TASTError Extends TASTNode
 
 	Method New( name:String )
 		Self.name  = name
-		Self.valid = False	' INVALID BY DEFAULT
+		'Self.valid = False	' INVALID BY DEFAULT
 	End Method
 
 	Method New( token:TToken )
 		consume( token )
-		Self.valid = False	' INVALID BY DEFAULT
+		'Self.valid = False	' INVALID BY DEFAULT
 	End Method
 
 	Method New( name:String, token:TToken )
 		Self.name  = name
 		consume( token )
 		'Self.descr = descr
-		Self.valid = False	' INVALID BY DEFAULT
+		'Self.valid = False	' INVALID BY DEFAULT
 	End Method
 		
 	' Used for debugging tree structure
 	Method reveal:String( indent:String = "" )
-		Local block:String = ["!","."][valid]+" "+indent+name
+		Local block:String = ["!","."][errors.isempty()]+" "+indent+name
 		If value<>"" block :+ " "+Replace(value,"~n","\n")
 		block :+ "~n"
-		If error<>"" block :+ indent+"  ("+error+")~n"
+		If errors
+			For Local err:TDiagnostic = EachIn errors
+				block :+ " >"+indent+"  ("+err.reveal()+")~n"
+			Next
+		End If
 		Return block
 	End Method
 

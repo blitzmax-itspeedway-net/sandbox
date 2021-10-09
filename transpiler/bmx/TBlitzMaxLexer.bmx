@@ -14,7 +14,7 @@ Type TBlitzMaxLexer Extends TLexer
 
 	Method New( text:String )
 		Super.New( text )
-		Print "Starting MAXLexer"
+		'Print "Starting MAXLexer"
 
 		' Define internal symbols
 		'SYM_LINECOMMENT	= "'"

@@ -3,6 +3,9 @@
 '
 '	TOKEN & AST VISUALISATON TOOL
 
+' NEXT TO FIX:
+'* Diagnostic messages do not contain RANGE information
+
 SuperStrict
 
 ' REQUIRED FOR THE GUI
@@ -26,6 +29,9 @@ Import Text.RegEx
 'Import bmx.transpiler
 
 Include "bin/loadfile().bmx"
+
+' SANDBOX LANGUAGE SERVER PROTOCOL DEFINITIONS
+Include "bin/lsp.bmx"
 
 ' SANDBOX LEXER
 Include "lexer/TLexer.bmx"
@@ -416,6 +422,9 @@ Type TVisualiser Extends TControl
 		
 		'connect()
 		
+		' CREATE INDEX THREAD
+		
+		
 		'editor.connect()
 		'tokenview.connect()
 		'astview.connect()
@@ -740,18 +749,35 @@ Type TDiagnostics Extends TControl
 		Local diags:String
 		
 		' Walk the AST Tree "In-Order"
-		'DebugStop
+'DebugStop
 		'Print "INORDER TREE WALKER"
-		Local result:String = String( ast.inorder( GetDiagnostic, "" ) )
+		Local list:TList = TList( ast.inorder( GetDiagnostic, New TList() ) )
 		
+		' Convert diagnostics into a string so we can display it
+		Local result:String
+		For Local diag:TDiagnostic = EachIn list
+			'result :+ "["+diag.range.start.line+","+diag.range.start.character+"] - "
+			'result :+ "["+diag.range.ends.line+","+diag.range.ends.character+"]"
+			'result :+ Upper( diag.severity.tostring() )
+			'result :+ diag.source
+			'result :+ diag.message
+			result :+ diag.reveal()+"~n"
+		Next
 		SetGadgetText( gadget, result )
 		
 		Function GetDiagnostic:Object( node:TASTNode, data:Object )
 'DebugStop
-			If node.error = "" Return data
-			' Convert data into a string and append to it
-			Local result:String = String( data )
-			Return result+ "["+node.line+","+node.pos+"] "+node.error+" ("+node.getname()+")~n"
+			If node.errors.isEmpty() Return data
+'DebugStop
+			' Convert data into a Tlist and append to it
+			Local list:TList = TList( data )
+			'Local result:String
+			For Local error:TDiagnostic = EachIn node.errors
+				'result :+ errors[n] + "["+node.line+","+node.pos+"] "+node.error+" ("+node.getname()+")~n"
+				'result :+ errors[n] + "["+node.line+","+node.pos+"] ("+node.getname()+")~n"
+				list.addlast( error )
+			Next 
+			Return list 
 		End Function
 		
 	End Method
@@ -924,13 +950,35 @@ Type TMotherInLaw Extends TVisitor
 
 	Method addNode:TGadget( node:TASTNode, parent:TGadget, detail:String )
 		Local gadget:TGadget = AddTreeViewNode( detail+node.loc(), parent, status( node ) )
-		If Not node.valid And node.error AddTreeViewNode( node.error, gadget, ICON_ERROR )
+		'If node.error.length>0
+		'	For Local n:Int =AddTreeViewNode( node.error, gadget, ICON_ERROR )
 		visitChildren( node, gadget )
 		Return gadget
 	End Method
+
+	Method addNodeValue( node:TToken, parent:TGadget, detail:String, invalid:String = "*NIL*" )
+		If node
+			Local gadget:TGadget = AddTreeViewNode( detail+" "+node.value+node.loc(), parent, ICON_GREEN )
+		Else
+			Local gadget:TGadget = AddTreeViewNode( detail+" "+invalid, parent, ICON_ERROR )
+		End If
+	End Method
+
+	Method addNodeValue( node:TASTNode, parent:TGadget, detail:String, invalid:String = "*NIL*" )
+		If node
+			Local gadget:TGadget = AddTreeViewNode( detail+" "+node.value+" "+node.loc(), parent, status( node ) )
+		Else
+			Local gadget:TGadget = AddTreeViewNode( detail+" "+invalid, parent, ICON_ERROR )
+		End If
+	End Method
+			
+	'Method value:String( token:TToken, invalid:String = "*NIL*" )
+	'	If token Return token.value
+	'	Return invalid
+	'End Method
 		
 	Method status:Int( node:TASTNode, isTrue:Int = ICON_WHITE, isFalse:Int = ICON_RED )
-		If node And node.valid Return isTrue
+		If node And node.errors.isempty() Return isTrue
 		Return isFalse
 	End Method
 	
@@ -954,7 +1002,8 @@ Type TMotherInLaw Extends TVisitor
 		If methd
 			methd.invoke( Self, [New TGift(node,mother)] )
 		Else
-			AddTreeViewNode( "** VISUALISER METHOD MISSING: "+prefix+"_"+class+"()", mother, ICON_RED )
+			Local gadget:TGadget = AddTreeViewNode( "## WARNING ##", mother, ICON_RED )
+			AddTreeViewNode( "Visualiser method '"+prefix+"_"+class+"()' is missing", gadget, ICON_ERROR )
 		EndIf
 		'If exception_on_missing_method ; exception( prefix+"_"+class )
 		'Return ""
@@ -972,8 +1021,12 @@ Type TMotherInLaw Extends TVisitor
 	Method visit_( arg:TGift )
 'DebugStop
 		Local node:TASTNode = arg.node
-		Local name:String = "~q"+node.name+"~q ("+node.value+") is Not defined in visualiser"
-		Local mother:TGadget = AddTreeViewNode( name, arg.gadget, ICON_RED )
+		'Local name:String = "'"+node.name+"' ("+node.value+") is Not defined in visualiser"
+		'Local mother:TGadget = AddTreeViewNode( name, arg.gadget, ICON_RED )
+
+		Local mother:TGadget = AddTreeViewNode( "## WARNING ##", arg.gadget, ICON_RED )
+		AddTreeViewNode( "Visualiser method for '"+node.name+"' ("+node.value+")' is not defined", mother, ICON_ERROR )
+
 		visitChildren( arg.node, mother )
 		ExpandTreeViewNode( mother )
 	End Method
@@ -986,6 +1039,12 @@ Type TMotherInLaw Extends TVisitor
 		Local mother:TGadget = AddTreeViewNode( detail, arg.gadget, ICON_GREY )
 	End Method
 	
+	Method visit_BODY( arg:TGift )
+		Local mother:TGadget = AddTreeViewNode( "BODY", arg.gadget, ICON_WHITE )
+		visitChildren( arg.node, mother )
+		ExpandTreeViewNode( mother )
+	End Method
+	
 	' We don't need to show these!
 	Method visit_EOL( arg:TGift )
 		If options[0]
@@ -994,10 +1053,22 @@ Type TMotherInLaw Extends TVisitor
 		End If
 	End Method
 
+	Method visit_ERROR( arg:TGift )
+		Local node:TASTNode = arg.node
+		Local mother:TGadget = AddTreeViewNode( "## WARNING ## "+node.value+node.loc(), arg.gadget, ICON_RED )
+		If Not node.errors.isempty()
+			For Local error:TDiagnostic = EachIn node.errors
+				AddTreeViewNode( error.reveal(), mother, ICON_ERROR )
+			Next
+		End If
+		visitChildren( arg.node, mother )
+		'ExpandTreeViewNode( mother )
+	End Method
+	
 	Method visit_IGNORED( arg:TGift )
 		Local node:TASTNode = arg.node
 		Local mother:TGadget = AddTreeViewNode( "IGNORED TOKENS:", arg.gadget, ICON_YELLOW )
-		If node.error ; AddTreeViewNode( node.error, mother, ICON_ERROR )
+		'If node.error ; AddTreeViewNode( node.error, mother, ICON_ERROR )
 		visitChildren( arg.node, mother )
 		'ExpandTreeViewNode( mother )
 	End Method
@@ -1017,7 +1088,7 @@ Type TMotherInLaw Extends TVisitor
 	Method visit_SKIPPED( arg:TGift )
 		Local node:TASTNode = arg.node
 		Local mother:TGadget = AddTreeViewNode( "SKIPPED: "+node.value+node.loc(), arg.gadget, ICON_YELLOW )
-		If node.error ; AddTreeViewNode( node.error, mother, ICON_ERROR )
+		'If node.error ; AddTreeViewNode( node.error, mother, ICON_ERROR )
 		visitChildren( arg.node, mother )
 		'ExpandTreeViewNode( mother )
 	End Method
@@ -1053,6 +1124,7 @@ Type TMotherInLaw Extends TVisitor
 	End Method
 	
 	Method visit_function( arg:TGift )
+		Local temp:String
 		Local node:TAST_Function = TAST_Function( arg.node )
 'DebugStop
 		'Local icon:Int      = ICON_RED
@@ -1072,7 +1144,22 @@ Type TMotherInLaw Extends TVisitor
 		End If
 
 		Local mother:TGadget = AddNode( node, arg.gadget, detail )
-		visitChildren( node, mother )
+
+		' Add parameters:
+		AddNodeValue( node.fnname, mother, "NAME:" )
+		AddNodeValue( node.colon, mother, "COLON:" )
+		AddNodeValue( node.returntype, mother, "RETURNTYPE:", "Void" )
+		AddNodeValue( node.lparen, mother, "LPAREN:" )
+		'AddTreeViewNode( "NAME: "+value( node.fnname ), mother, status( node.fnname ) )
+		'AddTreeViewNode( "COLON: "+value( node.colon ), mother, ICON_WHITE )
+		'AddTreeViewNode( "COLON: "+value( node.colon ), mother, ICON_WHITE )
+		'AddTreeViewNode( "RETURNTYPE: "+value( node.returntype, "Void" ), mother, ICON_WHITE )
+		visit( node.def, AddTreeViewNode( "DEFINITION", mother, ICON_WHITE ) )
+		AddNodeValue( node.rparen, mother, "RPAREN:" )
+		
+		' Add function body
+		If node.body visit( node.body, mother )
+		'visitChildren( node, mother )
 		ExpandTreeViewNode( mother )
 	End Method
 

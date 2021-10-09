@@ -64,4 +64,10 @@ Type TToken
 'DebugStop
 	'	Return Not(Self.id=id)
 	'End Method	
+	
+	' Get string location
+	Method loc:String()
+		Return "["+line+","+pos+"]"
+	End Method
+	
 End Type

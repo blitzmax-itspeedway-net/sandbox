@@ -12,5 +12,4 @@ Function CountDown( amount:Int )
 
 End Function
 
-
 Countdown( 10 )
