@@ -65,6 +65,12 @@ End Type
 Type TPosition
 	Field line: UInt
 	Field character: UInt
+	
+	Method New( line:UInt, character:UInt )
+		Self.line = line
+		Self.character = character
+	End Method
+	
 End Type
 
 ' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#range

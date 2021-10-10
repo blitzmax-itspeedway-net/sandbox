@@ -70,11 +70,16 @@ Include "transpiler/TTranspileJava.bmx"		' Java
 '	DELIVERABLES
 Include "bin/TSymbolTable.bmx"
 Include "bin/TLanguageServerVisitor.bmx"
+Include "bin/TDocuments.bmx"			' Document Manager
+Include "bin/TTextDocument.bmx"				' Text Document
 
 'Include "bin/TException.bmx"
 'Include "bin/TToken.bmx"
 
 Incbin "bin/icons.png"
+
+'	ENUMS
+'Enum ASCII ; NUL=0, SOH, STX, ETX, EOT, ENQ, ACK, BEL, BS, HT, LF, VT, FF, CR, SO, SI, DLE, DC1, DC2, DC3, DC4, NAK, SYN, ETB, CAN, EM, SUB, ESC, FS, GS, RS, US, SPACE ; End Enum
 
 '	TYPES AND FUNCTIONS
 
@@ -102,7 +107,11 @@ Const TAB_TOKENVIEW:Int = 0
 Const TAB_DIAGNOSTICS:Int = 1
 Const TAB_MESSAGES:Int = 2
 
+'	CREATE CONFIG MANAGER
 Global config:TConfig = New TConfig()
+
+'	CREATE DOCUMENT MANAGER
+Global documents:TDocuments = New TDocuments()
 
 AppTitle = "Visualisation Tool"
 
@@ -137,6 +146,8 @@ Type TConfig Extends TMap
 	End Method
 	
 End Type
+
+
 
 Type TControl
 	Field parent:TGadget
@@ -243,7 +254,7 @@ Type TVisualiser Extends TControl
 	Field lexer:TLexer
 	Field parser:TParser
 	Field ast:TASTNode   
-	
+		
 	'	CONSTANTS
 	
 	Const STYLE:Int = WINDOW_TITLEBAR|WINDOW_CLIENTCOORDS|WINDOW_MENU|WINDOW_RESIZABLE|WINDOW_STATUS
@@ -424,6 +435,8 @@ Type TVisualiser Extends TControl
 		
 		' CREATE INDEX THREAD
 		
+		documents = New TDocuments()
+		'documents.listen()
 		
 		'editor.connect()
 		'tokenview.connect()
@@ -558,8 +571,8 @@ Print("BYE")
 	Method update()
 
 		' Reset the visualiser title
-		If editor And editor.filename	
-			SetGadgetText( window, AppTitle + ":" + StripDir(editor.filename) )
+		If editor And editor.document	
+			SetGadgetText( window, AppTitle + ":" + StripDir(editor.document.uri) )
 		Else
 			SetGadgetText( window, AppTitle )
 		End If
@@ -588,8 +601,8 @@ End Type
 Type TEditor Extends TControl
 	'Field window:TGadget
 	
-	Field filename:String
-	Field filedata:String
+	'Field filename:String
+	Field document:TFullTextDocument
 	
 	' CONSTRUCTOR
 	Method New( parent:TGadget )
@@ -623,29 +636,25 @@ Type TEditor Extends TControl
 	' BEHAVIOUR
 	
 	Method fileClose()
-		filename = ""
-		filedata = ""
-		SetGadgetText( gadget, filedata )
+		If document documents.event_fileclose( document.uri )
+		SetGadgetText( gadget, "" )
 	End Method
 
 	Method fileNew()
 		fileClose()
+		SetGadgetText( gadget, "" )
 	End Method
 
-	Method fileOpen( name:String )
-		filename = name
-		filedata = ""
-		Local file:TStream = OpenFile( filename )
-		If file 
-			While Not Eof(file)
-				Local line:String = ReadLine(file)
-				filedata :+ line + "~n"
-			Wend
-			CloseStream file
-		EndIf
-		SetGadgetText( gadget, filedata )
+	Method fileOpen( uri:String )
+		If document documents.event_fileclose( document.uri )
+		
+		' Emulate Language Server
+		document = documents.event_fileopen( uri )
+		
+		' Fill text area
+		SetGadgetText( gadget, document.getText() )
 		'
-		config["filename"]=name
+		config["filename"]=uri
 		config.save( CONFIG_FILE )		
 	End Method
 	
