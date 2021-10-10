@@ -320,7 +320,7 @@ EndRem
 						error.consume( skip )
 						error.name = "ERROR"
 						'skip.value = token.value
-						error.errors.addlast( New TDiagnostic( "Unexpected symbol '"+skip.value+"'", DiagnosticSeverity.Warning ) )
+						error.errors :+ [ New TDiagnostic( "Unexpected symbol '"+skip.value+"'", DiagnosticSeverity.Warning ) ]
 						error.status = AST_NODE_ERROR
 						ast.add( error )
 						
@@ -347,7 +347,7 @@ EndRem
 					error.consume( skip )
 					error.name = "SKIPPED"
 					'skip.value = token.value
-					error.errors.addlast( New TDiagnostic( "~q"+skip.value + "~q was unexpected!", DiagnosticSeverity.Warning ) )
+					error.errors :+ [ New TDiagnostic( "~q"+skip.value + "~q was unexpected!", DiagnosticSeverity.Warning ) ]
 					ast.add( error )
 				
 				End If
@@ -804,17 +804,17 @@ End Rem
 			' Not a standard type, check against AST
 			' TODO
 			'valid = False
-			ast.errors.addlast( New TDiagnostic( "Invalid return type", DiagnosticSeverity.Warning )  )
+			ast.errors :+ [ New TDiagnostic( "Invalid return type", DiagnosticSeverity.Warning ) ]
 		End If
 
 		'	VALIDATE PARENTHESIS
 
 		If Not ast.lparen 
-			ast.errors.addlast( New TDiagnostic( "Missing parenthesis", DiagnosticSeverity.Warning ) )
+			ast.errors :+ [ New TDiagnostic( "Missing parenthesis", DiagnosticSeverity.Warning ) ]
 		ElseIf Not ast.rparen 
-			ast.errors.addlast( New TDiagnostic( "Missing parenthesis", DiagnosticSeverity.Warning ) )
+			ast.errors :+ [ New TDiagnostic( "Missing parenthesis", DiagnosticSeverity.Warning ) ]
 		ElseIf ast.lparen<>ast.rparen	' Mismatch "(" and NULL or Null and ")"
-			ast.errors.addlast( New TDiagnostic( "Mismatching parenthesis", DiagnosticSeverity.Warning ) )
+			ast.errors :+ [ New TDiagnostic( "Mismatching parenthesis", DiagnosticSeverity.Warning ) ]
 		End If
 
 		'	READ BODY
@@ -823,7 +823,7 @@ End Rem
 			'Local body:TASTCompound 
 			ast.body = parseSequence( "BODY", SYM_FUNCTION_BODY+[TK_ALPHA], [TK_EndFunction], parent )	
 		Else
-			ast.errors.addlast( New TDiagnostic( "Invalid function definition", DiagnosticSeverity.Warning ) )
+			ast.errors :+ [ New TDiagnostic( "Invalid function definition", DiagnosticSeverity.Warning ) ]
 		End If
 		' For the sake of simplicity at the moment, this will not parse the body
 		'ast.add( eatUntil( [TK_EndFunction], token ) )

@@ -43,7 +43,7 @@ Type TASTCompound Extends TASTNode
 
 	' Used for debugging tree structure
 	Method reveal:String( indent:String = "" )
-		Local block:String = ["!","."][errors.isempty()]+" "+indent+getname()
+		Local block:String = ["!","."][errors.length>0]+" "+indent+getname()
 		block :+ " " + Trim(showLeafText()) + "~n"
 		'If value<>"" block :+ " "+Replace(value,"~n","\n")
 		'block :+ "~n"

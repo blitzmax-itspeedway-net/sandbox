@@ -26,8 +26,8 @@ Type TASTNode
 	
 	'Field comment:TToken	' Trailing comment or Null
 	'Field valid:Int = False	' Is node valid
-	Field status:Int = 0	'	0=Unknown (GREY), 1=OK, 1=Warning, 2=Error
-	Field errors:TList = New TList()	' Invalidation messages
+	Field status:Int = 0		'	0=Unknown (GREY), 1=OK, 1=Warning, 2=Error
+	Field errors:TDiagnostic[]	' Invalidation messages
 	
 	Method New( name:String )
 		Self.name  = name
@@ -88,7 +88,7 @@ Type TASTNode
 	
 	' Used for debugging tree structure
 	Method reveal:String( indent:String = "" )
-		Local block:String = ["!","."][errors.isempty()]+" "+indent+getname()
+		Local block:String = ["!","."][errors.length>0]+" "+indent+getname()
 		block :+ " " + Trim(showLeafText()) + "~n"
 		If errors
 			For Local err:TDiagnostic = EachIn errors
@@ -158,7 +158,7 @@ Type TASTError Extends TASTNode
 		
 	' Used for debugging tree structure
 	Method reveal:String( indent:String = "" )
-		Local block:String = ["!","."][errors.isempty()]+" "+indent+name
+		Local block:String = ["!","."][errors.length>0]+" "+indent+name
 		If value<>"" block :+ " "+Replace(value,"~n","\n")
 		block :+ "~n"
 		If errors

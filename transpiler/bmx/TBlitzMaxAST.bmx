@@ -19,7 +19,7 @@ Type TASTMissingOptional Extends TASTNode { class="missingoptional" }
 		Self.value  = value
 		'Self.errors = New TList()
 		Self.status = AST_NODE_WARNING
-		errors.addlast( New TDiagnostic( "Optional ~q"+name+"~q has not been used", DiagnosticSeverity.Hint ))
+		errors :+ [ New TDiagnostic( "Optional ~q"+name+"~q has not been used", DiagnosticSeverity.Hint ) ]
 	End Method
 		
 End Type
@@ -59,7 +59,7 @@ Type TAST_Skipped Extends TASTError { class="skipped" }
 
 	Method New( token:TToken, error:String )
 		consume( token )
-		errors.addlast( New TDiagnostic( error, DiagnosticSeverity.Warning ) )
+		errors :+ [ New TDiagnostic( error, DiagnosticSeverity.Warning ) ]
 		'Self.valid = False
 	End Method	
 		
@@ -85,7 +85,7 @@ Type TAST_Framework Extends TASTNode { class="FRAMEWORK" }
 		If Not major Or major.id <> TK_Alpha ; valid = False
 		If Not dot Or dot.id <> TK_PERIOD ; valid = False
 		If Not minor Or minor.id <> TK_Alpha ; valid = False
-		If Not valid ; errors.addlast( New TDiagnostic( "Invalid module", DiagnosticSeverity.Error ) )
+		If Not valid ; errors :+ [ New TDiagnostic( "Invalid module", DiagnosticSeverity.Error ) ]
 		
 		'	Report back worst state
 		'Return Min( status, valid )

@@ -760,7 +760,7 @@ Type TDiagnostics Extends TControl
 		' Walk the AST Tree "In-Order"
 'DebugStop
 		'Print "INORDER TREE WALKER"
-		Local list:TList = TList( ast.inorder( GetDiagnostic, New TList() ) )
+		Local list:TDiagnostic[] = TDiagnostic[]( ast.inorder( GetDiagnostic, New TList() ) )
 		
 		' Convert diagnostics into a string so we can display it
 		Local result:String
@@ -776,17 +776,17 @@ Type TDiagnostics Extends TControl
 		
 		Function GetDiagnostic:Object( node:TASTNode, data:Object )
 'DebugStop
-			If node.errors.isEmpty() Return data
+			If node.errors.length = 0 Return data
 'DebugStop
 			' Convert data into a Tlist and append to it
-			Local list:TList = TList( data )
+			Local list:TDiagnostic[] = TDiagnostic[]( data )
 			'Local result:String
-			For Local error:TDiagnostic = EachIn node.errors
+			'For Local error:TDiagnostic = EachIn node.errors
 				'result :+ errors[n] + "["+node.line+","+node.pos+"] "+node.error+" ("+node.getname()+")~n"
 				'result :+ errors[n] + "["+node.line+","+node.pos+"] ("+node.getname()+")~n"
-				list.addlast( error )
-			Next 
-			Return list 
+			'	list.addlast( error )
+			'Next 
+			Return list + node.errors
 		End Function
 		
 	End Method
@@ -987,7 +987,7 @@ Type TMotherInLaw Extends TVisitor
 	'End Method
 		
 	Method status:Int( node:TASTNode, isTrue:Int = ICON_WHITE, isFalse:Int = ICON_RED )
-		If node And node.errors.isempty() Return isTrue
+		If node And node.errors.length = 0 Return isTrue
 		Return isFalse
 	End Method
 	
@@ -1065,7 +1065,7 @@ Type TMotherInLaw Extends TVisitor
 	Method visit_ERROR( arg:TGift )
 		Local node:TASTNode = arg.node
 		Local mother:TGadget = AddTreeViewNode( "## WARNING ## "+node.value+node.loc(), arg.gadget, ICON_RED )
-		If Not node.errors.isempty()
+		If Not node.errors.length = 0
 			For Local error:TDiagnostic = EachIn node.errors
 				AddTreeViewNode( error.reveal(), mother, ICON_ERROR )
 			Next
@@ -1088,6 +1088,10 @@ Type TMotherInLaw Extends TVisitor
 		ExpandTreeViewNode( mother )
 	End Method
 
+	Method visit_NUMBER( arg:TGift )
+		AddTreeViewNode( "NUMBER: ("+arg.node.value+")", arg.gadget, ICON_WHITE )
+	End Method
+	
 	Method visit_PROGRAM( arg:TGift )
 		Local mother:TGadget = AddTreeViewNode( "PROGRAM", arg.gadget, ICON_WHITE )
 		visitChildren( arg.node, mother )
