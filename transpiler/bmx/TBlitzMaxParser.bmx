@@ -411,7 +411,7 @@ End Rem
 	End Method
 	
 	Method ParseExpression:TASTNode()
-DebugStop
+'DebugStop
         Local ast:TASTNode = ParseTerm()
 
 		While token.in([ TK_PLUS, TK_hyphen ])
@@ -452,7 +452,7 @@ End Rem
 			advance()
 			Return ast
 		Case TK_LParen
-DebugStop
+'DebugStop
 			advance()
 			Local ast:TASTNode = ParseExpression()
 			Local rparen:TToken = eat( TK_RParen )
@@ -789,7 +789,7 @@ End Rem
 		ast.rparen = eat( TK_rparen, Null )
 		
 		' VALIDATION
-'DebugStop
+DebugStop
 
 		'Local valid:Int = True
 		'valid = valid & (ast.fnname<>Null) & (ast.lparen<>Null) & (ast.rparen<>Null)
@@ -810,6 +810,7 @@ End Rem
 		'	VALIDATE PARENTHESIS
 
 		If Not ast.lparen 
+			Local position:TPosition
 			ast.errors :+ [ New TDiagnostic( "Missing parenthesis", DiagnosticSeverity.Warning ) ]
 		ElseIf Not ast.rparen 
 			ast.errors :+ [ New TDiagnostic( "Missing parenthesis", DiagnosticSeverity.Warning ) ]
@@ -877,7 +878,13 @@ End Rem
 		Local ast:TAST_Include = New TAST_Include( "INCLUDE", token )
 		advance()
 		' Get module name
-		ast.value = eat( TK_QSTRING )
+		ast.file = eat( TK_QSTRING )
+		
+		' Request document is opened (If it isn't already)
+		If ast.file And ast.file.id=TK_QSTRING
+			Local file:String = ast.file.value
+			Local included:TTextDocument = documents.getFile( ast.value )
+		End If
 		' Trailing comment is a description
 		'ast.comment = eatOptional( [TK_COMMENT], Null )
 		Return ast
@@ -891,7 +898,7 @@ End Rem
 		ast.lnode = Parse_VarDecl()
 		'advance()
 		ast.operation  = eat( TK_Equals )
-DebugStop
+'DebugStop
 		ast.rnode = ParseExpression()
 
 'TODO: Implement variable definition

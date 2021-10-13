@@ -19,7 +19,8 @@ Type TASTMissingOptional Extends TASTNode { class="missingoptional" }
 		Self.value  = value
 		'Self.errors = New TList()
 		Self.status = AST_NODE_WARNING
-		errors :+ [ New TDiagnostic( "Optional ~q"+name+"~q has not been used", DiagnosticSeverity.Hint ) ]
+		Local range:TRange = New TRange( 0,0,0,0 )
+		errors :+ [ New TDiagnostic( "Optional ~q"+name+"~q has not been used", DiagnosticSeverity.Hint, range ) ]
 	End Method
 		
 End Type
@@ -130,11 +131,11 @@ Type TAST_Import Extends TASTNode { class="IMPORT" }
 End Type
 
 Type TAST_Include Extends TASTNode { class="INCLUDE" }
-	Field value:TToken
+	Field file:TToken
 	
 	' Used for debugging tree structure
 	Method showLeafText:String()
-		Return value.value
+		Return file.value
 	End Method
 	
 End Type

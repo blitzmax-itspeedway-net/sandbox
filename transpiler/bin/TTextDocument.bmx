@@ -20,13 +20,26 @@ Type TTextDocument Implements ITextDocument
 	
 	Field uri : String
 	Field languageId : String
-	Field version : UInt		' Incremented after each change including Undo/Redo
+	Field version : ULong		' Incremented after each change including Undo/Redo
 	'Field lineCount: UInt
-	
-	Field content:String
-	
-	Public
+
+	' Language server specific
+	Field symbols:TSymbolTable
 		
+	Public
+
+	Field content:String
+
+	Method New( uri:String, content:String="", version:ULong = 0 )
+		Self.uri = uri
+		Self.content = content
+		Self.version = version
+	End Method
+
+	Method get_languageId:String()	;	Return languageId				;	End Method
+	Method get_uri:String()			;	Return uri						;	End Method
+	Method get_version:Int()		;	Return version					;	End Method
+
 End Type
 
 ' A TFullTextDocument is open in the language client
@@ -37,14 +50,13 @@ Type TFullTextDocument Extends TTextDocument
 	
 	Field lineOffsets:UInt[]
 	
+	' Language server specific
+	Field ast:TASTNode
+	Field lexer:TLexer
+		
 	Public
-
-	Method New( uri:String, content:String )
-		Self.uri = uri
-		Self.content = content
-	End Method
-
-	Method New( uri:String, languageId:String, version:UInt, content:String )
+	
+	Method New( uri:String, languageId:String, content:String, version:ULong )
 		Self.uri = uri
 		Self.languageId = languageId
 		Self.version = version
@@ -52,10 +64,7 @@ Type TFullTextDocument Extends TTextDocument
 		lineOffsets = []
 	End Method
 
-	Method get_languageId:String()	;	Return languageId				;	End Method
 	Method get_lineCount:UInt()		; 	Return getLineOffsets().length	;	End Method
-	Method get_uri:String()			;	Return uri						;	End Method
-	Method get_version:Int()		;	Return version					;	End Method
 		
 	Method getLineOffsets:UInt[]()
 		If lineOffsets = [] ; lineOffsets = computeLineOffsets( content, True )
@@ -173,6 +182,18 @@ Rem
 			typeof candidate.text === 'string' && candidate.range === undefined && candidate.rangeLength === undefined;
 	}
 End Rem
+
+	Method parse()
+		If content = "" Return
+		
+		' PARSE THE SOURCE
+		lexer = New TBlitzMaxLexer( content )
+		Local parser:TParser = New TBlitzMaxParser( lexer )
+'DebugStop	
+		ast = parser.parse_ast()
+
+	End Method
+
 End Type
 
 Function computeLineOffsets:UInt[]( text:String, isAtLineStart:Int, textOffset:UInt = 0)
