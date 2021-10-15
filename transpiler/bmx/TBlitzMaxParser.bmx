@@ -760,8 +760,16 @@ End Rem
 	'	framework = framework ALPHA PERIOD ALPHA [COMMENT] EOL
 	Method Parse_Framework:TASTNode()
 'DebugStop
-		Local token:TToken = eatOptional( TK_FRAMEWORK, Null )
-		If Not token Return New TASTMissingOptional( "FRAMEWORK", "Framework" )
+		Local fwork:TToken = eatOptional( TK_FRAMEWORK, Null )
+		'If Not token Return New TASTMissingOptional( "FRAMEWORK", "Framework" )
+		If Not fwork 
+			Local starts:TPosition = New TPosition( token )
+			Local ends:TPosition =  New TPosition( token )
+			ends.character :+ token.value.length
+			Local ast:TASTMissingOptional = New TASTMissingOptional( "FRAMEWORK", "Framework" )
+			ast.errors :+ [ New TDiagnostic( "'Framework' is recommended", DiagnosticSeverity.Hint, New TRange( starts, ends ) ) ]
+			Return ast
+		End If
 		'
 		Local ast:TAST_Framework = New TAST_Framework( token )
 		'advance()
@@ -777,6 +785,7 @@ End Rem
 	'	function = function [ ":" <vartype> ] "(" [<args>] ")" [COMMENT] EOL
 	Method Parse_Function:TASTNode( parent:Int[] )
 		Local ast:TAST_Function = New TAST_Function( token )
+		Local start:TPosition = New TPosition( token )
 		advance()
 
 		' PROPERTIES
@@ -801,21 +810,25 @@ DebugStop
 		'	VALIDATE RETURN TYPE
 
 		If ast.returntype And ast.returntype.notin( [TK_Int,TK_String,TK_Double,TK_Float] )
-			' Not a standard type, check against AST
-			' TODO
-			'valid = False
-			ast.errors :+ [ New TDiagnostic( "Invalid return type", DiagnosticSeverity.Warning ) ]
+
+'TODO: Need to check return type against SYMBOL TABLE
+
+			Local starts:TPosition = New TPosition( ast.returntype )
+			Local ends:TPosition = New TPosition( ast.returntype )
+			ends.character :+ ast.returntype.value.length	' Add length of token
+			Local range:TRange = New TRange( starts, ends )
+			ast.errors :+ [ New TDiagnostic( "Invalid return type", DiagnosticSeverity.Warning, range ) ]
 		End If
 
 		'	VALIDATE PARENTHESIS
 
+		Local range:TRange = New TRange( start, New TPosition( token ) )
 		If Not ast.lparen 
-			Local position:TPosition
-			ast.errors :+ [ New TDiagnostic( "Missing parenthesis", DiagnosticSeverity.Warning ) ]
+			ast.errors :+ [ New TDiagnostic( "Missing parenthesis", DiagnosticSeverity.Warning, range ) ]
 		ElseIf Not ast.rparen 
-			ast.errors :+ [ New TDiagnostic( "Missing parenthesis", DiagnosticSeverity.Warning ) ]
+			ast.errors :+ [ New TDiagnostic( "Missing parenthesis", DiagnosticSeverity.Warning, range ) ]
 		ElseIf ast.lparen<>ast.rparen	' Mismatch "(" and NULL or Null and ")"
-			ast.errors :+ [ New TDiagnostic( "Mismatching parenthesis", DiagnosticSeverity.Warning ) ]
+			ast.errors :+ [ New TDiagnostic( "Mismatching parenthesis", DiagnosticSeverity.Warning, range ) ]
 		End If
 
 		'	READ BODY
@@ -824,7 +837,7 @@ DebugStop
 			'Local body:TASTCompound 
 			ast.body = parseSequence( "BODY", SYM_FUNCTION_BODY+[TK_ALPHA], [TK_EndFunction], parent )	
 		Else
-			ast.errors :+ [ New TDiagnostic( "Invalid function definition", DiagnosticSeverity.Warning ) ]
+			ast.errors :+ [ New TDiagnostic( "Invalid function definition", DiagnosticSeverity.Warning, range ) ] 
 		End If
 		' For the sake of simplicity at the moment, this will not parse the body
 		'ast.add( eatUntil( [TK_EndFunction], token ) )
@@ -1002,8 +1015,15 @@ EndRem
 
 	'	strictmode = (strict|superstrict) [COMMENT] EOL
 	Method Parse_Strictmode:TASTNode()
-		Local token:TToken = eatOptional( [TK_STRICT, TK_SUPERSTRICT], Null )
-		If Not token Return New TASTMissingOptional( "STRICTMODE", "superstrict~n" )
+		Local Strictmode:TToken = eatOptional( [TK_STRICT, TK_SUPERSTRICT], Null )
+		If Not Strictmode 
+			Local starts:TPosition = New TPosition( token )
+			Local ends:TPosition =  New TPosition( token )
+			ends.character :+ token.value.length
+			Local ast:TASTMissingOptional = New TASTMissingOptional( "STRICTMODE", "superstrict~n" )
+			ast.errors :+ [ New TDiagnostic( "'SuperStrict' is recommended", DiagnosticSeverity.Hint, New TRange( starts, ends ) ) ]
+			Return ast
+		End If
 'DebugStop
 		Local ast:TAST_Strictmode = New TAST_Strictmode( token )
 		'advance()

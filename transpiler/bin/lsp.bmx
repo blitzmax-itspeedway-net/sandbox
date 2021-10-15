@@ -128,6 +128,12 @@ Type TPosition
 		Self.character = character
 	End Method
 	
+	Method New( token:TToken )
+		If Not token return
+		Self.line = token.line
+		Self.character = token.pos
+	End Method
+	
 End Type
 
 ' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#range

@@ -19,8 +19,8 @@ Type TASTMissingOptional Extends TASTNode { class="missingoptional" }
 		Self.value  = value
 		'Self.errors = New TList()
 		Self.status = AST_NODE_WARNING
-		Local range:TRange = New TRange( 0,0,0,0 )
-		errors :+ [ New TDiagnostic( "Optional ~q"+name+"~q has not been used", DiagnosticSeverity.Hint, range ) ]
+		'Local range:TRange = New TRange( 0,0,0,0 )
+		'errors :+ [ New TDiagnostic( "'"+name+"' is recommended", DiagnosticSeverity.Hint, range ) ]
 	End Method
 		
 End Type
