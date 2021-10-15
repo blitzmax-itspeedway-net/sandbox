@@ -885,18 +885,17 @@ End Rem
 		Return ast
 	End Method
 
-	'	Create an AST Node for Import containing all imported modules as children
-	'	import = import ALPHA PERIOD ALPHA [COMMENT] EOL
+	'	Create an AST Node for Import
 	Method Parse_Include:TASTNode()
 		Local ast:TAST_Include = New TAST_Include( "INCLUDE", token )
 		advance()
 		' Get module name
 		ast.file = eat( TK_QSTRING )
-		
+DebugStop		
 		' Request document is opened (If it isn't already)
 		If ast.file And ast.file.id=TK_QSTRING
 			Local file:String = ast.file.value
-			Local included:TTextDocument = documents.getFile( ast.value )
+			Local included:TTextDocument = documents.getFile( file )
 		End If
 		' Trailing comment is a description
 		'ast.comment = eatOptional( [TK_COMMENT], Null )

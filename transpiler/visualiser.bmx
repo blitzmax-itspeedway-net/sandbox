@@ -1271,6 +1271,13 @@ Type TMotherInLaw Extends TVisitor
 		ExpandTreeViewNode( mother )
 	End Method
 
+	Method visit_include( arg:TGift )
+		Local node:TAST_Include = TAST_Include( arg.node )
+DebugStop
+		Local detail:String  = "INCLUDE "+node.file.value
+		Local mother:TGadget = AddNode( node, arg.gadget, detail )	
+	End Method
+	
 	Method visit_remark( arg:TGift )
 		If options[1]
 			Local node:TASTNode = arg.node

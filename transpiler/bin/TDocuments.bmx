@@ -42,6 +42,7 @@ DebugStop
 	' Get a file. 
 	' If the file is not in the library then we attempt to open it.
 	Method getFile:TTextDocument( file_uri:String )
+Print( "LOADING DOCUMENT "+file_uri )
 		Local document:TTextDocument = TTextDocument( documents.valueforkey( file_uri ) )
 		' Check if document is already loaded
 'DebugStop

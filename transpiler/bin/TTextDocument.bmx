@@ -192,6 +192,11 @@ End Rem
 'DebugStop	
 		ast = parser.parse_ast()
 
+Print "FILE '"+uri+"':"
+Print lexer.reveal()
+Print parser.reveal()
+Print ast.reveal()
+
 	End Method
 
 End Type
