@@ -1,5 +1,5 @@
 SuperStrict
-
+ 
 Function LoadFile:String(filename:String)
 	Local file:TStream = ReadStream( filename )
 	If Not file Return ""

@@ -7,6 +7,10 @@
 .bmx/
 .vscode/
 languageserver/
+loadfile/
+maxide/
+maxx/
+transpiler/
 transpiler/old
 
 # Exclude files

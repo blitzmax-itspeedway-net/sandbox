@@ -24,7 +24,8 @@ Import Text.RegEx
 Import bah.DBSQLite		' Specifically for the Symbol table ;)
 
 ' COMMENTED OUT BECAUSE WE ARE TESTING LOCAL COPIES
-'Import bmx.lexer
+Import bmx.json
+Import bmx.lexer
 'Import bmx.parser
 'Import bmx.blitzmaxparser
 'Import bmx.transpiler
@@ -32,20 +33,28 @@ Import bah.DBSQLite		' Specifically for the Symbol table ;)
 Include "bin/loadfile().bmx"
 
 ' SANDBOX LANGUAGE SERVER PROTOCOL DEFINITIONS
-Include "bin/lsp.bmx"
+Include "bin/language-server-protocol.bmx"
 
 ' SANDBOX LEXER
-Include "lexer/TLexer.bmx"
-Include "lexer/TToken.bmx"
-Include "lexer/TException.bmx"
+'Include "lexer/TLexer.bmx"
+'Include "lexer/TToken.bmx"
+'Include "lexer/TException.bmx"
 
 ' SANDBOX PARSER
-Include "parser/TParser.bmx"
-Include "parser/TASTNode.bmx"
-Include "parser/TASTBinary.bmx"
-Include "parser/TASTCompound.bmx"
-Include "parser/TVisitor.bmx"
-Include "parser/TParseValidator.bmx"
+Include "sandbox/bmx.parser/TParser.bmx"
+Include "sandbox/bmx.parser/TASTNode.bmx"
+Include "sandbox/bmx.parser/TASTBinary.bmx"
+Include "sandbox/bmx.parser/TASTCompound.bmx"
+Include "sandbox/bmx.parser/TVisitor.bmx"
+Include "sandbox/bmx.parser/TParseValidator.bmx"
+Include "sandbox/bmx.parser/TASTErrorMessage.bmx"
+
+' SANDBOX BLITZMAX LEXER/PARSER
+' Included here until stable release pushed back into module
+Include "sandbox/bmx.blitzmaxparser/lexer-const-bmx.bmx"
+Include "sandbox/bmx.blitzmaxparser/TBlitzMaxAST.bmx"
+Include "sandbox/bmx.blitzmaxparser/TBlitzMaxLexer.bmx"
+Include "sandbox/bmx.blitzmaxparser/TBlitzMaxParser.bmx"
 
 ' Exception handler for Parse errors
 Type TParseError Extends TException
@@ -54,12 +63,6 @@ End Type
 Function ThrowParseError( message:String, line:Int=-1, pos:Int=-1 )
 	Throw( New TParseError( message, line, pos ) )
 End Function
-
-' SANDBOX BLITZMAX LEXER/PARSER
-Include "bmx/lexer-const-bmx.bmx"
-Include "bmx/TBlitzMaxAST.bmx"
-Include "bmx/TBlitzMaxLexer.bmx"
-Include "bmx/TBlitzMaxParser.bmx"
 
 ' SANDBOX TRANSPILER
 Include "transpiler/TTranspiler.bmx"
@@ -121,7 +124,13 @@ Global config:TConfig = New TConfig()
 '	CREATE DOCUMENT MANAGER
 Global documents:TDocuments = New TDocuments()
 
-AppTitle = "Visualisation Tool"
+'	MONOSPACE FONT
+'DebugStop
+Global monospacefont:TGUIFont = LoadGuiFont("Courier", 10 )
+'Global monospacefont:TGUIFont = LookupGuiFont(GUIFONT_SYSTEM,14)
+'Global monospacefont:TGUIFont = LookupGuiFont(GUIFONT_MONOSPACED,10)
+
+AppTitle = "Transpiler"
 
 Type TConfig Extends TMap
 
@@ -272,12 +281,13 @@ End Type
 
 Type TVisualiser Extends TControl	
 	Field window:TGadget
-	Field hsplitter:TSplitter, vsplitter:TSplitter
-	Field tsplit:TGadget, bsplit:TGadget, lsplit:TGadget, rsplit:TGadget	' Top, Bot, Lft, Rgt
+	'Field hsplitter:TSplitter, vsplitter:TSplitter
+	'Field tsplit:TGadget, bsplit:TGadget, lsplit:TGadget, rsplit:TGadget	' Top, Bot, Lft, Rgt
 	
 	Field editor:TEditor
 	'Field tokenview:TTokenView
-	Field ASTview:TASTView
+	'Field ASTview:TASTView
+	Field panel:TGadget
 	Field tabber:TGadget, tabs:TControl[], currenttab:TControl
 	
 	Field menu_edit_eol:TGadget
@@ -357,42 +367,45 @@ Type TVisualiser Extends TControl
 		'	CREATE HORIZONTAL SPLITTER
 		
 		' Split window horizontally
-		hsplitter = CreateSplitter( 0, 0, ClientWidth(window), ClientHeight(window), window, SPLIT_HORIZONTAL, 15 )
-		SetGadgetLayout( hsplitter, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
-		SetSplitterPosition( hsplitter, ClientHeight(window)/2 )
-		SetSplitterBehavior( hsplitter, 0 )
+		'hsplitter = CreateSplitter( 0, 0, ClientWidth(window), ClientHeight(window), window, SPLIT_HORIZONTAL, 15 )
+		'SetGadgetLayout( hsplitter, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
+		'SetSplitterPosition( hsplitter, ClientHeight(window)/2 )
+		'SetSplitterBehavior( hsplitter, 0 )
 		'SetGadgetColor( hsplitter, 0,0,0 )
-		tsplit = SplitterPanel( hsplitter, SPLITPANEL_MAIN )
-		bsplit = SplitterPanel( hsplitter, SPLITPANEL_SIDEPANE )
+		'tsplit = SplitterPanel( hsplitter, SPLITPANEL_MAIN )
+		'bsplit = SplitterPanel( hsplitter, SPLITPANEL_SIDEPANE )
 		'SetGadgetLayout( tsplit, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
 		'SetGadgetLayout( bsplit, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
 		
 		'	CREATE VERTICAL SPLITTER IN TOP
 		
 		' Split TOP panel vertically
-		vsplitter = CreateSplitter( 0, 0, ClientWidth(tsplit), ClientHeight(tsplit), tsplit, SPLIT_VERTICAL )
-		SetGadgetLayout( vsplitter, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
-		SetSplitterPosition( vsplitter, ClientWidth(tsplit)/2 )
-		SetSplitterBehavior( vsplitter, 0)
+		'vsplitter = CreateSplitter( 0, 0, ClientWidth(tsplit), ClientHeight(tsplit), tsplit, SPLIT_VERTICAL )
+		'SetGadgetLayout( vsplitter, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
+		'SetSplitterPosition( vsplitter, ClientWidth(tsplit)/2 )
+		'SetSplitterBehavior( vsplitter, 0)
 		'SetGadgetColor( vsplitter, 0,0,0 )
-		lsplit = SplitterPanel( vsplitter, SPLITPANEL_MAIN )
-		rsplit = SplitterPanel( vsplitter, SPLITPANEL_SIDEPANE )
+		'lsplit = SplitterPanel( vsplitter, SPLITPANEL_MAIN )
+		'rsplit = SplitterPanel( vsplitter, SPLITPANEL_SIDEPANE )
 		'SetGadgetLayout( lsplit, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
 		'SetGadgetLayout( rsplit, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
 		
-		'	CREATE TOP COMPONENTS
+		'	CREATE LEFT PANEL CONTAINING EDITOR
 		
-		editor = New TEditor( Self, lsplit )
-		ASTview = New TASTView( Self, rsplit )
+		Local half:Int = ClientWidth( window ) /2
+		panel = CreatePanel( 0,0,half,ClientHeight(window), window )
+		SetGadgetLayout( panel, EDGE_ALIGNED, EDGE_RELATIVE, EDGE_ALIGNED, EDGE_ALIGNED )
+		
+		editor = New TEditor( Self, panel )
+		'ASTview = New TASTView( Self, rsplit )
 		
 		children :+ [editor]
-		children :+ [ASTView]
+		'children :+ [ASTView]
 		
-		'	CREATE TAB BAR
+		'	CREATE RIGHT PANEL CONTAINING TABS
 		
-		' Create a tab-view in the bottom split
-		tabber = CreateTabber( 0, 0, ClientWidth( bsplit ), ClientHeight( bsplit ), bsplit )
-		SetGadgetLayout( tabber, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
+		tabber = CreateTabber( half, 0, half, ClientHeight( window ), window )
+		SetGadgetLayout( tabber, EDGE_RELATIVE, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
 		
 		'	TEST STUFF
 		
@@ -412,6 +425,9 @@ Type TVisualiser Extends TControl
 		'AddTextAreaText(t3, "The quick brown pig jumped over the lazy bear.~n~n")
 		
 		'	ADD TABBER COMPONENTS
+		
+		AddGadgetItem( tabber, "AST" )
+		tabs :+ [New TASTView( Self, tabber )]
 		
 		AddGadgetItem( tabber, "Tokens" )
 		tabs :+ [New TTokenView( Self, tabber )]
@@ -563,6 +579,7 @@ Print("BYE")
 		If event 
 			Select event.source
 			Case tabber
+'DebugStop
 				HideGadget( currenttab.gadget )
 				currenttab = tabs[ event.data ]
 				ShowGadget( currenttab.gadget )
@@ -614,8 +631,8 @@ Print("BYE")
 	
 	Method OnWindowSize:Object( event:TEvent )
 'DebugStop
-		SetSplitterPosition( hsplitter, event.y/2 )
-		SetSplitterPosition( vsplitter, event.x/2 )
+		'SetSplitterPosition( hsplitter, event.y/2 )
+		'SetSplitterPosition( vsplitter, event.x/2 )
 		Return event
 	End Method
 	
@@ -648,11 +665,12 @@ Type TEditor Extends TControl
 		'Local monospacefont:TGuiFont = LookupGuiFont( GUIFONT_MONOSPACED, 11 ) 
 		'Print FontName( monospacefont )
 		
-		Local monospacefont:TGuiFont = LoadGuiFont( "Courier New", 11 ) 
+		'Local monospacefont:TGuiFont = LoadGuiFont( "Courier New", 11 ) 
 		'Local monospacefont:TGuiFont = LoadGuiFont( "FreeMono", 11 ) 
-		Print FontName( monospacefont )
-		If Not monospacefont monospacefont = LookupGuiFont( GUIFONT_MONOSPACED, 11 ) 
+		'Print FontName( monospacefont )
+		'If Not monospacefont monospacefont = LookupGuiFont( GUIFONT_MONOSPACED, 11 ) 
 
+		'SetGadgetFont( gadget, monospacefont )	' This does not work!
 		SetTextAreaFont( gadget, monospacefont )
 
 		'SetGadgetText( gadget, "EDITOR" )
@@ -717,7 +735,7 @@ DebugStop
 End Type
 
 Type TASTView Extends TControl
-	Field tv:TGadget, root:TGadget, icons:TIconStrip
+	Field root:TGadget, icons:TIconStrip
 
 	' CONSTRUCTOR
 	
@@ -725,20 +743,20 @@ Type TASTView Extends TControl
 		Super.New( mother, parent )
 		Print( "TASTView.new()" )
 
-		tv   = CreateTreeView( 0, 0, ClientWidth(parent), ClientHeight(parent), parent )
-		root = TreeViewRoot( tv )
+		gadget = CreateTreeView( 0, 0, ClientWidth(parent), ClientHeight(parent), parent )
+		root = TreeViewRoot( gadget )
 
-		SetGadgetLayout( tv, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
+		SetGadgetLayout( gadget, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
 
 		icons = LoadIconStrip( "incbin::bin/icons.png" )
-		SetGadgetIconStrip( tv, icons )
+		SetGadgetIconStrip( gadget, icons )
 		
 	End Method
 	
 	' BEHAVIOUR
 	
 	Method update( document:TFullTextDocument )
-		ClearTreeView( tv )
+		ClearTreeView( gadget )
 
 		Local mum:TVisualiser = TVisualiser( mother )
 		Local options:Int[] = [MenuChecked( mum.menu_edit_eol ), MenuChecked( mum.menu_edit_comments )]
@@ -766,7 +784,7 @@ Type TASTView Extends TControl
 	End Method
 
 	Method onFileClose:Object( event:TEvent )
-		ClearTreeView( tv )
+		ClearTreeView( gadget )
 		Return event	' Allow event to propogate
 	End Method
 	
@@ -782,6 +800,9 @@ Type TTokenView Extends TControl
 		
 		gadget = CreateTextArea( 0, 0, ClientWidth(parent), ClientHeight(parent), parent )
 		SetGadgetLayout( gadget, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
+		DebugStop
+		SetGadgetFont( gadget, monospacefont )		' This does not work!
+		SetTextAreaFont( gadget, monospacefont )	' nor does this!
 		
 		SetGadgetText( gadget, "THIS IS AN EXAMPLE" )
 		'ActivateGadget( gadget )
@@ -821,6 +842,8 @@ Type TDiagnostics Extends TControl
 		Super.New( mother, parent )
 		gadget = CreateTextArea( 0, 0, ClientWidth(parent), ClientHeight(parent), parent, TEXTAREA_READONLY )
 		SetGadgetLayout( gadget, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
+		'SetGadgetFont( gadget, monospacefont )	' This does not work!
+		SetTextAreaFont( gadget, monospacefont )
 		SetGadgetText( gadget, "DIAGNOSTICS VIEWER" )
 		'ActivateGadget( gadget )
 		HideGadget( gadget )
@@ -830,10 +853,10 @@ Type TDiagnostics Extends TControl
 		'Local diags:String
 		Local ast:TASTNode = document.ast
 		' Walk the AST Tree "In-Order"
-DebugStop
+'DebugStop
 		'Print "INORDER TREE WALKER"
 		Local list:TDiagnostic[]
-		list = TDiagnostic[]( ast.inorder( GetDiagnostic, list ) )
+		list = TDiagnostic[]( ast.inorder( GetDiagnostic, list, 0 ) )
 		
 		' Convert diagnostics into a string so we can display it
 		Local result:String
@@ -847,7 +870,7 @@ DebugStop
 		Next
 		SetGadgetText( gadget, result )
 		
-		Function GetDiagnostic:Object( node:TASTNode, data:Object )
+		Function GetDiagnostic:Object( node:TASTNode, data:Object, options:Int )
 'DebugStop
 			If node.errors.length = 0 Return data
 'DebugStop
@@ -889,6 +912,8 @@ Type TMessages Extends TControl
 		Super.New( mother, parent )
 		gadget = CreateTextArea( 0, 0, ClientWidth(parent), ClientHeight(parent), parent, TEXTAREA_READONLY )
 		SetGadgetLayout( gadget, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
+		'SetGadgetFont( gadget, monospacefont )	' This does not work!
+		SetTextAreaFont( gadget, monospacefont )
 		SetGadgetText( gadget, "MESSAGE VIEWER" )
 		'ActivateGadget( gadget )
 		HideGadget( gadget )
@@ -900,6 +925,8 @@ Type TViewBMax Extends TControl
 		Super.New( mother, parent )
 		gadget = CreateTextArea( 0, 0, ClientWidth(parent), ClientHeight(parent), parent, TEXTAREA_READONLY )
 		SetGadgetLayout( gadget, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
+		'SetGadgetFont( gadget, monospacefont )	' This does not work!
+		SetTextAreaFont( gadget, monospacefont )
 		SetGadgetText( gadget, "BlitzMax" )
 		'ActivateGadget( gadget )
 		HideGadget( gadget )
@@ -919,11 +946,11 @@ Type TViewBMax Extends TControl
 			Local exception:TException = TException( e )
 			Local blitzexception:TBlitzException = TBlitzException( e )
 			Local runtime:TRuntimeException = TRuntimeException( e )
-			Local text:String = String( e )
+			Local Text:String = String( e )
 			If exception 		;	result :+ "TException:~n"+exception.toString()
 			If blitzexception	;	result :+ "TBlitzException:~n"+blitzexception.toString()
 			If runtime			;	result :+ "TException:~n"+runtime.toString()
-			If text				;	result :+ text
+			If Text				;	result :+ Text
 		End Try
 		
 		SetGadgetText( gadget, result )
@@ -936,6 +963,8 @@ Type TViewCPP Extends TControl
 		Super.New( mother, parent )
 		gadget = CreateTextArea( 0, 0, ClientWidth(parent), ClientHeight(parent), parent, TEXTAREA_READONLY )
 		SetGadgetLayout( gadget, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
+		'SetGadgetFont( gadget, monospacefont )	' This does not work!
+		SetTextAreaFont( gadget, monospacefont )
 		SetGadgetText( gadget, "C++" )
 		'ActivateGadget( gadget )
 		HideGadget( gadget )
@@ -955,11 +984,11 @@ Type TViewCPP Extends TControl
 			Local exception:TException = TException( e )
 			Local blitzexception:TBlitzException = TBlitzException( e )
 			Local runtime:TRuntimeException = TRuntimeException( e )
-			Local text:String = String( e )
+			Local Text:String = String( e )
 			If exception 		;	result :+ "TException:~n"+exception.toString()
 			If blitzexception	;	result :+ "TBlitzException:~n"+blitzexception.toString()
 			If runtime			;	result :+ "TException:~n"+runtime.toString()
-			If text				;	result :+ text
+			If Text				;	result :+ Text
 		End Try
 		
 		SetGadgetText( gadget, result )
@@ -972,6 +1001,8 @@ Type TViewJava Extends TControl
 		Super.New( mother, parent )
 		gadget = CreateTextArea( 0, 0, ClientWidth(parent), ClientHeight(parent), parent, TEXTAREA_READONLY )
 		SetGadgetLayout( gadget, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED, EDGE_ALIGNED )
+		'SetGadgetFont( gadget, monospacefont )	' This does not work!
+		SetTextAreaFont( gadget, monospacefont )
 		SetGadgetText( gadget, "JAVA" )
 		'ActivateGadget( gadget )
 		HideGadget( gadget )
@@ -991,11 +1022,11 @@ Type TViewJava Extends TControl
 			Local exception:TException = TException( e )
 			Local blitzexception:TBlitzException = TBlitzException( e )
 			Local runtime:TRuntimeException = TRuntimeException( e )
-			Local text:String = String( e )
+			Local Text:String = String( e )
 			If exception 		;	result :+ "TException:~n"+exception.toString()
 			If blitzexception	;	result :+ "TBlitzException:~n"+blitzexception.toString()
 			If runtime			;	result :+ "TException:~n"+runtime.toString()
-			If text				;	result :+ text
+			If Text				;	result :+ Text
 		End Try
 		
 		SetGadgetText( gadget, result )
@@ -1273,7 +1304,7 @@ Type TMotherInLaw Extends TVisitor
 
 	Method visit_include( arg:TGift )
 		Local node:TAST_Include = TAST_Include( arg.node )
-DebugStop
+'DebugStop
 		Local detail:String  = "INCLUDE "+node.file.value
 		Local mother:TGadget = AddNode( node, arg.gadget, detail )	
 	End Method
@@ -1283,8 +1314,8 @@ DebugStop
 			Local node:TASTNode = arg.node
 	'DebugStop
 			Local mother:TGadget = AddTreeViewNode( "REMARK"+node.loc(), arg.gadget, status(node) )
-			Local text:String = Replace( Replace( node.value, "~n", "\n" ), "~t", "\t" )
-			Local child:TGadget = AddTreeViewNode( text, mother )
+			Local Text:String = Replace( Replace( node.value, "~n", "\n" ), "~t", "\t" )
+			Local child:TGadget = AddTreeViewNode( Text, mother )
 		End If
 	End Method
 	

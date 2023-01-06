@@ -18,7 +18,7 @@ Type TEST
 		
 	End Method
 
-
+ 
 	
 End Type
 
@@ -31,7 +31,7 @@ Type EXAMPLE Extends TEST {name="example"}
 	'	_meta = T.Metadata( "name" )
 	'End Method
 End Type
-
+DebugStop
 DebugStop
 
 Local T:Test = New Test()

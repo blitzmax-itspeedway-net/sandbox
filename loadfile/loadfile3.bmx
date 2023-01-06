@@ -14,10 +14,9 @@ Local text:String = CacheAndLoadText( "initialize.txt" )
 Print( "Loaded "+Len(text)+"bytes" )
 text = text[.. text.length - 2]
 'text = text + "}"
-
+ 
 DebugStop
 hexdump( text )
-
 
 Function HexDump( text:String )
 	Local addr:String, textline:String, hexline:String

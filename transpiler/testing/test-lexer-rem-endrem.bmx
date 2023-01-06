@@ -8,7 +8,7 @@ Include "../bin/loadfile().bmx"
 
 Global source:String = loadFile( "../samples/test.bmx" ) 
 Global cursor:Int = Instr( source,"REM" )+2
-
+ 
 Function findNext:TRegExMatch( text:String, regex:Int = False )
 	Local re:TRegEx
 	If Not regex text = "(?i)"+text
