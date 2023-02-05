@@ -16,8 +16,8 @@ End Struct
 
 Enum PRIMITIVE; PINT; PFLOAT; PDOUBLE; EndEnum
 
-Function boxtype:PRIMITIVE( box:Byte Ptr )
-	Return PRIMITIVE(Int(box[0]))
+Function boxtype:PRIMITIVE( buffer:Byte Ptr )
+	Return PRIMITIVE(Int(buffer[0]))
 End Function
 
 Function box:Byte Ptr( value:Int )
@@ -27,11 +27,10 @@ Function box:Byte Ptr( value:Int )
 	Return buffer
 End Function
 
-Function unbox:Int( buffer:Byte Ptr )
+Function unbox( value:Int Var, buffer:Byte Ptr )
 	Assert Byte(buffer[0])=PRIMITIVE.PINT.ordinal() Else "Invalid datatype"
-	Local value:Int = (Int Ptr(buffer+1))[0]
+	value = (Int Ptr(buffer+1))[0]
 	MemFree buffer
-	Return value
 End Function
 
 Function box:Byte Ptr( value:Float )
@@ -41,18 +40,22 @@ Function box:Byte Ptr( value:Float )
 	Return buffer
 End Function
 
-Function unbox:Float( buffer:Byte Ptr )
+Function unbox( value:Float Var, buffer:Byte Ptr )
 	Assert Byte(buffer[0])=PRIMITIVE.PFLOAT.ordinal() Else "Invalid datatype"
-	Local value:Int = (Float Ptr(buffer+1))[0]
+	value = (Float Ptr(buffer+1))[0]
 	MemFree buffer
-	Return value
+	'Return value
 End Function
 
 DebugStop
 Local value:Byte Ptr
 
 value = box( 23 )
-Print Int(unbox(value)) + " : "+ boxtype( value ).toString()
+Local _int:Int
+unbox( _int, value )
+Print _int '+ " : "+ boxtype( value ).toString()
 
 value = box( 67.2 )
-Print Float(unbox(value)) + " : "+ boxtype( value ).toString()
+Local _float:Float
+unbox( _float, value )
+Print _float '+ " : "+ boxtype( value ).toString()
