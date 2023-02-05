@@ -6,12 +6,15 @@
 # Exclude folders
 .bmx/
 .vscode/
+
+# Private Sandboxes
 languageserver/
 loadfile/
 maxide/
 maxx/
+Threading/
 transpiler/
-transpiler/old
+#transpiler/old
 
 # Exclude files
 *.bak
