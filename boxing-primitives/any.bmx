@@ -1,14 +1,17 @@
 SuperStrict
 
+' ## EXPERIMENTAL ##
+
 Enum PRIMITIVE; PINT; PFLOAT; PDOUBLE; EndEnum
 
-' ANY is related to a bank, but can store ANY primitive within it
+' ANY is based on a TBank and can store ANY primitive within it
+' Currenty it has limited primitive support
 
 Type ANY
 
 	Field _buf:Byte Ptr
-	Field _size:Int = 0
-	Field _capacity:Int = 0
+	Field _size:Size_T = 0
+	Field _capacity:Size_T = 0
 	
 	Method New( value:Int )
 		resize( SizeOf(value)+1 )
@@ -19,21 +22,25 @@ Type ANY
 	Method New( value:Float )
 		resize( SizeOf(value)+1 )
 		_buf[ 0 ] = PRIMITIVE.PFLOAT.ordinal()	' Insert datatype
-		(Int Ptr( _buf+1 ) )[0] = value			' Insert value
+		(Float Ptr( _buf+1 ) )[0] = value			' Insert value
 	End Method
 
 	Method New( value:Double )
 		resize( SizeOf(value)+1 )
 		_buf[ 0 ] = PRIMITIVE.PDOUBLE.ordinal()	' Insert datatype
-		(Int Ptr( _buf+1 ) )[0] = value			' Insert value
+		(Double Ptr( _buf+1 ) )[0] = value			' Insert value
 	End Method
 
+	Method Delete()
+		If _capacity>=0; MemFree _buf
+	End Method
+	
 	Method Resize( size:Int )
 		If size>_capacity
-			Local n:Int = _capacity*3/2
+			Local n:Size_T = _capacity*3/2
 			If n<size n=size
 			Local tmp:Byte Ptr=MemAlloc(n)
-			MemCopy tmp,_buf,_size
+			MemCopy tmp,_buf, _size
 			MemFree _buf
 			_capacity=n
 			_buf=tmp
@@ -63,6 +70,17 @@ Type ANY
 End Type
 
 DebugStop
-Local Number:ANY = New ANY( 23 )
-Print Number.getType().toString()
-Print Number.toInt()
+Local Number:ANY
+
+' Stick an Integer in the box
+Number = New ANY( 23 )
+Print Number.toInt() + " : " + Number.getType().toString()
+
+' Stick a Float in the box
+Number = New ANY( Float(67.2) )
+Print Number.toFloat() + " : " + Number.getType().toString()
+
+' Stick a Double in the box
+Number = New ANY( Double(87.9922116) )
+Print Number.toDouble() + " : " + Number.getType().toString()
+
