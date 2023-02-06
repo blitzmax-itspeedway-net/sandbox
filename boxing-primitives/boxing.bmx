@@ -14,9 +14,10 @@ Struct SBOX
 	End Method
 End Struct
 
-Enum PRIMITIVE; PINT; PFLOAT; PDOUBLE; EndEnum
+Enum PRIMITIVE; PINT=0; PFLOAT; PDOUBLE; EndEnum
 
-Function boxtype:PRIMITIVE( buffer:Byte Ptr )
+' MUST BE CALLED BEFORE UNBOXING OF BUFFER IS FREED
+Function getType:PRIMITIVE( buffer:Byte Ptr )
 	Return PRIMITIVE(Int(buffer[0]))
 End Function
 
@@ -47,15 +48,17 @@ Function unbox( value:Float Var, buffer:Byte Ptr )
 	'Return value
 End Function
 
-DebugStop
+
 Local value:Byte Ptr
 
 value = box( 23 )
+Print getType( value ).toString() ' MUST BE CALLED BEFORE UNBOXING
 Local _int:Int
 unbox( _int, value )
-Print _int '+ " : "+ boxtype( value ).toString()
+Print _int
 
 value = box( 67.2 )
+Print getType( value ).toString()
 Local _float:Float
 unbox( _float, value )
-Print _float '+ " : "+ boxtype( value ).toString()
+Print _float
