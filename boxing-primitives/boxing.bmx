@@ -2,9 +2,6 @@ SuperStrict
 
 ' ## EXPERIMENTAL ##
 
-' This doesn't work because you cannot declare multiple function/methods with
-' different return values!
-
 ' I might be able to use SBOX instead of Byte ptr which will look nicer!
 ' But I still would need toInt(), toFloat(), etc...
 Struct SBOX
@@ -47,7 +44,6 @@ Function unbox( value:Float Var, buffer:Byte Ptr )
 	MemFree buffer
 	'Return value
 End Function
-
 
 Local value:Byte Ptr
 
