@@ -18,9 +18,9 @@ ${.roleLastName:${.castGUID:1}}
 ${.gt:${.worldtimeYear}:2022:&quot;nach 2022&quot;:&quot;2022 oder eher&quot;}
 End Rem
 
+DebugStop
 
 Global ScriptExpression:TScriptExpression = New TScriptExpression
-
 
 ' SCAREMONGER - START
 	
@@ -55,6 +55,35 @@ Struct SToken
 	End Method
 	
 End Struct
+
+Type TParseException
+	Field error:String
+	Field linenum:Int
+	Field linepos:Int
+	Field extra:String
+
+	Method New( error:String, linenum:Int, linepos:Int, extra:String )
+		Self.error = error
+		Self.linenum = linenum
+		Self.linepos = linepos
+		Self.extra = extra
+	End Method
+
+	Method New( error:String, token:SToken, extra:String )
+		Self.error = error
+		Self.linenum = token.linenum
+		Self.linepos = token.linepos
+		Self.extra = extra
+	End Method
+
+	Method reveal:String()
+		Local str:String = error + " at " + linenum + ":" + linepos
+		If extra; str :+ " ("+extra+")"
+		Return Str
+	EndMethod
+
+End Type
+
 ' SCAREMONGER - END
 
 Type TScriptExpression
@@ -62,16 +91,17 @@ Type TScriptExpression
 	Field functionHandlers:TStringMap = New TStringMap()
 
 	' SCAREMONGER - START
-	Field SEFN_Handlers:TStringMap = New TStringMap()
+	Field FN_Handlers:TStringMap = New TStringMap()
 
-	Method Parse2:String( expression:String, context:Object = Null)
-	
-		Local parser:TScriptExpressionParser = New TScriptExpressionParser( expression )
+	Method Parse2:SToken( expression:String, context:Object[] = Null)
+		DebugStop
+		Local parser:TScriptExpressionParser = New TScriptExpressionParser( Self, expression, context )
 		Try
 			Local result:SToken[] = parser.readWrapper()
 			Return parser.eval( result, context )
-		Catch e:String
-			Print e
+		Catch e:TParseException
+			Print e.reveal()
+		
 		End Try
 	
 	End Method
@@ -93,8 +123,8 @@ Type TScriptExpression
 	End Method
 
 	' SCAREMONGER - START
-	Method Register( functionName:String, callback:Object(params:Object[], context:Object = Null), paramMinCount:Int = -1, paramMaxCount:Int = -1, resultType:EScriptExpressionResultType)
-		SEFN_Handlers.Insert( functionName.ToLower(), New TScriptExpressionFunctionHandler(callback, paramMinCount, paramMaxCount, resultType))
+	Method Register( functionName:String, callback:SToken(params:SToken[], context:Object = Null), paramMinCount:Int = -1, paramMaxCount:Int = -1, resultType:EScriptExpressionResultType)
+		FN_Handlers.Insert( functionName.ToLower(), New TSEFN_Handler(callback, paramMinCount, paramMaxCount, resultType))
 	End Method
 	' SCAREMONGER - END
 
@@ -108,6 +138,11 @@ Type TScriptExpression
 		Return TScriptExpressionFunctionHandler(functionHandlers.ValueForKey(functionName.ToLower()))
 	End Method
 
+	' SCAREMONGER - START
+	Method GetFunctionHandler2:TSEFN_Handler( functionName:String )
+		Return TSEFN_Handler( FN_Handlers.ValueForKey( functionName.ToLower() ))
+	End Method
+	' SCAREMONGER - END
 
 	'returns how many elements in the passed array are "true"
 	Function _CountTrueValues:Int(objects:Object[])
@@ -148,7 +183,43 @@ Type TScriptExpression
 		Return equalCount
 	End Function	
 
+	' SCAREMONGER - START
+	'returns how many elements in the passed array are "true"
+	Function _CountTrueValues2:Int(tokens:SToken[])
+		If tokens.length = 0 Then Return 0
 
+		Local trueCount:Int 
+		For Local i:Int = 0 Until tokens.length
+			Select tokens[i].id
+			Case TK_NUMBER
+				If Int(tokens[i].value); trueCount :+ 1
+			Case TK_IDENTIFIER
+				If tokens[i].value And tokens[i].value <> "1"; trueCount :+ 1
+			EndSelect
+		Next
+	
+		'count = 0: none true,
+		'0 < count < arr.length: not all are true (but at least one)
+		'count = arr.length: all true
+		Return trueCount
+	End Function	
+
+	'returns how many elements are equal to the first passed value
+	Function _CountEqualValues2:Int(tokens:SToken[])
+		If tokens.length = 0 Then Return 0
+
+		Local equalCount:Int = 1 'is equal with itself
+		For Local i:Int = 1 Until tokens.length
+			If tokens[i].id = tokens[0].id And tokens[i].value = tokens[0].value Then 
+				equalCount :+ 1
+			'Else
+			'	If String(objects[i]) = String(objects[0]) Then equalCount :+ 1
+			EndIf
+		Next
+		Return equalCount
+	End Function
+	' SCAREMONGER - END
+	
 	'parsing an expression for a condition only returns 1 or 0 
 	Method ParseCondition:Int(expression:String, context:Object = Null)
 	End Method
@@ -493,10 +564,10 @@ Type TScriptExpressionLexer
 
 	Field cursor:Int, linenum:Int, linepos:Int
 	Field expression:String
-
+	
 	Method New( expression:String )
 		Self.expression = expression
-		cursor = 0
+		cursor  = 0
 		linenum = 0
 		linepos = 0
 	End Method
@@ -506,7 +577,7 @@ Type TScriptExpressionLexer
 		'If (cursor+1)>=tokens.count Return Create_EOF_Token()
 		'cursor :+ 1
 		'Return TToken( tokens.valueAtIndex( cursor ) )
-	
+		'DebugStop
 		Repeat
 			Local ch:Int = PeekAscii()
 			Select True
@@ -523,13 +594,15 @@ Type TScriptExpressionLexer
 	Private
 	
 	Method PeekChar:String()
+	DebugStop
+	Local debug:String = expression[ cursor..cursor+1 ]
 		If cursor >= expression.length Return ""
-		Return expression[ cursor+1 ]
+		Return expression[ cursor..cursor+1 ]
 	End Method
 
 	Method PeekAscii:Int()
 		If cursor >= expression.length Return 0
-		Return expression[ cursor+1 ]
+		Return expression[ cursor ]
 	End Method
 Rem
 	' Pops next character moving the cursor forward
@@ -587,7 +660,7 @@ EndRem
 	' Pops next character moving the cursor forward
 	Method PopChar:String()
 		If cursor >= expression.length Return ""
-		Local ch:String = expression[ cursor+1 ]
+		Local ch:String = expression[ cursor..cursor+1 ]
 
 		' Move the cursor forward
 		If ch = "~n"
@@ -618,7 +691,7 @@ EndRem
 			Return New SToken( TK_NUMBER, ExtractNumber(), linenum, linepos )
 		Case ( ch >=97 And ch <= 122 ) Or ( ch >= 65 And ch <=90 )	' LETTER
 			Local ident:String = ExtractIdent()
-			Return New SToken( TK_IDENTIFIER, PopChar(), linenum, linepos )
+			Return New SToken( TK_IDENTIFIER, ident, linenum, linepos )
 		Default ' ch = SYM_COLON Or ch = SYM_PERIOD						' SYMBOLS
 			Return New SToken( ch, PopChar(), linenum, linepos )
 		Rem
@@ -636,16 +709,16 @@ EndRem
 	
 	' Identifier starts with a letter, but can contain "_" and numbers
 	Method ExtractIdent:String()
-		DebugStop
+		'DebugStop
 		Local str:String
 		Local ch:Int = peekAscii()
-		While ch<>0 ..
-				Or ch = SYM_UNDERSCORE ..
-				Or ( ch >= 48 And ch <= 57 ) ..		' NUMBER
-				Or ( ch >= 65 And ch <= 90 ) ..		' UPPERCASE
-				Or ( ch >= 97 And ch <= 122 )		' LOWERCASE
-			str :+ popChar()
-			ch = peekAscii()
+		While ch=0 ..
+			Or ch = SYM_UNDERSCORE ..
+			Or ( ch >= 48 And ch <= 57 ) ..		' NUMBER
+			Or ( ch >= 65 And ch <= 90 ) ..		' UPPERCASE
+			Or ( ch >= 97 And ch <= 122 )		' LOWERCASE
+				str :+ popChar()
+				ch = peekAscii()
 		Wend
 		Return str
 	End Method
@@ -715,11 +788,16 @@ End Type
 ' Expression Parser
 Type TScriptExpressionParser
 
+	Field parent:TScriptExpression
+	Field context:Object
 	Field lexer:TScriptExpressionLexer
 	Field token:SToken	' Current token
 	
-	Method New( expression:String )
+	Method New( parent:TScriptExpression, expression:String, context:Object )
+		Self.parent = parent
+		Self.context = context
 		lexer = New TScriptExpressionLexer( expression )
+		advance()	' Read first token
 	End Method
 
 	' Read a readWrapper ${..}
@@ -730,7 +808,7 @@ Type TScriptExpressionParser
 		eat( SYM_LBRACE )	' Skip Opening Brace
 
 		' Termination
-		If Not token Or token.id = TK_EOF ; Throw( "Unexpected end" )
+		If Not token Or token.id = TK_EOF ; Throw( New TParseException( "Unexpected end", token, "readWrapper()" ) )
 		If token.id = SYM_RBRACE ; Return result		
 		
 		' First identifier can be:
@@ -739,63 +817,71 @@ Type TScriptExpressionParser
 
 		Select token.id
 		Case SYM_DOLLAR
-			result :+ [ eval(readWrapper()) ]
+			result :+ [ eval(readWrapper(), context) ]
 		Case SYM_PERIOD
 			eat( SYM_PERIOD )		' We dont need this identifier
-			advance()
-			If token.id <> TK_IDENTIFIER; Throw Unexpected()
+			'advance()
+			If token.id <> TK_IDENTIFIER; Throw New TParseException( "Identifier expected", token, "readWrapper()" )
 			token.id = TK_FUNCTION
+			advance()
+		Case TK_QSTRING, TK_NUMBER
+			result :+ [token]
+			advance()
 		Default
-			Throw Unexpected()
+			DebugLog( "ReadWrapper() - 1. ["+token.id+"] "+token.value+", error" )
+			Throw New TParseException( "Unexpected token", token, "readWrapper()" )
 		End Select
 		
 		' Next are one or more arguments
-		
+		DebugStop
 		Repeat
-			If token.id = SYM_RBRACE; Return result
+			If token.id = SYM_RBRACE; Return result	' We have finished!
 			eat( SYM_COLON )
 
 			Select token.id
+			Case TK_EOF
+				Throw New TParseException( "Unexpected end of expression", token, "readWrapper().params" )
 			Case TK_IDENTIFIER, TK_NUMBER, TK_QSTRING
 				result :+ [token]
+				advance()
+			Case SYM_DOLLAR
+				result :+ [ eval(readWrapper(), context) ]
 			Default
-				Throw Unexpected()
+				DebugLog( "ReadWrapper() - 2. ["+token.id+"] "+token.value+", error" )
+				Throw New TParseException( "Unexpected parameter", token, "readWrapper()" )
 			End Select
 		Forever			
 	End Method
 	
 	' Advances the token
 	Method advance()
+		'DebugStop
 		token = lexer.getNext()
+		'DebugStop
 	End Method
 
 	' Consume an expected symbol.
 	' If symbol does not exist, create a missing node in it's place
-	Method eat:SToken( expectation:Int ) ', useclass:String = True )
+	Method eat:SToken( expectation:Int ) 
 		'If cursor> tokens.count Return Create_EOF_Token()
 		Local token:SToken = Self.token
 		If token.id = expectation
+			'DebugStop
 			advance()
 			Return token
 		End If
-		' Optional token not found, so return a placeholder
-		'If useclass Return New TToken( TK_MISSING, "", token.line, token.pos, "MISSING" )
-		Throw Unexpected()
+		Throw New TParseException( token.value+" was unexpected", token, "eat()" )
 	End Method		
-	
-	' Throw and exception
-	Method Unexpected:String()
-		Return "Unexpected symbol at line "+token.linenum+":"+token.linepos
-	End Method
-	
-	Method eval:String( tokens:SToken[] )
+		
+	Method eval:SToken( tokens:SToken[], context:Object )
 		Select tokens[0].id
 		Case TK_FUNCTION
-			Local fn:TSEFN_Handler = TSEFN_Handler(SEFN_Handler( token.value.toLower() ))
-			Return fn( tokens[1..] )
+			Local fn:TSEFN_Handler = parent.GetFunctionHandler2( token.value.toLower() )
+			If Not fn; Throw New TParseException( "Undefined function "+token.value.toLower(), token, "eval()" )
+			Return fn.run( tokens[1..], context )
 		Case TK_IDENTIFIER
 		Case TK_NUMBER
-			Return tokens[0].value
+			Return tokens[0]
 		End Select
 	End Method
 	
@@ -838,6 +924,27 @@ Type TScriptExpressionFunctionHandler
 		If callback Then Return callback(params, context)
 	End Method
 End Type
+
+' SCAREMONGER - END
+Type TSEFN_Handler
+
+	Field resultType:EScriptExpressionResultType
+	Field paramMinCount:Int = -1
+	Field paramMaxCount:Int = -1
+	Field callback:SToken(params:SToken[], context:Object = Null)
+
+	Method New(callback:SToken( params:SToken[], context:Object = Null), paramMinCount:Int, paramCount:Int, resultType:EScriptExpressionResultType)
+		Self.callback = callback
+		Self.paramMinCount = paramMinCount
+		Self.paramMaxCount = paramMaxCount
+		Self.resultType = resultType
+	End Method
+
+	Method Run:SToken(params:SToken[], context:Object = Null)
+		If callback Then Return callback(params, context)
+	End Method
+End Type
+' SCAREMONGER - END
 
 'register defaults
 
@@ -895,57 +1002,66 @@ Function ScriptExpressionFunctionHandler_Condition_Lte:Object(params:Object[], c
 End Function
 
 ' SCAREMONGER - START
-Function SEFN_Or:Object(params:Object[], context:Object = Null)
-	Return String(TScriptExpression._CountTrueValues(params) > 0)
+Function SEFN_Or:SToken(params:SToken[], context:Object = Null)
+	Local cmd:SToken = params[0]
+	Return New SToken( TK_IDENTIFIER, String(TScriptExpression._CountTrueValues2(params) > 0), cmd.linenum, cmd.linepos )
 End Function
 
-Function SEFN_And:Object(params:Object[], context:Object = Null)
-	Return String(TScriptExpression._CountTrueValues(params) = params.length)
+Function SEFN_And:SToken(params:SToken[], context:Object = Null)
+	Local cmd:SToken = params[0]
+	Return New SToken( TK_IDENTIFIER, String(TScriptExpression._CountTrueValues2(params) = params.length), cmd.linenum, cmd.linepos )
 End Function
 
-Function SEFN_Not:Object(params:Object[], context:Object = Null)
-	Return String(TScriptExpression._CountTrueValues(params) = 0)
+Function SEFN_Not:SToken( params:SToken[], context:Object = Null)
+	Local cmd:SToken = params[0]
+	Return New SToken( TK_IDENTIFIER, String(TScriptExpression._CountTrueValues2(params) = 0), cmd.linenum, cmd.linepos )
 End Function
 
-Function SEFN_If:Object(params:Object[], context:Object = Null)
-	If TScriptExpression._CountTrueValues([params[0]]) = 1
+Function SEFN_If:SToken(params:SToken[], context:Object = Null)
+	Local cmd:SToken = params[0]
+	If TScriptExpression._CountTrueValues2([params[0]]) = 1
 		If params.length < 2
-			Return "1"
+			Return New SToken( TK_NUMBER, "1", cmd.linenum, cmd.linepos )
 		Else
 			Return params[1]
 		EndIf
 	Else
 		If params.length < 3
-			Return "0"
+			Return New SToken( TK_NUMBER, "0", cmd.linenum, cmd.linepos )
 		Else
 			Return params[2]
 		EndIf
 	EndIf
 End Function
 
-Function SEFN_Eq:Object(params:Object[], context:Object = Null)
-	Return String(TScriptExpression._CountEqualValues(params) = params.length)
+Function SEFN_Eq:SToken(params:SToken[], context:Object = Null)
+	Local cmd:SToken = params[0]
+	Return New SToken( TK_NUMBER, "0", cmd.linenum, cmd.linepos )
+	'Return String(TScriptExpression._CountEqualValues2(params) = params.length)
 End Function
 
-Function SEFN_Gt:Object(params:Object[], context:Object = Null)
-	If params.length < 2 Then Return "0"
-	Return String(Double(String(params[0])) > Double(String(params[1])))
+Function SEFN_Gt:SToken(params:SToken[], context:Object = Null)
+	Local cmd:SToken = params[0]
+	If params.length < 2 Then Return New SToken( TK_NUMBER, "0", cmd.linenum, cmd.linepos )
+	Return New SToken( TK_NUMBER, (Double(params[0].value) > Double(params[1].value)), cmd.linenum, cmd.linepos )
 End Function
 
-Function SEFN_Gte:Object(params:Object[], context:Object = Null)
-	If params.length < 2 Then Return "0"
-	Return String(Double(String(params[0])) >= Double(String(params[1])))
+Function SEFN_Gte:SToken(params:SToken[], context:Object = Null)
+	Local cmd:SToken = params[0]
+	If params.length < 2 Then Return New SToken( TK_NUMBER, "0", cmd.linenum, cmd.linepos )
+	Return New SToken( TK_NUMBER, (Double(params[0].value) >= Double(params[1].value)), cmd.linenum, cmd.linepos )
 End Function
 
-
-Function SEFN_Lt:Object(params:Object[], context:Object = Null)
-	If params.length < 2 Then Return "0"
-	Return String(Double(String(params[0])) < Double(String(params[1])))
+Function SEFN_Lt:SToken(params:SToken[], context:Object = Null)
+	Local cmd:SToken = params[0]
+	If params.length < 2 Then Return New SToken( TK_NUMBER, "0", cmd.linenum, cmd.linepos )
+	Return New SToken( TK_NUMBER, (Double(params[0].value) < Double(params[1].value)), cmd.linenum, cmd.linepos )
 End Function
 
-Function SEFN_Lte:Object(params:Object[], context:Object = Null)
-	If params.length < 2 Then Return "0"
-	Return String(Double(String(params[0])) <= Double(String(params[1])))
+Function SEFN_Lte:SToken(params:SToken[], context:Object = Null)
+	Local cmd:SToken = params[0]
+	If params.length < 2 Then Return New SToken( TK_NUMBER, "0", cmd.linenum, cmd.linepos )
+	Return New SToken( TK_NUMBER, (Double(params[0].value) <= Double(params[1].value)), cmd.linenum, cmd.linepos )
 End Function
 ' SCAREMONGER - END
 
@@ -972,7 +1088,13 @@ ScriptExpression.Register( "lte", SEFN_Lte, 2,  2, EScriptExpressionResultType.N
 ' SCAREMONGER - END
 
 ' SCAREMONGER - START
+' THis function cleans up an expression that kills MAXIDE during testing
+Function anticrash:String( in:String )
+	Return in.Replace( "&7B;", Chr(123) ).Replace( "&7D;", Chr(125) )
+End Function
+
 Function expect( test:String, expected:String )
+	test = anticrash( test )
 	GWRon( test, expected )
 	Scaremonger( test, expected )
 End Function
@@ -987,11 +1109,12 @@ Function GWRon( test:String, expected:String )
 End Function
 
 Function Scaremonger( test:String, expected:String )
-	Local result:String = ScriptExpression.Parse2(test)
-	If result = expected
+DebugStop
+	Local result:SToken = ScriptExpression.Parse2(test)
+	If result.id = TK_IDENTIFIER And result.value = expected
 		Print test + " - SUCCESS"
 	Else
-		Print test + " - FAILURE ("+result+")"
+		Print test + " - FAILURE ("+result.value+")"
 	End If
 End Function
 ' SCAREMONGER - END
@@ -1006,27 +1129,21 @@ Print "Tests"
 'print test + "  ->  " + ScriptExpression.Parse(test) + " = 1 ??"
 'test = "${.or:${~qhello }~q  }:${  ${0}   }}"
 
-expect( "${.or:${~qhello }~q  }:${  ${0}   }", "1" )
+' Incomplete / BAD
+'#expect( "${.or:${~qhello }~q  }:${  ${0}   }", "1" )
 
-expect( "${.or:~qhello~q:${0}}", "1" )
-
-expect( "${.if:${.or:~qhello~q:${0}}:~qTrue~q:~qFalse~q}", "True" )
-
-expect( "${.if:1:~qTrue~q:~qFalse~q}", "True" )
-
-expect( "${.if:1:~q\~qTrue\~q~q:~qFalse~q}", "~qTrue~q" )	' Test escaped quote
-
-expect( "${.if:${.not:1}:~qTrue~q:~qFalse~q}", "False" )
-
-expect( "${.eq:1:2:1}", "0" )
-
-expect( "${.eq:1:1:1}", "1" )
-
-expect( "${.gt:4:0}", "1" )
-
-expect( "${.gt:0:4}", "0" )
-
-expect( "${.gte:4:4}", "1" )
+DebugStop
+expect( "$&7B;.or:~qhello~q:$&7B;0&7D;&7D;", "1" )
+DebugStop
+expect( "$&7B;.if:$&7B;.or:~qhello~q:$&7B;0&7D;&7D;:~qTrue~q:~qFalse~q&7D;", "True" )
+expect( "$&7B;.if:1:~qTrue~q:~qFalse~q&7D;", "True" )
+expect( "$&7B;.if:1:~q\~qTrue\~q~q:~qFalse~q&7D;", "~qTrue~q" )	' Test escaped quote
+expect( "$&7B;.if:$&7B;.not:1&7D;:~qTrue~q:~qFalse~q&7D;", "False" )
+expect( "$&7B;.eq:1:2:1&7D;", "0" )
+expect( "$&7B;.eq:1:1:1&7D;", "1" )
+expect( "$&7B;.gt:4:0&7D;", "1" )
+expect( "$&7B;.gt:0:4&7D;", "0" )
+expect( "$&7B;.gte:4:4&7D;", "1" )
 
 Global bbGCAllocCount:ULong = 0
 'Extern
@@ -1034,19 +1151,21 @@ Global bbGCAllocCount:ULong = 0
 'End Extern
 
 Local t:Int = MilliSecs()
-Local expr:String = "${.and:${.gte:4:4}:${.gte:5:4}}"
+Local expr:String = anticrash("$&7B;.and:$&7B;.gte:4:4&7D;:$&7B;.gte:5:4&7D;&7D;")
+
+Local allocs:Int
 
 Print "GWRon:"
 Print ScriptExpression.Parse(expr)
-Local allocs:Int = bbGCAllocCount
+allocs = bbGCAllocCount
 For Local i:Int = 0 Until 1000000
 	ScriptExpression.Parse(expr)
 Next
 Print "took: " + (MilliSecs() - t) +" ms. Allocs=" + (bbGCAllocCount - allocs)
 
 Print "Scaremonger:"
-Print ScriptExpression.Parse2(expr)
-Local allocs:Int = bbGCAllocCount
+Print ScriptExpression.Parse2(expr).value
+allocs = bbGCAllocCount
 For Local i:Int = 0 Until 1000000
 	ScriptExpression.Parse(expr)
 Next
