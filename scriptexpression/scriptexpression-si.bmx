@@ -1088,13 +1088,8 @@ ScriptExpression.Register( "lte", SEFN_Lte, 2,  2, EScriptExpressionResultType.N
 ' SCAREMONGER - END
 
 ' SCAREMONGER - START
-' THis function cleans up an expression that kills MAXIDE during testing
-Function anticrash:String( in:String )
-	Return in.Replace( "&7B;", Chr(123) ).Replace( "&7D;", Chr(125) )
-End Function
 
 Function expect( test:String, expected:String )
-	test = anticrash( test )
 	GWRon( test, expected )
 	Scaremonger( test, expected )
 End Function
@@ -1133,17 +1128,17 @@ Print "Tests"
 '#expect( "${.or:${~qhello }~q  }:${  ${0}   }", "1" )
 
 DebugStop
-expect( "$&7B;.or:~qhello~q:$&7B;0&7D;&7D;", "1" )
+expect( "${.or:~qhello~q:${0}}", "1" )
 DebugStop
-expect( "$&7B;.if:$&7B;.or:~qhello~q:$&7B;0&7D;&7D;:~qTrue~q:~qFalse~q&7D;", "True" )
-expect( "$&7B;.if:1:~qTrue~q:~qFalse~q&7D;", "True" )
-expect( "$&7B;.if:1:~q\~qTrue\~q~q:~qFalse~q&7D;", "~qTrue~q" )	' Test escaped quote
-expect( "$&7B;.if:$&7B;.not:1&7D;:~qTrue~q:~qFalse~q&7D;", "False" )
-expect( "$&7B;.eq:1:2:1&7D;", "0" )
-expect( "$&7B;.eq:1:1:1&7D;", "1" )
-expect( "$&7B;.gt:4:0&7D;", "1" )
-expect( "$&7B;.gt:0:4&7D;", "0" )
-expect( "$&7B;.gte:4:4&7D;", "1" )
+expect( "${.if:${.or:~qhello~q:${0}}:~qTrue~q:~qFalse~q}", "True" )
+expect( "${.if:1:~qTrue~q:~qFalse~q}", "True" )
+expect( "${.if:1:~q\~qTrue\~q~q:~qFalse~q}", "~qTrue~q" )	' Test escaped quote
+expect( "${.if:${.not:1}:~qTrue~q:~qFalse~q}", "False" )
+expect( "${.eq:1:2:1}", "0" )
+expect( "${.eq:1:1:1}", "1" )
+expect( "${.gt:4:0}", "1" )
+expect( "${.gt:0:4}", "0" )
+expect( "${.gte:4:4}", "1" )
 
 Global bbGCAllocCount:ULong = 0
 'Extern
@@ -1151,7 +1146,7 @@ Global bbGCAllocCount:ULong = 0
 'End Extern
 
 Local t:Int = MilliSecs()
-Local expr:String = anticrash("$&7B;.and:$&7B;.gte:4:4&7D;:$&7B;.gte:5:4&7D;&7D;")
+Local expr:String = "${.and:${.gte:4:4}:${.gte:5:4}}"
 
 Local allocs:Int
 
