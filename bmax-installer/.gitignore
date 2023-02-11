@@ -6,22 +6,20 @@
 # Exclude folders
 .bmx/
 .vscode/
-
-# Private Sandboxes
-languageserver/
-loadfile/
-maxx/
-Threading/
-transpiler/
-#transpiler/old
+.bls-cache/
+notes/
+old/
+message.samples/
+test/
 
 # Exclude files
 *.bak
 *.debug
 *.old
-*.exe
-*.a
-*.i
-*.i2
-
+*.sh
+*.code-workspace
+bls.config
+runlog.txt
+TODO.txt
+testme
 

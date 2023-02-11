@@ -3,6 +3,10 @@ Framework Brl.StandardIO
 Import Brl.Map
 Import Brl.StringBuilder
 
+' SCAREMONGER - START
+Import brl.retro	' Hex() in SToken.reveal()
+' SCAREMONGER - END
+
 'Import "../source/Dig/base.util.scriptexpression.bmx"
 
 Rem
@@ -41,6 +45,7 @@ Const TK_IDENTIFIER:Int		= 1		' Identifier (STRING)
 Const TK_NUMBER:Int 		= 2		' Number
 Const TK_QSTRING:Int 		= 3		' Quoted String
 Const TK_FUNCTION:Int 		= 4		' Function
+Const TK_BOOLEAN:Int 		= 5		' Boolean identifiers (true/false)
 
 Struct SToken
 	Field id:Int = 0
@@ -54,6 +59,10 @@ Struct SToken
 		Self.linepos = linepos
 	End Method
 	
+	' Debugging
+	Method reveal:String()
+		Return "h"+Hex(id)+" = '"+value+"' at ["+linenum+","+linepos+"]"
+	End Method
 End Struct
 
 Type TParseException
@@ -97,15 +106,12 @@ Type TScriptExpression
 		DebugStop
 		Local parser:TScriptExpressionParser = New TScriptExpressionParser( Self, expression, context )
 		Try
-			Local result:SToken[] = parser.readWrapper()
-			Return parser.eval( result, context )
+			Return parser.readWrapper()
 		Catch e:TParseException
-			Print e.reveal()
-		
+			DebugLog e.reveal()
 		End Try
-	
+		Return New SToken( TK_BOOLEAN, "false", 0, 0 )
 	End Method
-	
 	' SCAREMONGER - END
 	
 	Method RegisterConditionHandler(conditionName:String, callback:Int(params:Object[]))
@@ -691,7 +697,12 @@ EndRem
 			Return New SToken( TK_NUMBER, ExtractNumber(), linenum, linepos )
 		Case ( ch >=97 And ch <= 122 ) Or ( ch >= 65 And ch <=90 )	' LETTER
 			Local ident:String = ExtractIdent()
-			Return New SToken( TK_IDENTIFIER, ident, linenum, linepos )
+			Select ident.toLower()
+			Case "true", "false"
+				Return New SToken( TK_BOOLEAN, ident.toLower(), linenum, linepos )
+			Default
+				Return New SToken( TK_IDENTIFIER, ident, linenum, linepos )
+			End Select
 		Default ' ch = SYM_COLON Or ch = SYM_PERIOD						' SYMBOLS
 			Return New SToken( ch, PopChar(), linenum, linepos )
 		Rem
@@ -724,7 +735,7 @@ EndRem
 	End Method
 		
 	Method ExtractNumber:String()
-		DebugStop
+		'DebugStop
 		Local str:String
 		Local Integer:Int, Floating:Float, negative:Int = 1, divider:Float=1.0
 		Local ch:Int = peekAscii()
@@ -801,55 +812,47 @@ Type TScriptExpressionParser
 	End Method
 
 	' Read a readWrapper ${..}
-	Method readWrapper:SToken[]()
+	Method readWrapper:SToken()
 		DebugStop
-		Local result:SToken[]
+		Local result:SToken[] = []
 		eat( SYM_DOLLAR )	' Skip leading Dollar symbol
 		eat( SYM_LBRACE )	' Skip Opening Brace
 
 		' Termination
 		If Not token Or token.id = TK_EOF ; Throw( New TParseException( "Unexpected end", token, "readWrapper()" ) )
-		If token.id = SYM_RBRACE ; Return result		
-		
-		' First identifier can be:
-		' 1. A Function
-		' 2. A Wrapper
 
-		Select token.id
-		Case SYM_DOLLAR
-			result :+ [ eval(readWrapper(), context) ]
-		Case SYM_PERIOD
-			eat( SYM_PERIOD )		' We dont need this identifier
-			'advance()
-			If token.id <> TK_IDENTIFIER; Throw New TParseException( "Identifier expected", token, "readWrapper()" )
-			token.id = TK_FUNCTION
-			advance()
-		Case TK_QSTRING, TK_NUMBER
-			result :+ [token]
-			advance()
-		Default
-			DebugLog( "ReadWrapper() - 1. ["+token.id+"] "+token.value+", error" )
-			Throw New TParseException( "Unexpected token", token, "readWrapper()" )
-		End Select
+		' Empty Wrapper
+		If token.id = SYM_RBRACE; Throw( New TParseException( "Empty group", token, "readWrapper()" ) )
 		
 		' Next are one or more arguments
-		DebugStop
-		Repeat
-			If token.id = SYM_RBRACE; Return result	' We have finished!
-			eat( SYM_COLON )
-
+		Repeat	
+		
 			Select token.id
 			Case TK_EOF
 				Throw New TParseException( "Unexpected end of expression", token, "readWrapper().params" )
-			Case TK_IDENTIFIER, TK_NUMBER, TK_QSTRING
+			Case SYM_DOLLAR
+				result :+ [ readWrapper() ]
+			Case SYM_PERIOD
+				eat( SYM_PERIOD )		' We dont need this identifier
+				'advance()
+				If token.id <> TK_IDENTIFIER; Throw New TParseException( "Identifier expected", token, "readWrapper()" )
+				token.id = TK_FUNCTION
 				result :+ [token]
 				advance()
-			Case SYM_DOLLAR
-				result :+ [ eval(readWrapper(), context) ]
+			Case TK_IDENTIFIER, TK_QSTRING, TK_NUMBER
+				result :+ [token]
+				advance()
 			Default
-				DebugLog( "ReadWrapper() - 2. ["+token.id+"] "+token.value+", error" )
-				Throw New TParseException( "Unexpected parameter", token, "readWrapper()" )
+				DebugLog( "ReadWrapper() ["+token.id+"] "+token.value+", error" )
+				Throw New TParseException( "Unexpected token", token, "readWrapper()" )
 			End Select
+			
+			' If we have finished, evaluate the wrapper returning the result
+			If token.id = SYM_RBRACE; Return eval( result )
+			
+			' Next should be a ":"
+			eat( SYM_COLON )
+			
 		Forever			
 	End Method
 	
@@ -864,7 +867,7 @@ Type TScriptExpressionParser
 	' If symbol does not exist, create a missing node in it's place
 	Method eat:SToken( expectation:Int ) 
 		'If cursor> tokens.count Return Create_EOF_Token()
-		Local token:SToken = Self.token
+		'Local token:SToken = Self.token
 		If token.id = expectation
 			'DebugStop
 			advance()
@@ -873,14 +876,14 @@ Type TScriptExpressionParser
 		Throw New TParseException( token.value+" was unexpected", token, "eat()" )
 	End Method		
 		
-	Method eval:SToken( tokens:SToken[], context:Object )
+	Method eval:SToken( tokens:SToken[] )
 		Select tokens[0].id
 		Case TK_FUNCTION
 			Local fn:TSEFN_Handler = parent.GetFunctionHandler2( token.value.toLower() )
 			If Not fn; Throw New TParseException( "Undefined function "+token.value.toLower(), token, "eval()" )
 			Return fn.run( tokens[1..], context )
-		Case TK_IDENTIFIER
-		Case TK_NUMBER
+		Case TK_IDENTIFIER, TK_BOOLEAN, TK_NUMBER
+			If tokens.length > 1; Throw New TParseException( "Invalid parameters", tokens[1], "eval()" )
 			Return tokens[0]
 		End Select
 	End Method
@@ -1090,6 +1093,7 @@ ScriptExpression.Register( "lte", SEFN_Lte, 2,  2, EScriptExpressionResultType.N
 ' SCAREMONGER - START
 
 Function expect( test:String, expected:String )
+	Print "~n"
 	GWRon( test, expected )
 	Scaremonger( test, expected )
 End Function
@@ -1104,12 +1108,12 @@ Function GWRon( test:String, expected:String )
 End Function
 
 Function Scaremonger( test:String, expected:String )
-DebugStop
+'DebugStop
 	Local result:SToken = ScriptExpression.Parse2(test)
 	If result.id = TK_IDENTIFIER And result.value = expected
 		Print test + " - SUCCESS"
 	Else
-		Print test + " - FAILURE ("+result.value+")"
+		Print test + " - FAILURE ("+result.reveal()+")"
 	End If
 End Function
 ' SCAREMONGER - END
