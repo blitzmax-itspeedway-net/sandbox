@@ -4,12 +4,28 @@ EXPERIMENTAL
 
 # Command Line
 
+NOTE: This should be based on something like "apt"
+
 ```
 bmax --version      Application version
 bmax list           List all modules
 bmax show <module>  Show module detail
 
 bmax --debug        Produced a CSV containing all module data
+
+THESE ARE IN PROGESS AND ARE EXPERIMENTAL
+bmax install [--default|--in <folder>]	Installs latest release of Blitzmax
+	--default							Install in default location
+	--in <folder>						Specify the installation directory
+
+bmax install <package|module>			Installs latest package or module
+
+FROM HERE ARE NOT IMPLEMENTED:
+bmax upgrade
+
+bmax update <package|module>
+bmax install <package|module>
+bmax uninstall <package|module>			
 
 # NOTES
 
@@ -31,11 +47,16 @@ Before INSTALL/UNINSTALL is possible, we need a way to identify some additonal d
     @bmk version - (see some of my other modules) can write version details to a file
         Basically it should write to some type of JSON file.
 
+	Need a way to flag depreciated modules to the user
+	
 UPDATE FROM GITHUB
+https://api.github.com/
 https://www.advancedinstaller.com/github-integration-for-updater.html
+https://docs.github.com/en/rest/releases/releases?apiVersion=2022-11-28
 
 This uses the "Release" API
 
+To get a list of releases; you call this:
 https://api.github.com/repos/<username>/<repository_name>/releases
 
 Because it is HTTPS; we have to use Bruceys CURL module
@@ -45,6 +66,8 @@ Because it is HTTPS; we have to use Bruceys CURL module
         libcurl.mod
         libssh2.mod
         mbedtls.mod
+	
+		volumes.mod		<- Now part of BlitzMaxNH brl.volumes
 
     Copy them into mods/bah.mod (You may need to create the folder)
     
@@ -57,7 +80,46 @@ INSTALLER LOGIC
 	Some modules have Blitzmax dependencies
 	Some modules have operating system dependencies
 		For example, libcurl needs libidn11-dev
-	
+	Find list of documented libraries for "sudo apt-get install"
+
+MODSERVER INFORMATION
+
+PACKAGE			REPO					MODSERVER		INSTALL
+BlitzMaxNG		bmx-ng					bmx-ng					
+BlitzMax		bmx-ng					bmx-ng
+
+bcc				bmx-bg					bcc				. to ${BLITZMAX}/src/bcc
+		After compile: the exe needs copying to ${BLITZMAX}/bin/
+bmk				bmx-bg					bmk				. to ${BLITZMAX}/src/bmk
+		After compile: the exe needs copying to ${BLITZMAX}/bin/
+maxide			bmx-bg					maxide			. to ${BLITZMAX}/src/maxide
+		After compile: the exe needs copying to ${BLITZMAX}/
+bmax			blitzmax-itspeedway-net	bmax			. to ${BLITZMAX}/src/bmax
+		After compile:
+			the exe needs copying to ${BLITZMAX}/
+			Copy package database into ${BLITZMAX}/cfg/
+bls				blitzmax-itspeedway-net	bls				tbc
+
+audio.*			bmx-bg
+brl.*			bmx-bg
+crypto.mod		bmx-bg
+maxgui.mod		bmx-bg
+mky.mod			bmx-bg
+pub.mod			bmx-bg
+random.mod		bmx-bg
+sdl.mod			bmx-bg
+steam.mod		bmx-bg
+text.mod		bmx-bg
+
+bah.libcurl		maxmods 				bah.mod			Modules inside parent zip
+bah.mbedtls		maxmods 				bah.mod			Modules inside parent zip
+bah.libssh2		maxmods 				bah.mod			Modules inside parent zip
+
+bmx.observer	blitzmax-itspeedway-net	observer.mod	. to /mod/bmx/observer.mod
+bmx.json		blitzmax-itspeedway-net	json.mod		. to /mod/bmx/json.mod
+
+Need to document other users modules; i'm sure there are a lot of them
+
 THINGS TO DO
 * Document how to re-generate the certificate (Before it expires)
 

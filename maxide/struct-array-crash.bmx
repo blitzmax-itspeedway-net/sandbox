@@ -1,16 +1,17 @@
 SuperStrict
+DebugStop
 
 Struct TOKEN
 	Field ch:String
 	Method New( ch:String )
 		Self.ch = ch
 	End Method
-End Struct
+EndStruct
 
-Local tokens:TOKEN[]
+Local tokens:TOKEN[2]
 
-tokens :+ [ New TOKEN("A") ]
-tokens :+ [ New TOKEN("B") ]
+tokens[0] = New TOKEN("A")
+tokens[1] = New TOKEN("B")
 
 DebugStop
 Rem

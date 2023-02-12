@@ -1,54 +1,55 @@
+
+'	Github Modserver API test
+'	(c) Copyright Si Dunford [Scaremonger], FEB 2023, All rights reserved
+
+'	FURTHER READING:
+'	https://www.advancedinstaller.com/github-integration-For-updater.html
+
 SuperStrict
-'https://www.advancedinstaller.com/github-integration-For-updater.html
 
-Import bmx.json
-Import bah.libcurl
+'Import bmx.json
+'Import bah.libcurl
 
-Const GITHUBAPI:String = "http://api.github.com/repos/"
+Import "bin/TGitHub.bmx"
+Import "bin/TRepository.bmx"
 
-Global modserver:String = "GITHUB"
-Global modrepo:String = "bmx-ng/bmx-ng"
+' Set platform specific filters
+Global BLITZMAX_FILTER:String
+?linux
+		BLITZMAX_FILTER = "linux_x64"
+?Win32x86
+		BLITZMAX_FILTER = "win32_x86"
+?Win32x64
+		BLITZMAX_FILTER = "win32_x64"
+?MacOSX64
+		BLITZMAX_FILTER = "macos_x64"
+?raspberrypiARM
+		BLITZMAX_FILTER = "rpi_arm"
+?
+
+Global repo:String = "BlitzMax"
+If AppArgs.length = 2; repo = AppArgs[1]
 DebugStop
-Print AppArgs.length
-If AppArgs.length = 2; modrepo = AppArgs[1]
 
-Print "Checking '"+modserver+":"+modrepo+"'"
+Local repository:TRepository = New TRepository().find( repo )
+Local modserver:TGithub = New TGithub( repository )
 
-DebugStop
-Local api:String  = GITHUBAPI + modrepo + "/releases"
-
-Local wget:String
 Try
-	wget = download( api )
-	
-	Print wget
-	
-	Local J:JSON = JSON.parse( wget )
-	If J.isinvalid()
-		Print( J.error() )
-		Print( J.GetLastError() )
-	Else
-		Print J.Prettify()
-	End If
-Catch Exception:String
-	Print Exception
-EndTry
+	Print "Checking '"+repository.name+"'"
+	DebugStop
+	Local releases:TList = modserver.getReleases( BLITZMAX_FILTER )
+	Print "RELEASES:"
+	For Local released:TRelease = EachIn releases
+		Print released.reveal()
+	Next
+	Print "LATEST:"
+	Local latest:TRelease = modserver.getLatest()
+	Print latest.reveal()
+Catch e:String
+	Print e
+End Try
 
-Function download:String( url:String )
-	Local curl:TCurlEasy = TCurlEasy.Create()
-	If curl<>Null
-		curl.setWriteString()
-		'curl.setOptInt( CURLOPT_VERBOSE, 1 )
-		curl.setOptInt( CURLOPT_FOLLOWLOCATION, 1)
-		curl.setOptString( CURLOPT_CAINFO, "certificates/cacert.pem" )
-		curl.setOptString( CURLOPT_URL, url )
-		curl.httpHeader( ["User-Agent: BlitzMaxNG", "Referer:"] )
-	EndIf
-	Local error:Int = curl.perform()
-	If error; Throw CurlError( error )
-	curl.cleanup()
-	Return curl.toString()
-End Function
+
 
 Rem
 node_id" - Update section name (Update key)

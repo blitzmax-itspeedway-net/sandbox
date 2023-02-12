@@ -1,9 +1,17 @@
+
+'	BlitzMax installer
+'	(c) Copyright Si Dunford [Scaremonger], FEB 2023, All rights reserved
+
 SuperStrict
-'   BlitzMax Installer
-'   (c) Copyright Si Dunford, FEB 2023, All Rights Reserved. 
-'   VERSION: 1.0
 
 Import bmx.json
+'Import bah.volumes		' Now part of BlitzMaxNG, see brl.volumes
+'Import brl.volumes
+
+Import "bin/config.bmx"
+Import "bin/TGitHub.bmx"
+
+Import "bin/cmd_install.bmx"
 
 Rem ARGUMENTS
 
@@ -20,43 +28,101 @@ bmax install -r requirements.txt         NOT IMPLEMENTED
 
 bmax update		Updates self 			NOT IMPLEMENTED 
 
+bmax compile <package> [-h|-a etc]		NOT IMPLEMENTED
+bmax makedocs							NOT IMPLEMENTED
+
 /u --update     Updates a package       NOT IMPLEMENTED
 -r /r           Use a requirements file NOT IMPLEMENTED
 --proxy         Use a proxy server      NOT IMPLEMENTED
 
 End Rem
 
-Local version:String = "0.0.0"
+'Type TStringMapPlus Extends TStringMap
+'	Method operator []:String( key:String )
+'		Return String( valueForKey( key ) )
+'	End Method
+'End Type
 
 ' Use this for debugging available moduleinfo fields
 Global ModInfo:TMap = New TMap()	
 
-' Parse arguments
+'	INITIAISE CONFIG AND CREATE FOLDERS
 
-AppTitle = "bmax" 
+AppTitle = "bmax"
+Local AppVersion:String = "0.0.0"
+
+Try 
+	CONFIG.initialise()
+Catch Exception:String
+	Print Exception
+	End
+End Try
+
+Rem
+	' Set up some operational variables
+Global config:TStringMapPlus = New TStringMapPlus()
+config["userhome"]      = GetUserHomeDir()
+'config["desktop"]       = GetUserDesktopDir()
+'config["userdata"]		= GetUserDesktopDir()
+'consig["userdocs"]		= GetUserDocumentsDir()
+'config["shareddata"]	= GetCustomDir( DT_SHAREDUSERDATA )
+
+
+config["downloads"]     = config["blitzmax_root"]+config["directoryslash"]
+config["blitzmax_bin"]  = config["userhome"]+config["directoryslash"]+"BlitzMax"+config["bin"]
+config["blitzmax_src"]  = config["userhome"]+config["directoryslash"]+"BlitzMax"+config["bin"]
+config["blitzmax_mod"]  = config["userhome"]+config["directoryslash"]+"BlitzMax"+config["bin"]
+End Rem
+
+DebugStop
+
+'	PARSE ARGUMENTS
 
 Local args:String[] = AppArgs[1..]
-DebugStop
-' Identify function
-Select args[0].toLower()
-Case "list"
-	cmd_list()
-Case "show"
-	Assert args.length=2 Else "?" 'AppTitle+": expected 1 argument, found "+args.length
-	cmd_show( AppArgs[2] )
-Case "--debug"
-	DebugStop
-	cmd_debug( "all-modules.csv" )
-'Case "search"
-'Case "download"
-'Case "install"
-'Case "uninstall"
-'Case "update"
-Case "--version"
-	Print AppTitle+" "+version+" in "+AppDir
-Default
-	Print AppTitle+": Unknown command"
-End Select
+Try
+	If args.length = 0; Throw AppTitle+": No argument provided, try '--help' for more information"
+
+	' Identify function
+	Select args[0].toLower()
+	Case "list"
+		cmd_list()
+	Case "show"
+		Assert args.length=2 Else "?" 'AppTitle+": expected 1 argument, found "+args.length
+		cmd_show( AppArgs[2] )
+	Case "--debug"
+		DebugStop
+		cmd_debug( "all-modules.csv" )
+	Case "install"
+		' With no arguments, we overwrite existing or install as default
+		Select True
+		Case args.length = 1
+			cmd_install_blitzmax()
+		Case args.length = 2 And args[1].toLower() = "--default"
+			CONFIG.setRoot( "" )
+			cmd_install_blitzmax()
+		Case args.length = 3 And args[1].toLower() = "--in"
+			CONFIG.setRoot( args[2] )
+			cmd_install_blitzmax()
+		Case args.length = 2 And Instr( args[1], "." ) > 0
+			cmd_install_module()
+		Case args.length = 2
+			cmd_install_package()
+		Default
+			Throw( "Invalid arguments" )
+		EndSelect
+	'Case "search"
+	'Case "download"		
+	'Case "uninstall"
+	'Case "update"
+		' With no arguments we update to the latest offical release
+	Case "--version"
+		Print AppTitle+" "+AppVersion+" in "+AppDir
+	Default
+		Throw "Unknown command"
+	End Select
+Catch Exception:String
+	Print AppTitle + ":ERROR, "+ Exception
+EndTry
 End
 
 ' Shows a list of all modules
@@ -69,6 +135,7 @@ Function cmd_debug( output:String )
 		"DEPENDENCIES" ..
 		]]
 	
+	DebugStop
 	Local modules:TList = EnumModules()	
 	For Local modid:String = EachIn modules
 
