@@ -1,5 +1,5 @@
 
-'	BlitzMax installer
+'	GitHub modserver for BlitzMax installer
 '	(c) Copyright Si Dunford [Scaremonger], FEB 2023, All rights reserved
 
 SuperStrict
@@ -9,11 +9,13 @@ Import bmx.json
 Import "TModserver.bmx"
 Import "TRelease.bmx"
 Import "TRepository.bmx"
+Import "datetime.bmx"
 
 Type TGithub Extends TModserver
 
 	Private
 	
+	Const ONE_DAY:Int = 60*60*24	
 	Const GITHUB_API:String = "http://api.github.com/repos/"
 
 	Method _TRelease:TRelease( J:JSON )
@@ -36,25 +38,39 @@ Type TGithub Extends TModserver
 '	End Method
 	
 	Method getReleases:TList( filter:String = "" )
-		Print "READING RELEASES:"
-		'DebugStop
-		If Not filter; Return Null
-		Local data:JSON = JDownload( GITHUB_API + repository.workspace() + "/releases" )
+		Local data:JSON
+		DebugStop
 		
+		' Check if we have a recent copy of Repository Releases in cache
+		Local filename:String = CONFIG.DOWNLOAD+DIRSLASH+repository.filename()
+		If FileType( filename ) = FILETYPE_FILE And FileTime(filename ) < DateTime.time() - ONE_DAY
+			' Load from cache
+			Local jtext:String = LoadString( filename )
+			data = JSON.parse( jtext ) 
+		Else
+			Print "Updating release information"
+			DebugStop
+			If Not filter; Return Null
+			data = JDownload( GITHUB_API + repository.repo + "/releases" )
+			' Cache release information
+			If Not data Or data.isInvalid(); Return Null
+			SaveString( data.prettify(), filename )
+		End If
+		
+		' Extract release information	
 		Local releases:TList = New TList()
 		For Local asset:JSON = EachIn data.toArray()
 			Local rel:TRelease = _TRelease( asset )
 			If filter And Instr( rel.name, filter ) = 0; Continue
 			releases.addlast( rel )
 		Next
-		
 		If releases.isEmpty(); Return Null
 		Return releases
 	End Method
 	
 	Method getLatest:TRelease()
 		Print "READING LATEST:"
-		Local asset:JSON = JDownload( GITHUB_API + repository.workspace() + "/releases/latest" )
+		Local asset:JSON = JDownload( GITHUB_API + repository.repo + "/releases/latest" )
 '		Print asset.prettify()
 '		DebugStop
 		Return _TRelease( asset )

@@ -1,3 +1,7 @@
+Rem 
+	16 FEB 2023 - FIXED IN LATEST / FAILS IN OFFICIAL
+End Rem
+
 SuperStrict
 DebugStop
 
@@ -23,4 +27,6 @@ Rem
 	* Repeat the procedure
 	
 	When it is a Struct, you get "Segmentation fault (core dumped)"
+	
+
 EndRem

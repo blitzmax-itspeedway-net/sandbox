@@ -29,6 +29,7 @@ Type TModserver
 			curl.setOptInt( CURLOPT_FOLLOWLOCATION, 1)
 			curl.setOptString( CURLOPT_CAINFO, CertPath )
 			curl.setOptString( CURLOPT_URL, url )
+			'curl.setProgressCallback( progressCallback )
 			curl.httpHeader( ["User-Agent: "+UserAgent, "Referer:"] )
 		EndIf
 		Local error:Int = curl.perform()
@@ -39,7 +40,27 @@ Type TModserver
 	
 	Method downloadBinary( url:String, filename:String="" )
 		If filename = ""; filename = repository.name
-		filename = sanitise( filename )
+		filename = CONFIG.DOWNLOAD+DIRSLASH+sanitise( filename )
+		
+		Local curl:TCurlEasy = TCurlEasy.Create()
+		Local stream:TStream = WriteStream( filename )
+		
+		If curl<>Null And stream
+			curl.setWriteStream( stream )
+			'curl.setOptInt( CURLOPT_VERBOSE, 1 )
+			curl.setOptInt( CURLOPT_FOLLOWLOCATION, 1)
+			curl.setOptString( CURLOPT_CAINFO, CertPath )
+			curl.setOptString( CURLOPT_URL, url )
+			curl.setProgressCallback( progressCallback )
+			curl.httpHeader( ["User-Agent: "+UserAgent, "Referer:"] )
+		EndIf
+		Local error:Int = curl.perform()
+		CloseStream( stream )
+		If error; Throw CurlError( error )
+		curl.cleanup()
+		Print filename+", filesize: "+FileSize(filename)
+		'Return curl.toString()
+
 	End Method 
 	
 	Method Jdownload:JSON( url:String )
@@ -52,7 +73,7 @@ Type TModserver
 	' Santise a filename
 	'TODO: Need to improve this
 	Function sanitise:String( filename:String )
-		DebugStop
+		'DebugStop
 		Local sanitised:String
 		Const VALID:String = " -_,.0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 		For Local n:Int = 0 Until filename.length
@@ -65,5 +86,9 @@ Type TModserver
 		Next
 		Return sanitised
 	End Function
-	
+
+	Function progressCallback:Int(data:Object, dltotal:Long, dlnow:Long, ultotal:Long, ulnow:Long)
+		Print " ++++ " + dlnow + " bytes"
+		Return 0	
+	End Function	
 End Type

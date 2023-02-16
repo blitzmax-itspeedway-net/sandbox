@@ -19,17 +19,24 @@ Function cmd_install_blitzmax()
 	Local modserver:TGitHub = New TGithub( repository )
 	' Get available releases
 	Local releases:TList = modserver.getReleases( CONFIG.BLITZMAX_RELEASE )
-	If Not releases; Throw "Failed to download release information"
+	If Not releases; Throw "Failed to obtain release information"
 	' Select the latest release
 	Local latest:TRelease = TRelease( releases.removeFirst() )
-	' Check if we have already downloaded it
-	DebugStop
-	If FileType( CONFIG.DOWNLOAD+DIRSLASH+latest.name+".zip" ) = FILETYPE_FILE
+	' Download archive if we don't already have a copy
+	If FileType( CONFIG.DOWNLOAD+DIRSLASH+latest.name ) = FILETYPE_FILE
 		Print( latest.name +" already downloaded" )
 	Else
 		Print( "Downloading "+latest.name+"..." )	
-		modserver.downloadBinary( latest.url, latest.name+".zip" ) 
+		modserver.downloadBinary( latest.url, latest.name ) 
 	End If
+	' Decompress the library if we haven't already
+	' FOR THIS WE NEED TO KNOW THE UNZIPPED NAME
+	
+	Local package:TPackege = New TPackage( "Blitzmax" )
+	package.install()
+	
+	' 
+
 	
 End Function
 

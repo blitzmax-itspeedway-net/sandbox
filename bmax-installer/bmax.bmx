@@ -2,6 +2,8 @@
 '	BlitzMax installer
 '	(c) Copyright Si Dunford [Scaremonger], FEB 2023, All rights reserved
 
+' DEBUG COMMAND LINE:	install -in BlitzMaxNG
+
 SuperStrict
 
 Import bmx.json
@@ -79,6 +81,10 @@ DebugStop
 '	PARSE ARGUMENTS
 
 Local args:String[] = AppArgs[1..]
+DebugLog( "## ARG COUNT: "+args.length )
+For Local n:Int = 0 Until args.length
+	DebugLog n+") "+args[n]
+Next
 Try
 	If args.length = 0; Throw AppTitle+": No argument provided, try '--help' for more information"
 
@@ -93,6 +99,7 @@ Try
 		DebugStop
 		cmd_debug( "all-modules.csv" )
 	Case "install"
+		DebugStop
 		' With no arguments, we overwrite existing or install as default
 		Select True
 		Case args.length = 1

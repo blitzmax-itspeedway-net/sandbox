@@ -1,0 +1,11 @@
+{
+"BlitzMax":{
+    "repository": "bmx-ng/bmx-ng",
+    "pre-install":[
+        {"unzip":"blitzmax"}
+        ],
+    "install":[
+        {"copy":{"source":"","destination":"/"}}
+    ]       
+}
+

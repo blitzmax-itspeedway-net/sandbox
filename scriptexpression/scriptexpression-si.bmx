@@ -63,6 +63,19 @@ Struct SToken
 	Method reveal:String()
 		Return "h"+Hex(id)+" = '"+value+"' at ["+linenum+","+linepos+"]"
 	End Method
+	
+	Method TokName:String()
+		Select id
+		Case TK_EOF;		Return "EOF"
+		Case TK_IDENTIFIER;	Return "Identifier"
+		Case TK_NUMBER;		Return "Number"
+		Case TK_QSTRING;	Return "String"
+		Case TK_FUNCTION;	Return "Function"
+		Case TK_BOOLEAN;	Return "Bool"
+		Default
+			Return "n/a ("+id+")"
+		End Select
+	End Method
 End Struct
 
 Type TParseException
@@ -103,7 +116,7 @@ Type TScriptExpression
 	Field FN_Handlers:TStringMap = New TStringMap()
 
 	Method Parse2:SToken( expression:String, context:Object[] = Null)
-		DebugStop
+		'DebugStop
 		Local parser:TScriptExpressionParser = New TScriptExpressionParser( Self, expression, context )
 		Try
 			Return parser.readWrapper()
@@ -255,7 +268,7 @@ Type TScriptExpression
 			Local charIndex:Int = 0
 			Local inString:Int
 'print "Loop ==="
-			While charIndex < sb.Length()
+			While charIndex < sb.length()
 				If escapeNextChar
 'print charIndex + "-> escape  (" + charIndex + " < " + sb.Length() + ")"
 					escapeNextChar = False
@@ -279,7 +292,7 @@ Type TScriptExpression
 				EndIf
 
 				If Not inString
-					If charIndex < sb.Length() - 1 And sb[charIndex] = Asc("$") And sb[charIndex + 1] = Asc("{")
+					If charIndex < sb.length() - 1 And sb[charIndex] = Asc("$") And sb[charIndex + 1] = Asc("{")
 						lastOpeningTagCharIndex = charIndex
 '	print charIndex + "-> Opening ${  (" + charIndex + " < " + sb.Length() + ")"
 					ElseIf sb[charIndex] = Asc("}") And lastOpeningTagCharIndex >= 0
@@ -813,7 +826,7 @@ Type TScriptExpressionParser
 
 	' Read a readWrapper ${..}
 	Method readWrapper:SToken()
-		DebugStop
+		'DebugStop
 		Local result:SToken[] = []
 		eat( SYM_DOLLAR )	' Skip leading Dollar symbol
 		eat( SYM_LBRACE )	' Skip Opening Brace
@@ -879,8 +892,9 @@ Type TScriptExpressionParser
 	Method eval:SToken( tokens:SToken[] )
 		Select tokens[0].id
 		Case TK_FUNCTION
-			Local fn:TSEFN_Handler = parent.GetFunctionHandler2( token.value.toLower() )
-			If Not fn; Throw New TParseException( "Undefined function "+token.value.toLower(), token, "eval()" )
+			'DebugStop
+			Local fn:TSEFN_Handler = parent.GetFunctionHandler2( tokens[0].value.toLower() )
+			If Not fn; Throw New TParseException( "Undefined function "+tokens[0].value.toLower(), tokens[0], "eval()" )
 			Return fn.run( tokens[1..], context )
 		Case TK_IDENTIFIER, TK_BOOLEAN, TK_NUMBER
 			If tokens.length > 1; Throw New TParseException( "Invalid parameters", tokens[1], "eval()" )
@@ -1092,28 +1106,28 @@ ScriptExpression.Register( "lte", SEFN_Lte, 2,  2, EScriptExpressionResultType.N
 
 ' SCAREMONGER - START
 
-Function expect( test:String, expected:String )
-	Print "~n"
+Function expect( test:String, expected:String, token:Int )
+	Print "~n"+test
 	GWRon( test, expected )
-	Scaremonger( test, expected )
+	Scaremonger( test, expected, token )
 End Function
 
 Function GWRon( test:String, expected:String )
 	Local result:String = ScriptExpression.Parse(test)
 	If result = expected
-		Print test + " - SUCCESS"
+		Print "GWRON:       SUCCESS  [String] '"+expected+"'"
 	Else
-		Print test + " - FAILURE ("+result+")"
+		Print "GWRON:       FAILURE  [String] '"+result+"' <> '"+expected+"'"
 	End If
 End Function
 
-Function Scaremonger( test:String, expected:String )
+Function Scaremonger( test:String, expected:String, token:Int )
 'DebugStop
 	Local result:SToken = ScriptExpression.Parse2(test)
-	If result.id = TK_IDENTIFIER And result.value = expected
-		Print test + " - SUCCESS"
+	If result.id = token And result.value = expected
+		Print "SCAREMONGER: SUCCESS  ["+result.TokName()+"] '"+expected+"' )"
 	Else
-		Print test + " - FAILURE ("+result.reveal()+")"
+		Print "SCAREMONGER: FAILURE  ["+result.TokName()+"] '"+result.value+"' <> '"+expected+"' )"
 	End If
 End Function
 ' SCAREMONGER - END
@@ -1132,17 +1146,17 @@ Print "Tests"
 '#expect( "${.or:${~qhello }~q  }:${  ${0}   }", "1" )
 
 DebugStop
-expect( "${.or:~qhello~q:${0}}", "1" )
+expect( "${.or:~qhello~q:${0}}", "1", TK_BOOLEAN )
 DebugStop
-expect( "${.if:${.or:~qhello~q:${0}}:~qTrue~q:~qFalse~q}", "True" )
-expect( "${.if:1:~qTrue~q:~qFalse~q}", "True" )
-expect( "${.if:1:~q\~qTrue\~q~q:~qFalse~q}", "~qTrue~q" )	' Test escaped quote
-expect( "${.if:${.not:1}:~qTrue~q:~qFalse~q}", "False" )
-expect( "${.eq:1:2:1}", "0" )
-expect( "${.eq:1:1:1}", "1" )
-expect( "${.gt:4:0}", "1" )
-expect( "${.gt:0:4}", "0" )
-expect( "${.gte:4:4}", "1" )
+expect( "${.if:${.or:~qhello~q:${0}}:~qTrue~q:~qFalse~q}", "True", TK_BOOLEAN )
+expect( "${.if:1:~qTrue~q:~qFalse~q}", "True", TK_BOOLEAN )
+expect( "${.if:1:~q\~qTrue\~q~q:~qFalse~q}", "~qTrue~q", TK_QSTRING )	' Test escaped quote
+expect( "${.if:${.not:1}:~qTrue~q:~qFalse~q}", "False", TK_BOOLEAN )
+expect( "${.eq:1:2:1}", "0", TK_NUMBER )
+expect( "${.eq:1:1:1}", "1", TK_NUMBER )
+expect( "${.gt:4:0}", "1", TK_NUMBER )
+expect( "${.gt:0:4}", "0", TK_NUMBER )
+expect( "${.gte:4:4}", "1", TK_NUMBER )
 
 Global bbGCAllocCount:ULong = 0
 'Extern

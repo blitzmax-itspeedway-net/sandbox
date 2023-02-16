@@ -80,7 +80,7 @@ Type CONFIG
 		If root = ""	' Set to default
 			BMX_ROOT = USERHOME+DIRSLASH+"BlitzMax"
 		Else			' Specific path
-			BMX_ROOT = root
+			BMX_ROOT = USERHOME+DIRSLASH+root
 		End If
 		ResetFolderNames()
 	End Function
@@ -90,7 +90,7 @@ Type CONFIG
 		For Local folder:String = EachIn [ BMX_ROOT, BMX_BIN, BMX_CFG, BMX_MOD, BMX_SRC, CERTPATH, DOWNLOAD ]
 			MakeDirectory( folder )
 		Next
-		DebugStop
+		'DebugStop
 		' We will also copy our certificate
 		Local src:String = AppDir+DIRSLASH+"certificate"+DIRSLASH+CERTIFICATE
 		Local dst:String = CERTPATH+DIRSLASH+CERTIFICATE

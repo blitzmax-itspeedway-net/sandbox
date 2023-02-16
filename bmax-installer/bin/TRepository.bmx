@@ -11,36 +11,32 @@ Type TRepository
 	Global repositories:TMap
 	
 	Field name:String
-	Field username:String
 	Field repo:String
 	'Field platform:Int
 	
 	Function Initialise()
-DebugStop
+'DebugStop
 		If initialised; Return
 		repositories = New TMap()
 		initialised  = True
 
-		Local name:String, username:String, repo:String
+		Local name:String, repo:String
 		RestoreData repositories
 		ReadData( name )
-		ReadData( username )
 		ReadData( repo )
 		
 		While Name
-			New TRepository( name, username, repo )
+			New TRepository( name, repo )
 			ReadData( name )
 			If name
-				ReadData( username )
 				ReadData( repo )
 			End If
 		Wend
 
 	End Function
 
-	Method New( name:String, username:String, repo:String )
+	Method New( name:String, repo:String )
 		Self.name     = name
-		Self.username = username
 		Self.repo     = repo
 		repositories.insert( name.toLower(), Self )
 	End Method
@@ -49,15 +45,20 @@ DebugStop
 		Return TRepository( repositories.valueForKey( repository.toLower() ) )
 	End Method
 	
-	Method workspace:String()
-		Return username + "/" + repo
+	'Method workspace:String()
+	'	Return username + "/" + repo
+	'End Method
+	
+	' Format a temporary cache filename for this repository
+	Method filename:String()
+		Return name+"."+repo.Replace("/",".")+".releases.cache"
 	End Method
 
 End Type
 TRepository.initialise()
 
 #repositories
-DefData "BlitzMax", "bmx-ng", "bmx-ng"	'	,TRepository.GITHUB
+DefData "BlitzMax", "bmx-ng/bmx-ng"	'	,TRepository.GITHUB
 DefData ""
 
 

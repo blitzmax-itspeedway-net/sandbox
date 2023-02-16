@@ -2,6 +2,27 @@
 
 EXPERIMENTAL
 
+CURRENT STATE:
+Will download latest official release but does not unzip it etc (yet)
+
+
+NEED COMMUNITY INPUT BUT THIS MIGHT CHANGE
+
+* Instructions to install should be:
+
+    Create folder in home directory called BlitzMax
+    Copy the downloaded file to that folder
+    Unzip it.
+    Run the executeable for your platform
+
+* This applicaton MUST install into the current folder
+    so the use of -in and -default are not available
+   THE CHOICE OF FOLDER IS MADE BY THE CREATION OF FOLDER
+   NT BY --default or --in xxx
+
+* Community input into this change is necessary 
+
+
 # Command Line
 
 NOTE: This should be based on something like "apt"
@@ -122,5 +143,9 @@ Need to document other users modules; i'm sure there are a lot of them
 
 THINGS TO DO
 * Document how to re-generate the certificate (Before it expires)
+* Do we need setProgressCallback() in TModserver.downloadString()?
+* setProgressCallback() needs to be in MB instead of bytes... and only show increases.
+* Improve TModserver.sanitise()
+* We dont need to download releases EVERY time. Once per day is enough.
 
 
