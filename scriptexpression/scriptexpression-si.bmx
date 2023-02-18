@@ -48,6 +48,19 @@ Const TK_QSTRING:Int 		= 3		' Quoted String
 Const TK_FUNCTION:Int 		= 4		' Function
 Const TK_BOOLEAN:Int 		= 5		' Boolean identifiers (true/false)
 
+Function TokenName:String( id:Int )
+	Select id
+	Case TK_EOF;		Return "EOF"
+	Case TK_IDENTIFIER;	Return "Identifier"
+	Case TK_NUMBER;		Return "Number"
+	Case TK_QSTRING;	Return "String"
+	Case TK_FUNCTION;	Return "Function"
+	Case TK_BOOLEAN;	Return "Bool"
+	Default
+		Return "n/a ("+id+")"
+	End Select
+End Function
+
 Struct SToken
 	Field id:Int = 0
 	Field value:String = ""
@@ -66,16 +79,7 @@ Struct SToken
 	End Method
 	
 	Method TokName:String()
-		Select id
-		Case TK_EOF;		Return "EOF"
-		Case TK_IDENTIFIER;	Return "Identifier"
-		Case TK_NUMBER;		Return "Number"
-		Case TK_QSTRING;	Return "String"
-		Case TK_FUNCTION;	Return "Function"
-		Case TK_BOOLEAN;	Return "Bool"
-		Default
-			Return "n/a ("+id+")"
-		End Select
+		Return TokenName( id )
 	End Method
 End Struct
 
@@ -250,9 +254,10 @@ Type TScriptExpression
 	End Function
 	' SCAREMONGER - END
 	
+	' SCAREMONGER - Commented this out because its not used:
 	'parsing an expression for a condition only returns 1 or 0 
-	Method ParseCondition:Int(expression:String, context:Object = Null)
-	End Method
+	'Method ParseCondition:Int(expression:String, context:Object = Null)
+	'End Method
 
 
 	'parsing an expression returns a string(ified) value
@@ -859,6 +864,8 @@ Type TScriptExpressionParser
 				Throw New TParseException( "Unexpected end of expression", token, "readWrapper().params" )
 			Case SYM_DOLLAR
 				result :+ [ readWrapper() ]
+				'DebugStop
+				advance()
 			Case SYM_PERIOD
 				eat( SYM_PERIOD )		' We dont need this identifier
 				'advance()
@@ -1050,16 +1057,19 @@ Function SEFN_Not:SToken( params:SToken[], context:Object = Null)
 End Function
 
 Function SEFN_If:SToken(params:SToken[], context:Object = Null)
+'DebugStop
 	Local cmd:SToken = params[0]
 	If TScriptExpression._CountTrueValues2([params[0]]) = 1
+		' Expression is TRUE
 		If params.length < 2
-			Return New SToken( TK_NUMBER, "1", cmd.linenum, cmd.linepos )
+			Return New SToken( TK_BOOLEAN, "1", cmd.linenum, cmd.linepos )
 		Else
 			Return params[1]
 		EndIf
 	Else
+		' Expression is FALSE
 		If params.length < 3
-			Return New SToken( TK_NUMBER, "0", cmd.linenum, cmd.linepos )
+			Return New SToken( TK_BOOLEAN, "0", cmd.linenum, cmd.linepos )
 		Else
 			Return params[2]
 		EndIf
@@ -1132,7 +1142,7 @@ Function GWRon( test:String, expected:String )
 	If result = expected
 		Print "GWRON:       SUCCESS  [String] '"+expected+"'"
 	Else
-		Print "GWRON:       FAILURE  [String] '"+result+"' <> '"+expected+"'"
+		Print "GWRON:       FAILURE  [String] '"+result+"', expected [String] '"+expected+"'"
 	End If
 End Function
 
@@ -1142,7 +1152,7 @@ Function Scaremonger( test:String, expected:String, token:Int )
 	If result.id = token And result.value = expected
 		Print "SCAREMONGER: SUCCESS  ["+result.TokName()+"] '"+expected+"' )"
 	Else
-		Print "SCAREMONGER: FAILURE  ["+result.TokName()+"] '"+result.value+"' <> '"+expected+"' )"
+		Print "SCAREMONGER: FAILURE  ["+result.TokName()+"] '"+result.value+"', expected ["+TokenName(token)+"] '"+expected+"' )"
 	End If
 End Function
 ' SCAREMONGER - END
@@ -1162,17 +1172,19 @@ Print "Tests"
 
 'DebugStop
 expect( "${.or:~qhello~q:${0}}", "1", TK_BOOLEAN )
-expect( "${.if:${.or:~qhello~q:${0}}:~qTrue~q:~qFalse~q}", "True", TK_BOOLEAN )
-expect( "${.if:1:~qTrue~q:~qFalse~q}", "True", TK_BOOLEAN )
+expect( "${.if:${.or:~qhello~q:${0}}:~qTrue~q:~qFalse~q}", "True", TK_QSTRING )
+expect( "${.if:1:~qTrue~q:~qFalse~q}", "True", TK_QSTRING )
+' Additonal test [SCAREMONGER]
+expect( "${.if:1:True:False}", True, TK_BOOLEAN )
 'DebugStop
 expect( "${.if:1:~q\~qTrue\~q~q:~qFalse~q}", "~qTrue~q", TK_QSTRING )	' Test escaped quote
-expect( "${.if:${.not:1}:~qTrue~q:~qFalse~q}", "False", TK_BOOLEAN )
-expect( "${.eq:1:2:1}", "0", TK_NUMBER )
+expect( "${.if:${.not:1}:~qTrue~q:~qFalse~q}", "False", TK_QSTRING )
+expect( "${.eq:1:2:1}", "0", TK_BOOLEAN )
 'DebugStop
-expect( "${.eq:1:1:1}", "1", TK_NUMBER )
-expect( "${.gt:4:0}", "1", TK_NUMBER )
-expect( "${.gt:0:4}", "0", TK_NUMBER )
-expect( "${.gte:4:4}", "1", TK_NUMBER )
+expect( "${.eq:1:1:1}", "1", TK_BOOLEAN )
+expect( "${.gt:4:0}", "1", TK_BOOLEAN )
+expect( "${.gt:0:4}", "0", TK_BOOLEAN )
+expect( "${.gte:4:4}", "1", TK_BOOLEAN )
 
 Global bbGCAllocCount:ULong = 0
 'Extern
