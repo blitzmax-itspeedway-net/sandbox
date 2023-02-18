@@ -1078,7 +1078,7 @@ End Function
 
 Function SEFN_Eq:SToken(params:SToken[], context:Object = Null)
 	Local cmd:SToken = params[0]
-	Return New SToken( TK_BOOLEAN, "0", cmd.linenum, cmd.linepos )
+	Return New SToken( TK_BOOLEAN, TScriptExpression._CountEqualValues2(params) = params.length, cmd.linenum, cmd.linepos )
 	'Return String(TScriptExpression._CountEqualValues2(params) = params.length)
 End Function
 
