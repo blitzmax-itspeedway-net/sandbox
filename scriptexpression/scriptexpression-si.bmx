@@ -215,6 +215,16 @@ Type TScriptExpression
 				If Int(tokens[i].value); trueCount :+ 1
 			Case TK_IDENTIFIER
 				If tokens[i].value And tokens[i].value <> "1"; trueCount :+ 1
+			Case TK_QSTRING
+				If tokens[i].value; truecount :+ 1
+			Case TK_BOOLEAN
+				' OPTIMISE: See "counter-on-string-value.bmx"
+				' RESULT:   String compare quicker in production
+?debug
+				truecount :+ Int( tokens[i].value )			' Quicker in Debug
+?Not debug
+				If tokens[i].value = "1"; truecount :+ 1	' Quicker in Production
+?
 			EndSelect
 		Next
 	
@@ -1025,17 +1035,18 @@ End Function
 ' SCAREMONGER - START
 Function SEFN_Or:SToken(params:SToken[], context:Object = Null)
 	Local cmd:SToken = params[0]
-	Return New SToken( TK_IDENTIFIER, String(TScriptExpression._CountTrueValues2(params) > 0), cmd.linenum, cmd.linepos )
+'DebugStop
+	Return New SToken( TK_BOOLEAN, String(TScriptExpression._CountTrueValues2(params) > 0), cmd.linenum, cmd.linepos )
 End Function
 
 Function SEFN_And:SToken(params:SToken[], context:Object = Null)
 	Local cmd:SToken = params[0]
-	Return New SToken( TK_IDENTIFIER, String(TScriptExpression._CountTrueValues2(params) = params.length), cmd.linenum, cmd.linepos )
+	Return New SToken( TK_BOOLEAN, String(TScriptExpression._CountTrueValues2(params) = params.length), cmd.linenum, cmd.linepos )
 End Function
 
 Function SEFN_Not:SToken( params:SToken[], context:Object = Null)
 	Local cmd:SToken = params[0]
-	Return New SToken( TK_IDENTIFIER, String(TScriptExpression._CountTrueValues2(params) = 0), cmd.linenum, cmd.linepos )
+	Return New SToken( TK_BOOLEAN, String(TScriptExpression._CountTrueValues2(params) = 0), cmd.linenum, cmd.linepos )
 End Function
 
 Function SEFN_If:SToken(params:SToken[], context:Object = Null)
@@ -1057,32 +1068,32 @@ End Function
 
 Function SEFN_Eq:SToken(params:SToken[], context:Object = Null)
 	Local cmd:SToken = params[0]
-	Return New SToken( TK_NUMBER, "0", cmd.linenum, cmd.linepos )
+	Return New SToken( TK_BOOLEAN, "0", cmd.linenum, cmd.linepos )
 	'Return String(TScriptExpression._CountEqualValues2(params) = params.length)
 End Function
 
 Function SEFN_Gt:SToken(params:SToken[], context:Object = Null)
 	Local cmd:SToken = params[0]
 	If params.length < 2 Then Return New SToken( TK_NUMBER, "0", cmd.linenum, cmd.linepos )
-	Return New SToken( TK_NUMBER, (Double(params[0].value) > Double(params[1].value)), cmd.linenum, cmd.linepos )
+	Return New SToken( TK_BOOLEAN, (Double(params[0].value) > Double(params[1].value)), cmd.linenum, cmd.linepos )
 End Function
 
 Function SEFN_Gte:SToken(params:SToken[], context:Object = Null)
 	Local cmd:SToken = params[0]
 	If params.length < 2 Then Return New SToken( TK_NUMBER, "0", cmd.linenum, cmd.linepos )
-	Return New SToken( TK_NUMBER, (Double(params[0].value) >= Double(params[1].value)), cmd.linenum, cmd.linepos )
+	Return New SToken( TK_BOOLEAN, (Double(params[0].value) >= Double(params[1].value)), cmd.linenum, cmd.linepos )
 End Function
 
 Function SEFN_Lt:SToken(params:SToken[], context:Object = Null)
 	Local cmd:SToken = params[0]
 	If params.length < 2 Then Return New SToken( TK_NUMBER, "0", cmd.linenum, cmd.linepos )
-	Return New SToken( TK_NUMBER, (Double(params[0].value) < Double(params[1].value)), cmd.linenum, cmd.linepos )
+	Return New SToken( TK_BOOLEAN, (Double(params[0].value) < Double(params[1].value)), cmd.linenum, cmd.linepos )
 End Function
 
 Function SEFN_Lte:SToken(params:SToken[], context:Object = Null)
 	Local cmd:SToken = params[0]
 	If params.length < 2 Then Return New SToken( TK_NUMBER, "0", cmd.linenum, cmd.linepos )
-	Return New SToken( TK_NUMBER, (Double(params[0].value) <= Double(params[1].value)), cmd.linenum, cmd.linepos )
+	Return New SToken( TK_BOOLEAN, (Double(params[0].value) <= Double(params[1].value)), cmd.linenum, cmd.linepos )
 End Function
 ' SCAREMONGER - END
 
@@ -1126,7 +1137,7 @@ Function GWRon( test:String, expected:String )
 End Function
 
 Function Scaremonger( test:String, expected:String, token:Int )
-DebugStop
+'DebugStop
 	Local result:SToken = ScriptExpression.Parse2(test)
 	If result.id = token And result.value = expected
 		Print "SCAREMONGER: SUCCESS  ["+result.TokName()+"] '"+expected+"' )"
@@ -1149,15 +1160,15 @@ Print "Tests"
 ' Incomplete / BAD
 '#expect( "${.or:${~qhello }~q  }:${  ${0}   }", "1" )
 
-DebugStop
+'DebugStop
 expect( "${.or:~qhello~q:${0}}", "1", TK_BOOLEAN )
 expect( "${.if:${.or:~qhello~q:${0}}:~qTrue~q:~qFalse~q}", "True", TK_BOOLEAN )
 expect( "${.if:1:~qTrue~q:~qFalse~q}", "True", TK_BOOLEAN )
-DebugStop
+'DebugStop
 expect( "${.if:1:~q\~qTrue\~q~q:~qFalse~q}", "~qTrue~q", TK_QSTRING )	' Test escaped quote
 expect( "${.if:${.not:1}:~qTrue~q:~qFalse~q}", "False", TK_BOOLEAN )
 expect( "${.eq:1:2:1}", "0", TK_NUMBER )
-DebugStop
+'DebugStop
 expect( "${.eq:1:1:1}", "1", TK_NUMBER )
 expect( "${.gt:4:0}", "1", TK_NUMBER )
 expect( "${.gt:0:4}", "0", TK_NUMBER )
