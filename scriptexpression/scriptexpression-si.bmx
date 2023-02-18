@@ -727,8 +727,10 @@ EndRem
 		Case ( ch >=97 And ch <= 122 ) Or ( ch >= 65 And ch <=90 )	' LETTER
 			Local ident:String = ExtractIdent()
 			Select ident.toLower()
-			Case "true", "false"
-				Return New SToken( TK_BOOLEAN, ident.toLower(), linenum, linepos )
+			Case "true"
+				Return New SToken( TK_BOOLEAN, 1, linenum, linepos )
+			Case "false"
+				Return New SToken( TK_BOOLEAN, 0, linenum, linepos )
 			Default
 				Return New SToken( TK_IDENTIFIER, ident, linenum, linepos )
 			End Select
@@ -873,7 +875,7 @@ Type TScriptExpressionParser
 				token.id = TK_FUNCTION
 				result :+ [token]
 				advance()
-			Case TK_IDENTIFIER, TK_QSTRING, TK_NUMBER
+			Case TK_IDENTIFIER, TK_QSTRING, TK_NUMBER, TK_BOOLEAN
 				result :+ [token]
 				advance()
 			Default
@@ -1175,6 +1177,7 @@ expect( "${.or:~qhello~q:${0}}", "1", TK_BOOLEAN )
 expect( "${.if:${.or:~qhello~q:${0}}:~qTrue~q:~qFalse~q}", "True", TK_QSTRING )
 expect( "${.if:1:~qTrue~q:~qFalse~q}", "True", TK_QSTRING )
 ' Additonal test [SCAREMONGER]
+DebugStop
 expect( "${.if:1:True:False}", True, TK_BOOLEAN )
 'DebugStop
 expect( "${.if:1:~q\~qTrue\~q~q:~qFalse~q}", "~qTrue~q", TK_QSTRING )	' Test escaped quote
