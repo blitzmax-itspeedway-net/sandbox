@@ -36,6 +36,7 @@ Const SYM_RPAREN:Int		= 41	' )
 Const SYM_HYPHEN:Int 		= 45	' -
 Const SYM_PERIOD:Int 		= 46	' .
 Const SYM_COLON:Int 		= 58	' :
+Const SYM_BACKSLASH:Int 	= 92	' \
 Const SYM_UNDERSCORE:Int	= 95	' _
 Const SYM_LBRACE:Int		= 123	' {
 Const SYM_RBRACE:Int		= 125	' }
@@ -614,8 +615,8 @@ Type TScriptExpressionLexer
 	
 	Method PeekChar:String()
 	DebugStop
-	Local debug:String = expression[ cursor..cursor+1 ]
 		If cursor >= expression.length Return ""
+		'Local ch:String = expression[ cursor..cursor+1 ]
 		Return expression[ cursor..cursor+1 ]
 	End Method
 
@@ -686,10 +687,10 @@ EndRem
 			linenum :+ 1
 			linepos = 1
 			cursor :+ 1
-		ElseIf ch = "\"	' ESCAPE CHARACTER
-			ch = expression[ cursor+2 ]
-			linepos :+ 2
-			cursor :+ 2
+		'ElseIf ch = "\"	' ESCAPE CHARACTER
+		'	ch = expression[ cursor+2 ]
+		'	linepos :+ 2
+		'	cursor :+ 2
 		Else
 			linepos :+ 1
 			cursor :+ 1
@@ -783,25 +784,28 @@ EndRem
 	End Method
 
 	Method ExtractQuotedString:String()
+'DebugStop
 		Local str:String
 		Local ch:String
 		ch = PopChar()   				' This is the leading Quote (Skip that)
 		ch = PopChar()					' This is the first character (The one we want)
 		While ch <> "" And ch <> "~q"
-			
-			'Select ch.length
-			'Case 1
-				str :+ ch
-			'Case 2	' ESCAPE CHARACTER?
-			'	Select ch
-			'	Case "\~q","\\","\/"	;	str :+ ch[1..]
-			'	'Case "\b"				;	Text :+ Chr($08)		' Backspace
-			'	'Case "\f"				;	Text :+ Chr($0C)		' Formfeed
-			'	Case "\n"				;	str :+ "~n"			' Newline
-			'	Case "\r"				;	str:+ "~r"			' Carriage Return
-			'	Case "\t"				;	str:+ "~t"			' Tab
-			'	End Select
-			'End Select
+			If ch = "\"
+				' Only \" is valid, we can do that with this
+				ch = popchar()
+				' Parse escaped characters
+				'DebugStop
+				'Select popchar()
+				'Case "~q"; ch="~q"
+				'Case "t"; ch = "~t"			' Tab
+				'Case "n"; ch = "~n"			' Newline
+				'Case "r"; ch = "~r"			' Carriage Return
+				'Case "b"; ch = Chr($08)		' Backspace
+				'Case "f"; ch = Chr($0C)		' Formfeed
+				'Default
+				'End Select
+			End If
+			str :+ ch
 			ch = PopChar()
 		Wend
 		Return str
@@ -1122,7 +1126,7 @@ Function GWRon( test:String, expected:String )
 End Function
 
 Function Scaremonger( test:String, expected:String, token:Int )
-'DebugStop
+DebugStop
 	Local result:SToken = ScriptExpression.Parse2(test)
 	If result.id = token And result.value = expected
 		Print "SCAREMONGER: SUCCESS  ["+result.TokName()+"] '"+expected+"' )"
@@ -1147,12 +1151,13 @@ Print "Tests"
 
 DebugStop
 expect( "${.or:~qhello~q:${0}}", "1", TK_BOOLEAN )
-DebugStop
 expect( "${.if:${.or:~qhello~q:${0}}:~qTrue~q:~qFalse~q}", "True", TK_BOOLEAN )
 expect( "${.if:1:~qTrue~q:~qFalse~q}", "True", TK_BOOLEAN )
+DebugStop
 expect( "${.if:1:~q\~qTrue\~q~q:~qFalse~q}", "~qTrue~q", TK_QSTRING )	' Test escaped quote
 expect( "${.if:${.not:1}:~qTrue~q:~qFalse~q}", "False", TK_BOOLEAN )
 expect( "${.eq:1:2:1}", "0", TK_NUMBER )
+DebugStop
 expect( "${.eq:1:1:1}", "1", TK_NUMBER )
 expect( "${.gt:4:0}", "1", TK_NUMBER )
 expect( "${.gt:0:4}", "0", TK_NUMBER )
