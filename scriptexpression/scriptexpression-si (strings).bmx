@@ -3,16 +3,6 @@ Framework Brl.StandardIO
 Import Brl.Map
 Import Brl.StringBuilder
 
-Rem SCAREMONGER TODO:
-* Chnage STRING into STRINGBUILDER
-
-* TIMINGS			 GWRON		SCAREMONGER		DIFF
-	STRING:			 78002ms 	155974ms		199.96%
-	STRINGBUILDER:	 65740ms	132194ms		200.00%
-	STR BY IDEX:	 66019ms	132340ms		200.00%
-End Rem
-
-
 ' SCAREMONGER - START
 Import brl.retro	' Hex() in SToken.reveal()
 ' SCAREMONGER - END
@@ -57,10 +47,6 @@ Const TK_NUMBER:Int 		= 2		' Number
 Const TK_QSTRING:Int 		= 3		' Quoted String
 Const TK_FUNCTION:Int 		= 4		' Function
 Const TK_BOOLEAN:Int 		= 5		' Boolean identifiers (true/false)
-
-Const TK_TAB:Int 			= 9		' /t
-Const TK_LF:Int 			= 10	' /n
-Const TK_CR:Int 			= 13	' /r
 
 Function TokenName:String( id:Int )
 	Select id
@@ -142,7 +128,7 @@ Type TScriptExpression
 		Catch e:TParseException
 			DebugLog e.reveal()
 		End Try
-		Return New SToken( TK_BOOLEAN, False, 0, 0 )
+		Return New SToken( TK_BOOLEAN, "false", 0, 0 )
 	End Method
 	' SCAREMONGER - END
 	
@@ -612,42 +598,15 @@ End Enum
 Type TScriptExpressionLexer
 
 	Field cursor:Int, linenum:Int, linepos:Int
-	Field expression:String, expressionLen:Int
-	'Field temp:TStringBuilder
+	Field expression:String
 	
 	Method New( expression:String )
-		Self.expression = expression	'New TStringBuilder( expression )
-		expressionLen = Len(expression)
-		'Self.temp = New TStringBuilder()
+		Self.expression = expression
 		cursor  = 0
 		linenum = 0
 		linepos = 0
 	End Method
-	
-	Private
-
-	Method PeekChar:Int()
-		If cursor >= expressionLen; Return 0
-		Return expression[ cursor ]
-	End Method
-
-	' Pops next character moving the cursor forward
-	Method PopChar:Int()
-		If cursor >= expressionLen; Return TK_EOF
-		'Local ch:String = expression[ cursor..cursor+1 ]
-		Local ch:Int = expression[ cursor ]
-		' Move the cursor forward
-		If ch = TK_LF	' \n
-			linenum :+ 1
-			linepos = 1
-			cursor :+ 1
-		Else
-			linepos :+ 1
-			cursor :+ 1
-		End If
-		Return ch
-	End Method
-
+		
 	' Retrieves the current token (At the cursor)
 	Method GetNext:SToken()
 		'If (cursor+1)>=tokens.count Return Create_EOF_Token()
@@ -655,88 +614,184 @@ Type TScriptExpressionLexer
 		'Return TToken( tokens.valueAtIndex( cursor ) )
 		'DebugStop
 		Repeat
-			Local ch:Int = PeekChar()
-			Local line:Int = linenum
-			Local pos:Int = linepos
-
+			Local ch:Int = PeekAscii()
 			Select True
 			Case ch = 0							' End of file
 				Return New SToken( TK_EOF, "EOF", linenum, linepos )
 			Case ch <= SYM_SPACE Or ch >=126	' Whitespace or control codes
 				PopChar()
-			Case ch = SYM_DQUOTE										' QUOTED STRING
-				Return New SToken( TK_QSTRING, ExtractQuotedString(), linenum, linepos )
-			Case ch = 45 Or ( ch >= 48 And ch <= 57 )					' NUMBER
-				Return New SToken( TK_NUMBER, ExtractNumber(), linenum, linepos )
-			Case ( ch >=97 And ch <= 122 ) Or ( ch >= 65 And ch <=90 )	' LETTER
-				Local ident:String = ExtractIdent()
-				Select ident.toLower()
-				Case "true"
-					Return New SToken( TK_BOOLEAN, True, linenum, linepos )
-				Case "false"
-					Return New SToken( TK_BOOLEAN, False, linenum, linepos )
-				Default
-					Return New SToken( TK_IDENTIFIER, ident, linenum, linepos )
-				End Select
-			Default ' ch = SYM_COLON Or ch = SYM_PERIOD						' SYMBOLS
-				Return New SToken( ch, Chr(PopChar()), linenum, linepos )
+			Default
+				Return GetLanguageToken()
 			End Select	
 		Forever
 	End Method
-		
-	' Identifier starts with a letter, but can contain "_" and numbers
-	Method ExtractIdent:String()
-		Local start:Int = cursor	', finish:Int = cursor
-		While expression[cursor] = SYM_UNDERSCORE ..
-			Or ( expression[cursor] >= 48 And expression[cursor] <= 57 ) ..		' NUMBER
-			Or ( expression[cursor] >= 65 And expression[cursor] <= 90 ) ..		' UPPERCASE
-			Or ( expression[cursor] >= 97 And expression[cursor] <= 122 )		' LOWERCASE
-			cursor :+ 1
-		Wend
-		Return expression[ start..cursor ]
+	
+	Private
+	
+	Method PeekChar:String()
+	DebugStop
+		If cursor >= expression.length Return ""
+		'Local ch:String = expression[ cursor..cursor+1 ]
+		Return expression[ cursor..cursor+1 ]
 	End Method
 
-	Method ExtractNumber:String()
-		Local start:Int = cursor
-		Local decimal:Int = False	' Did we find the decimal point?
-		
-		If expression[cursor] = SYM_HYPHEN; cursor :+ 1		' Negative number
-		
-		While ( expression[cursor] > 47 And expression[cursor] < 58 ) ..		' NUMBER
-			Or ( expression[cursor] = SYM_PERIOD And Not decimal )
-			If expression[cursor] = SYM_PERIOD; decimal = True
-			cursor :+ 1
-		Wend
-		Return expression[ start..cursor ]
+	Method PeekAscii:Int()
+		If cursor >= expression.length Return 0
+		Return expression[ cursor ]
 	End Method
-			
-Rem	Method ExtractNumber:String()
+Rem
+	' Pops next character moving the cursor forward
+	Method PopChar:String( IgnoredSymbols:String )
+		If cursor >= source.length; Return ""
+		Local ch:String = source[ cursor+1 ]
+		
+		' Ignore leading whitespace
+		While Instr( IgnoredSymbols, char )
+		'Local IgnoredSymbols:String = ""
+		'
+		'If ignoreWhitespace IgnoredSymbols = whitespace
+		
+		'Repeat
+			If source.length = 0 Return ""
+			char = source[cursor..cursor+1]
+			Select char
+			Case "~r"   ' CR
+				cursor :+ 1
+			Case "~n"   ' LF
+				linenum :+ 1
+				linepos = 1
+				cursor :+ 1
+			Case " ","~t"
+				linepos:+1
+				cursor :+1
+			Default
+				linepos :+ 1
+				cursor :+ 1
+			End Select
+		'Until Not Instr( IgnoredSymbols, char )
+		Wend
+		'
+		' Move the cursor forward
+		If char="~n"
+			linenum :+ 1
+			linepos = 1
+			cursor :+ 1
+		ElseIf char="\"	' ESCAPE CHARACTER
+'DebugStop
+			char = source[cursor..cursor+2]
+			If char="\u"	'HEX DIGIT
+				char = source[cursor..cursor+6]			
+				cursor :+ 6
+			Else
+				cursor :+ 2
+			End If
+		Else
+			linepos :+ 1
+			cursor :+ 1
+		End If
+		Return char
+	End Method
+EndRem
+	' Pops next character moving the cursor forward
+	Method PopChar:String()
+		If cursor >= expression.length Return ""
+		Local ch:String = expression[ cursor..cursor+1 ]
+
+		' Move the cursor forward
+		If ch = "~n"
+			linenum :+ 1
+			linepos = 1
+			cursor :+ 1
+		'ElseIf ch = "\"	' ESCAPE CHARACTER
+		'	ch = expression[ cursor+2 ]
+		'	linepos :+ 2
+		'	cursor :+ 2
+		Else
+			linepos :+ 1
+			cursor :+ 1
+		End If
+		Return ch
+	End Method
+
+	' Language specific tokeniser
+	Method GetLanguageToken:SToken()
+		Local ch:Int = PeekAscii()
+		Local line:Int = linenum
+		Local pos:Int = linepos
+		'
+		Select True
+		Case ch = SYM_DQUOTE										' QUOTED STRING
+			Return New SToken( TK_QSTRING, ExtractQuotedString(), linenum, linepos )
+		Case ch = 45 Or ( ch >= 48 And ch <= 57 )					' NUMBER
+			Return New SToken( TK_NUMBER, ExtractNumber(), linenum, linepos )
+		Case ( ch >=97 And ch <= 122 ) Or ( ch >= 65 And ch <=90 )	' LETTER
+			Local ident:String = ExtractIdent()
+			Select ident.toLower()
+			Case "true"
+				Return New SToken( TK_BOOLEAN, 1, linenum, linepos )
+			Case "false"
+				Return New SToken( TK_BOOLEAN, 0, linenum, linepos )
+			Default
+				Return New SToken( TK_IDENTIFIER, ident, linenum, linepos )
+			End Select
+		Default ' ch = SYM_COLON Or ch = SYM_PERIOD						' SYMBOLS
+			Return New SToken( ch, PopChar(), linenum, linepos )
+		Rem
+		Default													' A Symbol
+			PopChar()   ' Move to next character
+			Local ascii:Int = Asc(char)
+			Local class:String = lookup[ascii]
+			If class<>"" Return New TToken( ascii, char, line, pos, class ) 
+			' Default to ASCII code
+			Return New TToken( ascii, char, line, pos, "SYMBOL" )
+		End Rem
+		EndSelect
+		
+	End Method
+	
+	' Identifier starts with a letter, but can contain "_" and numbers
+	Method ExtractIdent:String()
+		'DebugStop
+		Local str:String
+		Local ch:Int = peekAscii()
+		While ch=0 ..
+			Or ch = SYM_UNDERSCORE ..
+			Or ( ch >= 48 And ch <= 57 ) ..		' NUMBER
+			Or ( ch >= 65 And ch <= 90 ) ..		' UPPERCASE
+			Or ( ch >= 97 And ch <= 122 )		' LOWERCASE
+				str :+ popChar()
+				ch = peekAscii()
+		Wend
+		Return str
+	End Method
+		
+	Method ExtractNumber:String()
 		'DebugStop
 		Local str:String
 		Local Integer:Int, Floating:Float, negative:Int = 1, divider:Float=1.0
-		Local ch:Int = PeekChar()
+		Local ch:Int = peekAscii()
 		' Leading "-" (Negative number)
 		If ch = SYM_HYPHEN	
 			negative = True
-			str :+ Chr(popChar())
-			ch = PeekChar()
+			str :+ popChar()
+			ch = peekAscii()
 		End If
 		' Number
 		While ch<>0 And ( ch>=48 And ch<=57 )
 			Integer = Integer * 10 + (ch-48)
-			str :+ Chr(popChar())
-			ch = PeekChar()
+			str :+ popChar()
+			ch = PeekAscii()
 		Wend
 		' Decimal
 		If ch = SYM_PERIOD
 			Floating = Float(Integer)
-			str :+ Chr(popChar())
-			ch = PeekChar()
+			str :+ popChar()
+			ch = PeekAscii()
 			While ch<>0 And ( ch>=48 And ch<=57 )
 				Floating :+ (ch-48) / divider
 				Divider = divider / 10
-				str :+ Chr(popChar())
-				ch = PeekChar()
+				str :+ popChar()
+				ch = PeekAscii()
 			Wend
 			'Return Floating*Negative
 		End If
@@ -744,28 +799,15 @@ Rem	Method ExtractNumber:String()
 		'Return Integer*Negative
 		Return str
 	End Method
-EndRem
 
-	' Identifier starts with a letter, but can contain "_" and numbers
 	Method ExtractQuotedString:String()
-		cursor :+ 1			' Skip leading quote
-		Local start:Int = cursor
-		While expression[cursor] <> TK_EOF And expression[cursor] <> SYM_DQUOTE			
-			If expression[cursor] = Asc("\"); cursor :+ 1
-			cursor :+ 1
-		Wend
-		cursor :+ 1			' Skip trailing quote
-		Return expression[ start..cursor ].Replace("\"+Chr(34),Chr(34))
-	End Method
-	
-Rem	Method ExtractQuotedString_old:String()
-		'DebugStop
+'DebugStop
 		Local str:String
-		Local ch:Int
+		Local ch:String
 		ch = PopChar()   				' This is the leading Quote (Skip that)
 		ch = PopChar()					' This is the first character (The one we want)
-		While ch <> TK_EOF And ch <> SYM_DQUOTE
-			If ch = SYM_BACKSLASH
+		While ch <> "" And ch <> "~q"
+			If ch = "\"
 				' Only \" is valid, we can do that with this
 				ch = popchar()
 				' Parse escaped characters
@@ -780,12 +822,11 @@ Rem	Method ExtractQuotedString_old:String()
 				'Default
 				'End Select
 			End If
-			str :+ Chr(ch)
+			str :+ ch
 			ch = PopChar()
 		Wend
 		Return str
 	End Method
-End Rem
 
 End Type
 
@@ -1131,7 +1172,7 @@ Print "Tests"
 ' Incomplete / BAD
 '#expect( "${.or:${~qhello }~q  }:${  ${0}   }", "1" )
 
-DebugStop
+'DebugStop
 expect( "${.or:~qhello~q:${0}}", "1", TK_BOOLEAN )
 expect( "${.if:${.or:~qhello~q:${0}}:~qTrue~q:~qFalse~q}", "True", TK_QSTRING )
 expect( "${.if:1:~qTrue~q:~qFalse~q}", "True", TK_QSTRING )
@@ -1159,15 +1200,13 @@ Local expr:String = "${.and:${.gte:4:4}:${.gte:5:4}}"
 Local allocs:Int
 
 Print "~nTIMINGS:"
-Local gwron:Int, scaremonger:Int
 Print "GWRon:"
 Print "expression: "+ScriptExpression.Parse(expr)
 allocs = bbGCAllocCount
 For Local i:Int = 0 Until 1000000
 	ScriptExpression.Parse(expr)
 Next
-gwron = (MilliSecs() - t)
-Print "took: " + gwron +" ms. Allocs=" + (bbGCAllocCount - allocs)
+Print "took: " + (MilliSecs() - t) +" ms. Allocs=" + (bbGCAllocCount - allocs)
 
 Print "Scaremonger:"
 Print "expression: "+ScriptExpression.Parse(expr)
@@ -1175,10 +1214,7 @@ allocs = bbGCAllocCount
 For Local i:Int = 0 Until 1000000
 	ScriptExpression.Parse(expr)
 Next
-scaremonger = (MilliSecs() - t)
-Print "took: " + scaremonger +" ms. Allocs=" + (bbGCAllocCount - allocs)
-
-Print "~n: DIFFERENCE=" + Float( scaremonger/gwron ) * 100 + "%"
+Print "took: " + (MilliSecs() - t) +" ms. Allocs=" + (bbGCAllocCount - allocs)
 
 Rem
 expr = "4 >= 4 && 5 >= 4"
