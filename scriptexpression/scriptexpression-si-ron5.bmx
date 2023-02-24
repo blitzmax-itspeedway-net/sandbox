@@ -50,16 +50,23 @@ Const TK_CR:Int 			= 13	' /r
 
 
 Function TokenName:String( id:Int )
-	Select id
-		Case TK_EOF;		Return "EOF"
-		Case TK_IDENTIFIER;	Return "Identifier"
-		Case TK_NUMBER;		Return "Number"
-		Case TK_QSTRING;	Return "String"
-		Case TK_FUNCTION;	Return "Function"
-		Case TK_BOOLEAN;	Return "Bool"
+	If id<32
+		Select id
+			Case TK_EOF;		Return "EOF"
+			Case TK_IDENTIFIER;	Return "Identifier"
+			Case TK_NUMBER;		Return "Number"
+			Case TK_QSTRING;	Return "String"
+			Case TK_FUNCTION;	Return "Function"
+			Case TK_BOOLEAN;	Return "Bool"
+			Case TK_TAB;		Return "TAB"
+			Case TK_LF;			Return "LF"
+			Case TK_CR;			Return "CR"
 		Default
 			Return "n/a ("+id+")"
-	End Select
+		End Select
+	Else
+		Return "CHR='"+Chr(id)+"'"
+	End If
 End Function
 
 
@@ -253,6 +260,10 @@ Type TScriptExpression
 		Return New SToken( TK_BOOLEAN, False, 0, 0 )
 	End Method
 
+	Method ParseText:String( expression:String, context:TStringMap=Null )
+		Local parser:SScriptExpressionParser = New SScriptExpressionParser( expression, context, False )
+		Return parser.expandText()
+	End Method
 
 	Method RegisterFunctionHandler( functionName:String, callback:SToken(params:STokenGroup Var, context:Object = Null), paramMinCount:Int = -1, paramMaxCount:Int = -1)
 		functionHandlers.Insert( functionName.ToLower(), New TSEFN_Handler(callback, paramMinCount, paramMaxCount))
@@ -381,7 +392,7 @@ Struct SScriptExpressionLexer
 		Self.expression = expression	'New TStringBuilder( expression )
 		cursor = 0
 		linenum = 0
-		linepos = 0
+		linepos = 1
 	End Method
 	
 	Private
@@ -412,6 +423,9 @@ Struct SScriptExpressionLexer
 	Method GetNext:SToken()
 		Repeat
 			Local ch:Int = PeekChar()
+			' Save the line number and position so we can use it later
+			Local linenumstart:Int = linenum
+			Local lineposstart:Int = linepos
 
 			Select True
 				' End of file
@@ -424,29 +438,30 @@ Struct SScriptExpressionLexer
 
 				' QUOTED STRING
 				Case ch = SYM_DQUOTE
-					Return New SToken( TK_QSTRING, ExtractQuotedString(), linenum, linepos )
+					Return New SToken( TK_QSTRING, ExtractQuotedString(), linenumstart, lineposstart )
 
 				' NUMBER
 				Case ch = 45 Or ( ch >= 48 And ch <= 57 )
 					Local valueLong:Long, valueDouble:Double, valueType:Int
 					valueType = ExtractNumber(valueLong, valueDouble)
 					If valueType = 1
-						Return New SToken( TK_NUMBER, valueLong, linenum, linepos )
+						Return New SToken( TK_NUMBER, valueLong, linenumstart, lineposstart )
 					ElseIf valueType = 2
-						Return New SToken( TK_NUMBER, valueDouble, linenum, linepos )
+						Return New SToken( TK_NUMBER, valueDouble, linenumstart, lineposstart )
 					EndIf
 
 				' LETTER
 				Case ( ch >=97 And ch <= 122 ) Or ( ch >= 65 And ch <=90 )
+					'DebugStop
 					Local ident:String = ExtractIdent()
 'rem
 					If ident.length = 4 And ident[0] = Asc("t") And ident[1] = Asc("r") And ident[2] = Asc("u") And ident[3] = Asc("e")
-						Return New SToken( TK_BOOLEAN, True, linenum, linepos )
+						Return New SToken( TK_BOOLEAN, True, linenumstart, lineposstart )
 					ElseIf ident.length = 5 And ident[0] = Asc("f") And ident[1] = Asc("a") And ident[2] = Asc("l") And ident[3] = Asc("s") And ident[4] = Asc("e")
-						Return New SToken( TK_BOOLEAN, False, linenum, linepos )
+						Return New SToken( TK_BOOLEAN, False, linenumstart, lineposstart )
 					Else
 					'print "ident ~q"+ident+"~q"
-						Return New SToken( TK_IDENTIFIER, ident, linenum, linepos )
+						Return New SToken( TK_IDENTIFIER, ident, linenumstart, lineposstart )
 					EndIf
 'endrem
 Rem
@@ -469,6 +484,19 @@ endrem
 		Forever
 	End Method
 		
+	' Read text until it hits a group-wrapper '$' symbol
+	Method GetBlock:String()
+		'DebugStop
+		Local start:Int = cursor	', finish:Int = cursor
+		While cursor<expression.length ..
+			And expression[cursor] <> SYM_DOLLAR
+			cursor :+ 1
+			linepos :+ 1
+		Wend
+		'Local temp:String = expression[ start..cursor ]		
+		'DebugStop
+		Return expression[ start..cursor ]		
+	End Method
 
 	' SCAREMONGER / Replaced as "ch" not being updated!
 	' Identifier starts with a letter, but can contain "_" and numbers
@@ -517,12 +545,14 @@ endrem
 		If ch = SYM_HYPHEN	
 			negative = True
 			cursor :+ 1
+			linepos :+ 1
 			ch = PeekChar()
 		End If
 		' Number
 		While ch<>0 And ( ch>=48 And ch<=57 )
 			longValue = longValue * 10 + (ch-48)
 			cursor :+ 1
+			linepos :+ 1
 			ch = PeekChar()
 		Wend
 
@@ -530,11 +560,14 @@ endrem
 		If ch = SYM_PERIOD
 			doubleValue = longValue
 			cursor :+ 1
+			linepos :+ 1
+
 			ch = PeekChar()
 			While ch<>0 And ( ch>=48 And ch<=57 ) And decimalDivider < 10000000000:Long
 				doubleValue :+ Double(ch-48) / decimalDivider
 				decimalDivider :* 10
 				cursor :+ 1
+				linepos :+ 1
 				ch = PeekChar()
 			Wend
 			If negative Then doubleValue :* -1
@@ -584,15 +617,36 @@ Struct SScriptExpressionParser
 	' Current token
 	Field token:SToken
 	
-
-	Method New( expression:String, context:Object )
+	Method New( expression:String, context:Object, readFirst:Int = True )
 		Self.context = context
 		lexer = New SScriptExpressionLexer( expression )
 		
 		' Read first token
-		advance()
+		' We only do this when parsing a token
+		' for strings we need to use the start of line
+		If readFirst Then advance()
 	End Method
 
+	Method expandText:String()
+	
+		' NOTE: THIS IS NOT TESTED YET
+		
+		Local result:String
+		DebugStop
+		Repeat
+			Local block:String = lexer.getBlock()
+			result :+ block
+			advance()
+			Select token.id
+				Case TK_EOF
+					Return result
+				Case SYM_DOLLAR
+					Local token:SToken = readWrapper()
+					result :+ token.GetValueText()
+			End Select
+		Forever
+		
+	End Method
 
 	' Read a readWrapper ${..}
 	Method readWrapper:SToken()
@@ -608,7 +662,9 @@ Struct SScriptExpressionParser
 		If token.id = SYM_RBRACE Then Throw( New TParseException( "Empty group", token, "readWrapper()" ) )
 		
 		' Next are one or more arguments
-		Repeat	
+		Repeat
+			'Print lexer.expression
+			'Print " "[..(lexer.cursor-1)]+"^  {"+lexer.linenum+":"+lexer.linepos+"} "+tokenName( token.id )
 			Select token.id
 				Case TK_EOF
 					Throw New TParseException( "Unexpected end of expression", token, "readWrapper().params" )
@@ -651,7 +707,10 @@ Struct SScriptExpressionParser
 	' Advances the token
 	Method advance()
 		'DebugStop
+		'Local savecursor:Int = lexer.cursor
 		token = lexer.getNext()
+		'Print lexer.expression
+		'Print " "[..(savecursor)]+"^  {"+token.linenum+":"+token.linepos+"} "+tokenName( token.id )
 		'DebugStop
 	End Method
 
@@ -820,15 +879,15 @@ endrem
 
 ' Incomplete / BAD
 '#expect( "${.or:${~qhello }~q  }:${  ${0}   }", "1" )
-DebugStop
+'DebugStop
 expect( "${.or:${~qhello }~q  }:${  ${0}   }", "1", TK_QSTRING )
 
-DebugStop
+'DebugStop
 expect( "${.or:~qhello~q:${0}}", "1", TK_BOOLEAN )
 expect( "${.if:${.or:~qhello~q:${0}}:~qTrue~q:~qFalse~q}", "True", TK_QSTRING )
 expect( "${.if:1:~qTrue~q:~qFalse~q}", "True", TK_QSTRING )
 ' Additonal test [SCAREMONGER]
-DebugStop
+'DebugStop
 expect( "${.if:1:True:False}", True, TK_BOOLEAN )
 'DebugStop
 expect( "${.if:1:~q\~qTrue\~q~q:~qFalse~q}", "~qTrue~q", TK_QSTRING )	' Test escaped quote
@@ -848,6 +907,17 @@ Print "Parse : " + ScriptExpression.Parse(expr2).GetValueText()
 
 'end
 
+DebugStop
+Print "~nPARSETEXT:"
+Local context:TStringMap = New TStringMap()
+context.insert( "rolename", "James Bond" )
+
+Local descr:String = "The big boss '${.rolename:1}' is played by ${.castname:1} and will win this time"
+
+Local result:String = ScriptExpression.ParseText( descr, context )
+
+Print "~nTIMINGS:"
+
 Global bbGCAllocCount:ULong = 0
 'Extern
 '    Global bbGCAllocCount:ULong="bbGCAllocCount"
@@ -857,7 +927,6 @@ Local time:Int = MilliSecs()
 Local expr:String = "${.and:${.gte:4:4}:${.gte:5:4}}"
 Local allocs:Int
 
-Print "~nTIMINGS:"
 Print "expression: "+ScriptExpression.Parse(expr).GetValueText()
 allocs = bbGCAllocCount
 For Local i:Int = 0 Until 1000000
