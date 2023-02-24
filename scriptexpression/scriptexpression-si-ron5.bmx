@@ -248,7 +248,6 @@ End Type
 Type TScriptExpression
 	Field functionHandlers:TStringMap = New TStringMap()
 
-
 	Method Parse:SToken( expression:String, context:Object[] = Null)
 		'DebugStop
 		Local parser:SScriptExpressionParser = New SScriptExpressionParser( expression, context )
@@ -262,7 +261,12 @@ Type TScriptExpression
 
 	Method ParseText:String( expression:String, context:TStringMap=Null )
 		Local parser:SScriptExpressionParser = New SScriptExpressionParser( expression, context, False )
-		Return parser.expandText()
+		Try
+			Return parser.expandText()
+		Catch e:TParseException
+			DebugLog e.reveal()
+			Return e.reveal()
+		End Try
 	End Method
 
 	Method RegisterFunctionHandler( functionName:String, callback:SToken(params:STokenGroup Var, context:Object = Null), paramMinCount:Int = -1, paramMaxCount:Int = -1)
@@ -632,7 +636,7 @@ Struct SScriptExpressionParser
 		' NOTE: THIS IS NOT TESTED YET
 		
 		Local result:String
-		DebugStop
+		'DebugStop
 		Repeat
 			Local block:String = lexer.getBlock()
 			result :+ block
@@ -645,7 +649,6 @@ Struct SScriptExpressionParser
 					result :+ token.GetValueText()
 			End Select
 		Forever
-		
 	End Method
 
 	' Read a readWrapper ${..}
@@ -836,6 +839,39 @@ Function SEFN_Lte:SToken(params:STokenGroup Var, context:Object = Null)
 	Return New SToken( TK_BOOLEAN, Long(params.GetToken(1).CompareWith(params.GetToken(2)) <= 0), first.linenum, first.linepos )
 End Function
 
+'finds an array index within a string array saved in a stringmap...!
+Function lookupstring:String( within:TStringMap, key:String, index:Int )
+	If Not within Or Not within.contains( key ) Then Return "<null>"
+	Local array:String[] = String[]( within.valueforkey( key ) )
+	If array.length < index Then Return "#"+index
+	Return array[index-1]
+End Function
+
+Function SEFN_Rolename:SToken(params:STokenGroup Var, context:Object = Null)
+	Local first:SToken = params.GetToken(0)
+	Local idx:Int
+	'DebugStop
+	
+	Local within:TStringMap = TStringMap( context )
+	
+	If params.added > 1 Then idx = params.getToken(1).valueLong
+	
+	Local lookup:String = lookupString( TStringMap( context ), "rolename", idx )
+	
+	Return New SToken( TK_IDENTIFIER, lookup, first.linenum, first.linepos )
+End Function
+
+Function SEFN_Castname:SToken(params:STokenGroup Var, context:Object = Null)
+	Local first:SToken = params.GetToken(0)
+	Local idx:Int
+	'DebugStop
+	
+	If params.added > 1 Then idx = params.getToken(1).valueLong
+	
+	Local lookup:String = lookupString( TStringMap( context ), "castname", idx )
+	
+	Return New SToken( TK_IDENTIFIER, lookup, first.linenum, first.linepos )
+End Function
 
 ScriptExpression.RegisterFunctionHandler( "not", SEFN_Not, 1, -1)
 ScriptExpression.RegisterFunctionHandler( "and", SEFN_And, 1, -1)
@@ -847,6 +883,8 @@ ScriptExpression.RegisterFunctionHandler( "gte", SEFN_Gte, 2,  2)
 ScriptExpression.RegisterFunctionHandler( "lt",  SEFN_Lt,  2,  2)
 ScriptExpression.RegisterFunctionHandler( "lte", SEFN_Lte, 2,  2)
 
+ScriptExpression.RegisterFunctionHandler( "rolename", SEFN_Rolename, 2,  2)
+ScriptExpression.RegisterFunctionHandler( "castname", SEFN_Castname, 2,  2)
 
 
 ' test functionality
@@ -908,13 +946,18 @@ Print "Parse : " + ScriptExpression.Parse(expr2).GetValueText()
 'end
 
 DebugStop
+
 Print "~nPARSETEXT:"
 Local context:TStringMap = New TStringMap()
-context.insert( "rolename", "James Bond" )
-
 Local descr:String = "The big boss '${.rolename:1}' is played by ${.castname:1} and will win this time"
 
-Local result:String = ScriptExpression.ParseText( descr, context )
+Print( "No Rolename or Castname: "+ScriptExpression.ParseText( descr, context ) )
+
+context.insert( "rolename", ["James Bond"] )
+Print( "Rolename, no Castname:   "+ScriptExpression.ParseText( descr, context ) )
+
+context.insert( "castname", ["Sean Connery"] )
+Print( "Rolename and Castname:   "+ScriptExpression.ParseText( descr, context ) )
 
 Print "~nTIMINGS:"
 
