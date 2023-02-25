@@ -53,11 +53,11 @@ Const TK_NUMBER:Int 		= 2		' Number
 Const TK_QSTRING:Int 		= 3		' Quoted String
 Const TK_FUNCTION:Int 		= 4		' Function
 Const TK_BOOLEAN:Int 		= 5		' Boolean identifiers (true/false)
+Const TK_TEXT:Int 			= 6		' Text String
 
 Const TK_TAB:Int 			= 9		' /t
 Const TK_LF:Int 			= 10	' /n
 Const TK_CR:Int 			= 13	' /r
-
 
 Function TokenName:String( id:Int )
 	If id<32
@@ -65,6 +65,7 @@ Function TokenName:String( id:Int )
 			Case TK_EOF;		Return "EOF"
 			Case TK_IDENTIFIER;	Return "Identifier"
 			Case TK_NUMBER;		Return "Number"
+			Case TK_TEXT;		Return "Text"
 			Case TK_QSTRING;	Return "String"
 			Case TK_FUNCTION;	Return "Function"
 			Case TK_BOOLEAN;	Return "Bool"
@@ -78,9 +79,6 @@ Function TokenName:String( id:Int )
 		Return "CHR='"+Chr(id)+"'"
 	End If
 End Function
-
-
-
 
 Struct STokenGroup
 	Field StaticArray token:SToken[10]
@@ -632,7 +630,7 @@ endrem
 			Select True
 			'escape next
 			Case expression[cursor] = Asc("\")
-			DebugStop
+			'DebugStop
 				cursor :+ 2
 				linepos :+ 2
 			Case expression[cursor] = TK_LF	'\n
@@ -924,6 +922,18 @@ Function SEFN_Castname:SToken(params:STokenGroup Var, context:Object = Null)
 	Return New SToken( TK_IDENTIFIER, lookup, first.linenum, first.linepos )
 End Function
 
+Function SEFN_Concat:SToken(params:STokenGroup Var, context:Object = Null)
+	'DebugStop
+	Local first:SToken = params.GetToken(0)
+	Local result:String
+	
+	For Local n:Int = 1 Until params.added
+		result :+ params.getToken(n).value
+	Next
+		
+	Return New SToken( TK_TEXT, result, first.linenum, first.linepos )
+End Function
+
 ScriptExpression.RegisterFunctionHandler( "not", SEFN_Not, 1, -1)
 ScriptExpression.RegisterFunctionHandler( "and", SEFN_And, 1, -1)
 ScriptExpression.RegisterFunctionHandler( "or",  SEFN_Or,  1, -1)
@@ -936,6 +946,8 @@ ScriptExpression.RegisterFunctionHandler( "lte", SEFN_Lte, 2,  2)
 
 ScriptExpression.RegisterFunctionHandler( "rolename", SEFN_Rolename, 2,  2)
 ScriptExpression.RegisterFunctionHandler( "castname", SEFN_Castname, 2,  2)
+
+ScriptExpression.RegisterFunctionHandler( "concat", SEFN_Concat, 2,  2)
 
 ' test functionality
 Print "Tests"
@@ -1032,6 +1044,9 @@ expect( "${.eq:1:1:1}", "1", TK_BOOLEAN )
 expect( "${.gt:4:0}", "1", TK_BOOLEAN )
 expect( "${.gt:0:4}", "0", TK_BOOLEAN )
 expect( "${.gte:4:4}", "1", TK_BOOLEAN )
+
+DebugStop
+expect( "${.concat:${name}:~q,~q:${age}:~q,~q:${postcode}}", "Scaremonger,<age>,<postcode>", TK_TEXT )
 
 'Local expr2:String = "${.and:${.gte:4:4}:${.gte:5:4}}"
 Local expr2:String = "${.if:${.and:${.gte:4:4}:${.gte:5:4}}:~qis true~q:~qis false~q}"
