@@ -1,5 +1,7 @@
 SuperStrict
 
+'example
+
 Const ITERATIONS:Int = 100000
 
 Local start:Int, test:Int
