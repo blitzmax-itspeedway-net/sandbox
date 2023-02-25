@@ -4,6 +4,16 @@ Import Brl.Map
 Import Brl.StringBuilder
 Import brl.retro	' Hex() in SToken.reveal()
 
+Rem SCAREMONGER CHANGES THIS VERSION
+* Moved try-catch from parse() and parsetext() up into expect()
+* Modified GetToken() to parse SYM_DOLLAR followed by an identifier as a TK_FUNCTION, freeing up identifers to be variables.
+* Modified readWrapper() to process TK_FUNCTION instead of SYM_PERIOD
+* Modifier readWrapper() to process TK_IDENTIFIER seperate from TK_QSTRING, TK_NUMBER and TK_BOOLEAN
+* Added TScriptExpressionConfig argument to SScriptExpressionParser.new() so it can access field "config"
+* Fixed bug in getNext() where 4 character identifiers were mis-read.
+* Fixed bug with escaped quotes in ExtractQuotedString()
+End Rem
+
 Rem
 ${.functionName:param1:${.otherFunctionName:param1:param2}}
 
@@ -18,7 +28,7 @@ ${.gt:${.worldtimeYear}:2022:&quot;nach 2022&quot;:&quot;2022 oder eher&quot;}
 End Rem
 
 
-Global ScriptExpression:TScriptExpression = New TScriptExpression
+Global ScriptExpression:TScriptExpression = New TScriptExpression( New TScriptExpressionConfig_Scaremonger() )
 Function GetScriptExpressionFunctionHandler:TSEFN_Handler( functionName:String )
 	Return ScriptExpression.GetFunctionHandler( functionName )
 End Function
@@ -248,25 +258,34 @@ End Type
 Type TScriptExpression
 	Field functionHandlers:TStringMap = New TStringMap()
 
+	Field config:TScriptExpressionConfig 
+
+	Method New( config:TScriptExpressionConfig = Null )
+		If Not config Then config = New TScriptExpressionConfig()	' Default!
+		Self.config = config
+	End Method
+
 	Method Parse:SToken( expression:String, context:Object[] = Null)
 		'DebugStop
-		Local parser:SScriptExpressionParser = New SScriptExpressionParser( expression, context )
-		Try
-			Return parser.readWrapper()
-		Catch e:TParseException
-			DebugLog e.reveal()
-		End Try
-		Return New SToken( TK_BOOLEAN, False, 0, 0 )
+		Local parser:SScriptExpressionParser = New SScriptExpressionParser( config, expression, context )
+		Return parser.readWrapper()
+		'Try
+		'	Return parser.readWrapper()
+		'Catch e:TParseException
+		'	DebugLog e.reveal()
+		'End Try
+		'Return New SToken( TK_BOOLEAN, False, 0, 0 )
 	End Method
 
 	Method ParseText:String( expression:String, context:TStringMap=Null )
-		Local parser:SScriptExpressionParser = New SScriptExpressionParser( expression, context, False )
-		Try
-			Return parser.expandText()
-		Catch e:TParseException
-			DebugLog e.reveal()
-			Return e.reveal()
-		End Try
+		Local parser:SScriptExpressionParser = New SScriptExpressionParser( config, expression, context, False )
+		Return parser.expandText()
+		'Try
+		'	Return parser.expandText()
+		'Catch e:TParseException
+		'	DebugLog e.reveal()
+		'	Return e.reveal()
+		'End Try
 	End Method
 
 	Method RegisterFunctionHandler( functionName:String, callback:SToken(params:STokenGroup Var, context:Object = Null), paramMinCount:Int = -1, paramMaxCount:Int = -1)
@@ -390,7 +409,6 @@ Struct SScriptExpressionLexer
 	Field linenum:Int
 	Field linepos:Int
 	Field expression:String
-
 	
 	Method New( expression:String )
 		Self.expression = expression	'New TStringBuilder( expression )
@@ -440,6 +458,22 @@ Struct SScriptExpressionLexer
 				Case ch <= SYM_SPACE Or ch >=126
 					PopChar()
 
+				' FUNCTION
+				Case ch = SYM_PERIOD
+					'DebugStop
+					' Strip function identifier 
+					Popchar()
+					'eat( SYM_PERIOD )
+
+					Local ident:String = ExtractIdent()
+
+					'If token.id <> TK_IDENTIFIER Then Throw New TParseException( "Identifier expected", token, "readWrapper()" )
+					'token.id = TK_FUNCTION
+					'result.AddToken(token)
+
+					'advance()
+					Return New SToken( TK_FUNCTION, ident, linenumstart, lineposstart )					
+
 				' QUOTED STRING
 				Case ch = SYM_DQUOTE
 					Return New SToken( TK_QSTRING, ExtractQuotedString(), linenumstart, lineposstart )
@@ -459,14 +493,19 @@ Struct SScriptExpressionLexer
 					'DebugStop
 					Local ident:String = ExtractIdent()
 'rem
-					If ident.length = 4 And ident[0] = Asc("t") And ident[1] = Asc("r") And ident[2] = Asc("u") And ident[3] = Asc("e")
-						Return New SToken( TK_BOOLEAN, True, linenumstart, lineposstart )
+					If ident.length = 4 
+						If ident[0] = Asc("t") And ident[1] = Asc("r") And ident[2] = Asc("u") And ident[3] = Asc("e")
+							Return New SToken( TK_BOOLEAN, True, linenumstart, lineposstart )
+						ElseIf ident[0] = Asc("n") And ident[1] = Asc("u") And ident[2] = Asc("l") And ident[3] = Asc("l")
+							Return New SToken( TK_BOOLEAN, -1, linenumstart, lineposstart )
+						EndIf
 					ElseIf ident.length = 5 And ident[0] = Asc("f") And ident[1] = Asc("a") And ident[2] = Asc("l") And ident[3] = Asc("s") And ident[4] = Asc("e")
 						Return New SToken( TK_BOOLEAN, False, linenumstart, lineposstart )
-					Else
-					'print "ident ~q"+ident+"~q"
-						Return New SToken( TK_IDENTIFIER, ident, linenumstart, lineposstart )
 					EndIf
+					
+					'DebugStop
+					'print "ident ~q"+ident+"~q"
+					Return New SToken( TK_IDENTIFIER, ident, linenumstart, lineposstart )
 'endrem
 Rem
 					lowerCaseCount :+ 1
@@ -593,8 +632,9 @@ endrem
 			Select True
 			'escape next
 			Case expression[cursor] = Asc("\")
-				cursor :+ 1
-				linepos :+ 1
+			DebugStop
+				cursor :+ 2
+				linepos :+ 2
 			Case expression[cursor] = TK_LF	'\n
 				linenum :+ 1
 				linepos = 1
@@ -620,8 +660,10 @@ Struct SScriptExpressionParser
 	Field lexer:SScriptExpressionLexer
 	' Current token
 	Field token:SToken
+	Field config:TScriptExpressionConfig
 	
-	Method New( expression:String, context:Object, readFirst:Int = True )
+	Method New( config:TScriptExpressionConfig, expression:String, context:Object, readFirst:Int = True )
+		Self.config = config
 		Self.context = context
 		lexer = New SScriptExpressionLexer( expression )
 		
@@ -632,8 +674,6 @@ Struct SScriptExpressionParser
 	End Method
 
 	Method expandText:String()
-	
-		' NOTE: THIS IS NOT TESTED YET
 		
 		Local result:String
 		'DebugStop
@@ -672,29 +712,40 @@ Struct SScriptExpressionParser
 				Case TK_EOF
 					Throw New TParseException( "Unexpected end of expression", token, "readWrapper().params" )
 
-				Case SYM_DOLLAR
+				Case SYM_DOLLAR	' Embedded Script Expression
 					result.AddToken(readWrapper())
 					'DebugStop
 
 					advance()
 
-				Case SYM_PERIOD
-					' Strip function identifier 
-					eat( SYM_PERIOD )
-
-					If token.id <> TK_IDENTIFIER Then Throw New TParseException( "Identifier expected", token, "readWrapper()" )
-					token.id = TK_FUNCTION
+				Case TK_FUNCTION	' Function
 					result.AddToken(token)
+					advance()
+					
+				'Case SYM_PERIOD
+				'	' Strip function identifier 
+				'	eat( SYM_PERIOD )
 
+				'	If token.id <> TK_IDENTIFIER Then Throw New TParseException( "Identifier expected", token, "readWrapper()" )
+				'	token.id = TK_FUNCTION
+				'	result.AddToken(token)
+
+				'	advance()
+
+				Case TK_IDENTIFIER	' Identifiers on their own are variables!
+					'DebugStop
+					' Replace the identifier
+					If config Then config.evaluateVariable( token ) 
+					result.AddToken(token)
 					advance()
 
-				Case TK_IDENTIFIER, TK_QSTRING, TK_NUMBER, TK_BOOLEAN
+				Case TK_QSTRING, TK_NUMBER, TK_BOOLEAN
 					result.AddToken(token)
 
 					advance()
 
 				Default
-					DebugLog( "ReadWrapper() ["+token.id+"] "+token.GetValueText()+", error" )
+					'DebugLog( "ReadWrapper() ["+token.id+"] "+token.GetValueText()+", error" )
 					Throw New TParseException( "Unexpected token", token, "readWrapper()" )
 			End Select
 			
@@ -886,17 +937,22 @@ ScriptExpression.RegisterFunctionHandler( "lte", SEFN_Lte, 2,  2)
 ScriptExpression.RegisterFunctionHandler( "rolename", SEFN_Rolename, 2,  2)
 ScriptExpression.RegisterFunctionHandler( "castname", SEFN_Castname, 2,  2)
 
-
 ' test functionality
 Print "Tests"
 
-Function expect( test:String, expected:String, token:Int )
-	Local result:SToken = ScriptExpression.Parse(test)
-	If result.id = token And (result.value = expected Or (result.valueType = 1 And result.valueLong = expected) Or (result.valueType = 2 And result.valueDouble = expected)) 
-		Print "~n" + test + " -> " + "SUCCESS  ["+result.TokName()+"] '"+expected+"'"
-	Else
-		Print "~n" + test + " -> " + "FAILURE  ["+result.TokName()+"] '" + result.GetValueText() + "', expected ["+TokenName(token)+"] '"+expected+"' )"
-	End If
+Function expect( test:String, expected:String, token:Int, note:String="" )
+	If note Then note = "  ** "+note+" **"
+	Try
+		Local result:SToken = ScriptExpression.Parse( test )
+		If result.id = token And (result.value = expected Or (result.valueType = 1 And result.valueLong = expected) Or (result.valueType = 2 And result.valueDouble = expected))
+			Print "~n" + test + " -> SUCCESS  ["+result.TokName()+"] '"+expected+"'" + note
+		Else
+			Print "~n" + test + " -> FAILURE  ["+result.TokName()+"] '" + result.GetValueText() + "', expected ["+TokenName(token)+"] '"+expected+"' )" + note
+		End If
+	Catch e:TParseException
+		Print "~n" + test + " -> ERROR "+ note
+		If e.linenum=0 Then Print( " "[..(e.linepos-1)]+"^  "+e.reveal() )
+	End Try
 End Function
 
 Rem
@@ -908,6 +964,44 @@ print "valueDouble="+valueDouble
 print "valueType="+valueType
 endrem
 
+Struct SScriptExpressionConfig
+  Field variableHandlerCB:String(variableName:String, context:Object)
+  Field errorHandler:String(t:String, context:Object)
+
+  Method New( variableHandlerCB:String(variableName:String, context:Object), errorHandler:String(t:String, context:Object) )
+    Self.variableHandlerCB = variableHandlerCB
+    Self.errorHandler = errorHandler
+  End Method
+End Struct
+
+Type TScriptExpressionConfig
+
+	' Example 
+	Method evaluateVariable( identifier:SToken Var )
+		identifier.value="<"+identifier.value+">"
+	End Method
+	
+End Type
+
+Type TScriptExpressionConfig_Scaremonger Extends TScriptExpressionConfig
+
+	' Example 
+	Method evaluateVariable( identifier:SToken Var )
+		Select identifier.value
+		Case "name"
+			identifier.value="Scaremonger"
+		Default
+			identifier.value="<"+identifier.value+">"
+		End Select
+	End Method
+	
+End Type
+
+Function variableHandlerCallback:String( variableName:String, context:Object)
+End Function
+
+Function errorHandlerCallback:String( t:String, context:Object )
+End Function
 
 'Local test:String
 
@@ -918,7 +1012,8 @@ endrem
 ' Incomplete / BAD
 '#expect( "${.or:${~qhello }~q  }:${  ${0}   }", "1" )
 'DebugStop
-expect( "${.or:${~qhello }~q  }:${  ${0}   }", "1", TK_QSTRING )
+
+expect( "${.or:${~qhello }~q  }:${  ${0}   }", "1", TK_QSTRING, "This should fail" )
 
 'DebugStop
 expect( "${.or:~qhello~q:${0}}", "1", TK_BOOLEAN )
@@ -926,8 +1021,9 @@ expect( "${.if:${.or:~qhello~q:${0}}:~qTrue~q:~qFalse~q}", "True", TK_QSTRING )
 expect( "${.if:1:~qTrue~q:~qFalse~q}", "True", TK_QSTRING )
 ' Additonal test [SCAREMONGER]
 'DebugStop
-expect( "${.if:1:True:False}", True, TK_BOOLEAN )
-'DebugStop
+expect( "${.if:1:True:False}", True, TK_BOOLEAN, "This should fail" )
+expect( "${.if:1:true:false}", True, TK_BOOLEAN )
+DebugStop
 expect( "${.if:1:~q\~qTrue\~q~q:~qFalse~q}", "~qTrue~q", TK_QSTRING )	' Test escaped quote
 expect( "${.if:${.not:1}:~qTrue~q:~qFalse~q}", "False", TK_QSTRING )
 expect( "${.eq:1:2:1}", "0", TK_BOOLEAN )
@@ -936,7 +1032,6 @@ expect( "${.eq:1:1:1}", "1", TK_BOOLEAN )
 expect( "${.gt:4:0}", "1", TK_BOOLEAN )
 expect( "${.gt:0:4}", "0", TK_BOOLEAN )
 expect( "${.gte:4:4}", "1", TK_BOOLEAN )
-
 
 'Local expr2:String = "${.and:${.gte:4:4}:${.gte:5:4}}"
 Local expr2:String = "${.if:${.and:${.gte:4:4}:${.gte:5:4}}:~qis true~q:~qis false~q}"
@@ -958,6 +1053,13 @@ Print( "Rolename, no Castname:   "+ScriptExpression.ParseText( descr, context ) 
 
 context.insert( "castname", ["Sean Connery"] )
 Print( "Rolename and Castname:   "+ScriptExpression.ParseText( descr, context ) )
+
+descr = "${.rolename:1} is the boss played by ${.castname:1}"
+Print( "Begin and End:           "+ScriptExpression.ParseText( descr, context ) )
+
+descr = "Testing ${.rolename:1}${.castname:1} together"
+Print( "Consecutive:             "+ScriptExpression.ParseText( descr, context ) )
+
 
 Print "~nTIMINGS:"
 
