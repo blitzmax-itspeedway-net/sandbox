@@ -6,7 +6,7 @@ Import brl.retro	' Hex() in SToken.reveal()
 
 Rem SCAREMONGER CHANGES THIS VERSION
 * Moved try-catch from parse() and parsetext() up into expect()
-* Modified GetToken() to parse SYM_DOLLAR followed by an identifier as a TK_FUNCTION, freeing up identifers to be variables.
+* Modified GetToken() to parse SYM_PERIOD followed by an identifier as a TK_FUNCTION, freeing up identifers to be variables.
 * Modified readWrapper() to process TK_FUNCTION instead of SYM_PERIOD
 * Modifier readWrapper() to process TK_IDENTIFIER seperate from TK_QSTRING, TK_NUMBER and TK_BOOLEAN
 * Added TScriptExpressionConfig argument to SScriptExpressionParser.new() so it can access field "config"
@@ -1046,7 +1046,7 @@ expect( "${.gt:0:4}", "0", TK_BOOLEAN )
 expect( "${.gte:4:4}", "1", TK_BOOLEAN )
 
 DebugStop
-expect( "${.concat:${name}:~q,~q:${age}:~q,~q:${postcode}}", "Scaremonger,<age>,<postcode>", TK_TEXT )
+expect( "${.concat:name:~q,~q:age:~q,~q:postcode}", "Scaremonger,<age>,<postcode>", TK_TEXT )
 
 'Local expr2:String = "${.and:${.gte:4:4}:${.gte:5:4}}"
 Local expr2:String = "${.if:${.and:${.gte:4:4}:${.gte:5:4}}:~qis true~q:~qis false~q}"
