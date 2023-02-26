@@ -57,6 +57,8 @@ Type THandle
 	Field index:UInt, version:UInt, signature:UInt
 	'Field indexbits:Byte = IBITS, verbits:Byte = VBITS, sigbits:Byte = TBITS
 	
+	Public 
+
 	Method New( index:UInt, version:UInt, signature:UInt )
 		Self.index     = index
 		Self.version   = version

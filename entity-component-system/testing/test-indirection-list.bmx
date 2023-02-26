@@ -66,7 +66,7 @@ Repeat
 	UX.Frame( 10, 10, 112, GraphicsHeight()-20 )
 	
 	' Loop through entities list
-	For Local index:Int = 0 Until entities.list.length
+	For Local index:UInt = 0 Until entities.list.length
 	
 		' Get the record at given index
 		Local hnd:THandleRecord = entities.list[ index ]
@@ -76,23 +76,31 @@ Repeat
 		If hnd.enabled()
 			If UX.Button( index+1, txt, 5, 5+index*20, 100, 19 )
 				Print("pressed")
+				entities.remove( New THandle( index, hnd.version, UINT(0) ) )
 			End If
 		Else
 			SetColor( $c0, $c0, $c0 )
 			DrawRect( 15, 15+index*20, 100, 19 )
 			SetColor( $00, $00, $00 )
-			DrawText( txt, 
+			DrawText( txt, 5+(100-textwidth(txt))/2, 15+index*20+(19-textheight(txt))/2 )
 		End If
 		
 	Next
 	
 	UX.Frame( 132, 10, GraphicsWidth()-142, 55 )
 	
-	If UX.Button( 200, "ADD ALIEN", 5, 5, 100, 19 )
-		Local h:THandle = entities.add( "ALIEN" )
+	If UX.Button( 200, "CAT++", 5, 5, 100, 19 )
+		Local h:THandle = entities.add( "CAT" )
 		If Not h ; Print "INVALID HANDLE"
 	End If
-	
+	If UX.Button( 201, "DOG++", 110, 5, 100, 19 )
+		Local h:THandle = entities.add( "DOG" )
+		If Not h ; Print "INVALID HANDLE"
+	End If
+	If UX.Button( 202, "RABBIT++", 215, 5, 100, 19 )
+		Local h:THandle = entities.add( "RABBIT" )
+		If Not h ; Print "INVALID HANDLE"
+	End If
 Rem
 	ECS.pre_update()
 	
