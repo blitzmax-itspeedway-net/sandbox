@@ -126,15 +126,15 @@ Type TProtoUX
 	'Method find:Int( name:String )
 End Type
 
-Interface IWidget
-End Interface
+'Interface IWidget
+'End Interface
 
-Interface IContainer
-	Method add( control:IWidget )
-End Interface
+'Interface IContainer
+'	Method add( control:IWidget )
+'End Interface
 
 Type UXWidget
-	Field parent:IWidget
+	Field parent:UXWidget
 	Field box:SDimensions
 End Type
 
@@ -243,10 +243,11 @@ Graphics 800,600
 Repeat
 	ux.setBackgroundColor()
 	Cls
-	'DebugStop
+	DebugStop
 	ux.frame( 100,100,GraphicsWidth()-200,GraphicsHeight()-200 )
 	ux.layout( ux.GRID, 3, 3 )
-	ux.button( "Hello" )
+	ux.button( "button1" )
+	ux.button( "button2" )
 	ux.pop()					' Exit grid back to frame
 	
 Rem	ux.layoutStart( GRID, 3, 3 )		' Screen 
