@@ -27,12 +27,6 @@ ${.roleLastName:${.castGUID:1}}
 ${.gt:${.worldtimeYear}:2022:&quot;nach 2022&quot;:&quot;2022 oder eher&quot;}
 End Rem
 
-
-Global ScriptExpression:TScriptExpression = New TScriptExpression( New TScriptExpressionConfig_Scaremonger() )
-Function GetScriptExpressionFunctionHandler:TSEFN_Handler( functionName:String )
-	Return ScriptExpression.GetFunctionHandler( functionName )
-End Function
-
 	
 Const SYM_SPACE:Int 		= 32	' space
 Const SYM_DQUOTE:Int 		= 34	' "
@@ -253,17 +247,8 @@ End Type
 
 
 
-Type TScriptExpression
-	Field functionHandlers:TStringMap = New TStringMap()
-
-	Field config:TScriptExpressionConfig 
-
-	Method New( config:TScriptExpressionConfig = Null )
-		If Not config Then config = New TScriptExpressionConfig()	' Default!
-		Self.config = config
-	End Method
-
-	Method Parse:SToken( expression:String, context:Object[] = Null)
+Struct SScriptExpression
+	Method Parse:SToken( expression:String, config:SScriptExpressionConfig, context:Object = Null)
 		'DebugStop
 		Local parser:SScriptExpressionParser = New SScriptExpressionParser( config, expression, context )
 		Return parser.readWrapper()
@@ -275,7 +260,7 @@ Type TScriptExpression
 		'Return New SToken( TK_BOOLEAN, False, 0, 0 )
 	End Method
 
-	Method ParseText:String( expression:String, context:TStringMap=Null )
+	Method ParseText:String( expression:String, config:SScriptExpressionConfig, context:TStringMap=Null )
 		Local parser:SScriptExpressionParser = New SScriptExpressionParser( config, expression, context, False )
 		Return parser.expandText()
 		'Try
@@ -286,20 +271,49 @@ Type TScriptExpression
 		'End Try
 	End Method
 
-	Method RegisterFunctionHandler( functionName:String, callback:SToken(params:STokenGroup Var, context:Object = Null), paramMinCount:Int = -1, paramMaxCount:Int = -1)
-		functionHandlers.Insert( functionName.ToLower(), New TSEFN_Handler(callback, paramMinCount, paramMaxCount))
-	End Method
-
-
-	Method GetFunctionHandler:TSEFN_Handler( functionName:String )
-		Return TSEFN_Handler( functionHandlers.ValueForKey( functionName.ToLower() ))
-	End Method
-
 
 	Method GetVariableContent:String(variableKey:String, result:Int Var)
 		result = True
 		Return variableKey
 	End Method
+End Struct
+
+
+
+
+Type TScriptExpression
+	Global functionHandlers:TStringMap = New TStringMap()
+	Field config:TScriptExpressionConfig 
+
+	Method New()
+		config = New TScriptExpressionConfig()
+	End Method
+		
+
+	Method New( config:TScriptExpressionConfig )
+		If Not config Then config = New TScriptExpressionConfig()	' Default!
+		Self.config = config
+	End Method
+
+
+	Method Parse:SToken( expression:String, context:Object = Null)
+		Return New SScriptExpression.Parse(expression, self.config.s, context)
+	End Method
+
+
+	Method ParseText:String( expression:String, context:TStringMap=Null )
+		Return New SScriptExpression.ParseText(expression, self.config.s, context)
+	End Method
+
+
+	Function RegisterFunctionHandler( functionName:String, callback:SToken(params:STokenGroup Var, context:Object = Null), paramMinCount:Int = -1, paramMaxCount:Int = -1)
+		functionHandlers.Insert( functionName.ToLower(), New TSEFN_Handler(callback, paramMinCount, paramMaxCount))
+	End Function
+
+
+	Function GetFunctionHandler:TSEFN_Handler( functionName:String )
+		Return TSEFN_Handler( functionHandlers.ValueForKey( functionName.ToLower() ))
+	End Function
 
 
 	'returns how many elements in the passed array are "true"
@@ -396,6 +410,54 @@ Type TScriptExpression
 		EndIf
 		Return equalCount
 	End Function
+End Type
+
+
+
+
+
+Struct SScriptExpressionConfig
+	Field variableHandlerCB:String(variableName:String, context:Object)
+	Field errorHandler:String(t:String, context:Object)
+
+	Method New( variableHandlerCB:String(variableName:String, context:Object), errorHandler:String(t:String, context:Object) )
+		Self.variableHandlerCB = variableHandlerCB
+		Self.errorHandler = errorHandler
+	End Method
+
+	' Example 
+	Method evaluateVariable( identifier:SToken Var, context:Object = Null)
+		If variableHandlerCB
+			identifier.value = variableHandlerCB(identifier.GetValueText(), context)
+		Else
+			identifier.value="<"+identifier.value+">"
+		EndIf
+	End Method
+ End Struct
+
+
+
+
+Type TScriptExpressionConfig
+	Field s:SScriptExpressionConfig
+	Field sIsSet:int
+
+	Method New(config:SScriptExpressionConfig)
+		self.s = config
+		self.sIsSet = True
+	End Method
+
+	
+	Method New( variableHandlerCB:String(variableName:String, context:Object), errorHandler:String(t:String, context:Object) )
+		self.s = New SScriptExpressionConfig(variableHandlerCB, errorHandler)
+		self.sIsSet = True
+	End Method
+
+
+	Method evaluateVariable( identifier:SToken Var )
+		If sIsSet Then self.s.evaluateVariable(identifier)
+		'TODO: Throw exception about unset SScriptExpressionConfig
+	End Method
 End Type
 
 
@@ -658,10 +720,13 @@ Struct SScriptExpressionParser
 	Field lexer:SScriptExpressionLexer
 	' Current token
 	Field token:SToken
-	Field config:TScriptExpressionConfig
+	Field config:SScriptExpressionConfig
+	Field configIsSet:Int
 	
-	Method New( config:TScriptExpressionConfig, expression:String, context:Object, readFirst:Int = True )
+	Method New( config:SScriptExpressionConfig, expression:String, context:Object = Null, readFirst:Int = True )
 		Self.config = config
+		Self.configIsSet = True
+
 		Self.context = context
 		lexer = New SScriptExpressionLexer( expression )
 		
@@ -733,7 +798,7 @@ Struct SScriptExpressionParser
 				Case TK_IDENTIFIER	' Identifiers on their own are variables!
 					'DebugStop
 					' Replace the identifier
-					If config Then config.evaluateVariable( token ) 
+					If configIsSet Then config.evaluateVariable( token ) 
 					result.AddToken(token)
 					advance()
 
@@ -785,7 +850,7 @@ Struct SScriptExpressionParser
 		Select firstToken.id
 			Case TK_FUNCTION
 				'DebugStop
-				Local fn:TSEFN_Handler = GetScriptExpressionFunctionHandler( firstToken.value )
+				Local fn:TSEFN_Handler = TScriptExpression.GetFunctionHandler( firstToken.value )
 				If Not fn Then Throw New TParseException( "Undefined function "+firstToken.value, firstToken, "eval()" )
 
 				Return fn.run( tokens, context )
@@ -934,23 +999,33 @@ Function SEFN_Concat:SToken(params:STokenGroup Var, context:Object = Null)
 	Return New SToken( TK_TEXT, result, first.linenum, first.linepos )
 End Function
 
-ScriptExpression.RegisterFunctionHandler( "not", SEFN_Not, 1, -1)
-ScriptExpression.RegisterFunctionHandler( "and", SEFN_And, 1, -1)
-ScriptExpression.RegisterFunctionHandler( "or",  SEFN_Or,  1, -1)
-ScriptExpression.RegisterFunctionHandler( "if",  SEFN_If,  1,  3)
-ScriptExpression.RegisterFunctionHandler( "eq",  SEFN_Eq,  1, -1)
-ScriptExpression.RegisterFunctionHandler( "gt",  SEFN_Gt,  2,  2)
-ScriptExpression.RegisterFunctionHandler( "gte", SEFN_Gte, 2,  2)
-ScriptExpression.RegisterFunctionHandler( "lt",  SEFN_Lt,  2,  2)
-ScriptExpression.RegisterFunctionHandler( "lte", SEFN_Lte, 2,  2)
+TScriptExpression.RegisterFunctionHandler( "not", SEFN_Not, 1, -1)
+TScriptExpression.RegisterFunctionHandler( "and", SEFN_And, 1, -1)
+TScriptExpression.RegisterFunctionHandler( "or",  SEFN_Or,  1, -1)
+TScriptExpression.RegisterFunctionHandler( "if",  SEFN_If,  1,  3)
+TScriptExpression.RegisterFunctionHandler( "eq",  SEFN_Eq,  1, -1)
+TScriptExpression.RegisterFunctionHandler( "gt",  SEFN_Gt,  2,  2)
+TScriptExpression.RegisterFunctionHandler( "gte", SEFN_Gte, 2,  2)
+TScriptExpression.RegisterFunctionHandler( "lt",  SEFN_Lt,  2,  2)
+TScriptExpression.RegisterFunctionHandler( "lte", SEFN_Lte, 2,  2)
+TScriptExpression.RegisterFunctionHandler( "concat", SEFN_Concat, 2,  2)
 
-ScriptExpression.RegisterFunctionHandler( "rolename", SEFN_Rolename, 2,  2)
-ScriptExpression.RegisterFunctionHandler( "castname", SEFN_Castname, 2,  2)
 
-ScriptExpression.RegisterFunctionHandler( "concat", SEFN_Concat, 2,  2)
+
 
 ' test functionality
 Print "Tests"
+
+
+' sample functions (normally registered in other files with access to the
+' individual elements like "TRole"
+TScriptExpression.RegisterFunctionHandler( "rolename", SEFN_Rolename, 2,  2)
+TScriptExpression.RegisterFunctionHandler( "castname", SEFN_Castname, 2,  2)
+
+
+' make a global available TScriptExpression instance so "expect()" does not need
+' to get an instance passed
+Global ScriptExpression:TScriptExpression = New TScriptExpression( New TScriptExpressionConfig_Scaremonger() )
 
 Function expect( test:String, expected:String, token:Int, note:String="" )
 	If note Then note = "  ** "+note+" **"
@@ -976,29 +1051,12 @@ print "valueDouble="+valueDouble
 print "valueType="+valueType
 endrem
 
-Struct SScriptExpressionConfig
-  Field variableHandlerCB:String(variableName:String, context:Object)
-  Field errorHandler:String(t:String, context:Object)
-
-  Method New( variableHandlerCB:String(variableName:String, context:Object), errorHandler:String(t:String, context:Object) )
-    Self.variableHandlerCB = variableHandlerCB
-    Self.errorHandler = errorHandler
-  End Method
-End Struct
-
-Type TScriptExpressionConfig
-
-	' Example 
-	Method evaluateVariable( identifier:SToken Var )
-		identifier.value="<"+identifier.value+">"
-	End Method
-	
-End Type
-
+' sample override to have a custom "evaluateVariable()" implementation
+' instead of a custom callback.
 Type TScriptExpressionConfig_Scaremonger Extends TScriptExpressionConfig
 
 	' Example 
-	Method evaluateVariable( identifier:SToken Var )
+	Method evaluateVariable( identifier:SToken Var ) override
 		Select identifier.value
 		Case "name"
 			identifier.value="Scaremonger"
@@ -1006,14 +1064,8 @@ Type TScriptExpressionConfig_Scaremonger Extends TScriptExpressionConfig
 			identifier.value="<"+identifier.value+">"
 		End Select
 	End Method
-	
 End Type
 
-Function variableHandlerCallback:String( variableName:String, context:Object)
-End Function
-
-Function errorHandlerCallback:String( t:String, context:Object )
-End Function
 
 'Local test:String
 
