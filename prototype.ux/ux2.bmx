@@ -2,6 +2,10 @@
 '	Prototyping User Interface
 '	Written by Si Dunford, Feb 2023
 
+
+'	CURRENT STATE:	NON FUNCTIONAL
+
+
 '	Released into the public domain without warranty
 '	Please feel free to do what you want with it
 
