@@ -417,23 +417,34 @@ End Type
 
 
 Struct SScriptExpressionConfig
+	Field functionHandlerCB:TSEFN_Handler(functionName:String)
 	Field variableHandlerCB:String(variableName:String, context:Object)
 	Field errorHandler:String(t:String, context:Object)
 
-	Method New( variableHandlerCB:String(variableName:String, context:Object), errorHandler:String(t:String, context:Object) )
+
+	Method New( functionHandlerCB:TSEFN_Handler(functionName:String), variableHandlerCB:String(variableName:String, context:Object), errorHandler:String(t:String, context:Object) )
+		Self.functionHandlerCB = functionHandlerCB
 		Self.variableHandlerCB = variableHandlerCB
 		Self.errorHandler = errorHandler
 	End Method
 
+	
+	Method GetFunctionHandler:TSEFN_Handler(functionName:String)
+		If functionHandlerCB Then Return functionHandlerCB(functionName)
+		'fall back to default
+		Return TScriptExpression.GetFunctionHandler(functionName)
+	End Method
+
+
 	' Example 
-	Method evaluateVariable( identifier:SToken Var, context:Object = Null)
+	Method EvaluateVariable( identifier:SToken Var, context:Object = Null)
 		If variableHandlerCB
 			identifier.value = variableHandlerCB(identifier.GetValueText(), context)
 		Else
 			identifier.value="<"+identifier.value+">"
 		EndIf
 	End Method
- End Struct
+End Struct
 
 
 
@@ -448,14 +459,19 @@ Type TScriptExpressionConfig
 	End Method
 
 	
-	Method New( variableHandlerCB:String(variableName:String, context:Object), errorHandler:String(t:String, context:Object) )
-		self.s = New SScriptExpressionConfig(variableHandlerCB, errorHandler)
+	Method New( functionHandlerCB:TSEFN_Handler(functionName:String), variableHandlerCB:String(variableName:String, context:Object), errorHandler:String(t:String, context:Object) )
+		self.s = New SScriptExpressionConfig(functionHandlerCB, variableHandlerCB, errorHandler)
 		self.sIsSet = True
 	End Method
 
 
-	Method evaluateVariable( identifier:SToken Var )
-		If sIsSet Then self.s.evaluateVariable(identifier)
+	Method GetFunctionHandler:TSEFN_Handler(functionName:String)
+		If sIsSet Then Return self.s.GetFunctionHandler(functionName)
+	End Method
+
+	
+	Method EvaluateVariable( identifier:SToken Var )
+		If sIsSet Then self.s.EvaluateVariable(identifier)
 		'TODO: Throw exception about unset SScriptExpressionConfig
 	End Method
 End Type
@@ -850,7 +866,16 @@ Struct SScriptExpressionParser
 		Select firstToken.id
 			Case TK_FUNCTION
 				'DebugStop
-				Local fn:TSEFN_Handler = TScriptExpression.GetFunctionHandler( firstToken.value )
+				Local fn:TSEFN_Handler
+				' using an if-else here so config's GetFunctionHandler (or more likely the callback
+				' there) could return Null (so "overriding" the existence of defined default functions
+				' so the developer recognizes they need to implement it in their custom config)
+				If configIsSet
+					fn = config.GetFunctionHandler( firstToken.value ) 
+				' automatic fallback only if NO config is set
+				Else
+					fn = TScriptExpression.GetFunctionHandler( firstToken.value )
+				EndIf
 				If Not fn Then Throw New TParseException( "Undefined function "+firstToken.value, firstToken, "eval()" )
 
 				Return fn.run( tokens, context )
