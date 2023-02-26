@@ -449,7 +449,7 @@ End Struct
 
 
 
-Type TScriptExpressionConfig
+Type TScriptExpressionConfig Final
 	Field s:SScriptExpressionConfig
 	Field sIsSet:int
 
@@ -1050,7 +1050,8 @@ TScriptExpression.RegisterFunctionHandler( "castname", SEFN_Castname, 2,  2)
 
 ' make a global available TScriptExpression instance so "expect()" does not need
 ' to get an instance passed
-Global ScriptExpression:TScriptExpression = New TScriptExpression( New TScriptExpressionConfig_Scaremonger() )
+Global ScriptExpressionConfig:TScriptExpressionConfig = New TScriptExpressionConfig(Null, Scaremonger_variableHandlerCB, Null)
+Global ScriptExpression:TScriptExpression = New TScriptExpression( ScriptExpressionConfig )
 
 Function expect( test:String, expected:String, token:Int, note:String="" )
 	If note Then note = "  ** "+note+" **"
@@ -1078,18 +1079,14 @@ endrem
 
 ' sample override to have a custom "evaluateVariable()" implementation
 ' instead of a custom callback.
-Type TScriptExpressionConfig_Scaremonger Extends TScriptExpressionConfig
-
-	' Example 
-	Method evaluateVariable( identifier:SToken Var ) override
-		Select identifier.value
+Function Scaremonger_variableHandlerCB:String(variableName:String, context:Object)
+	Select variableName
 		Case "name"
-			identifier.value="Scaremonger"
+			Return "Scaremonger"
 		Default
-			identifier.value="<"+identifier.value+">"
-		End Select
-	End Method
-End Type
+			Return "<"+variableName+">"
+	End Select
+End Function
 
 
 'Local test:String
