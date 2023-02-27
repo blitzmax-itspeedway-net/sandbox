@@ -3,6 +3,51 @@
 '	(c) Copyright Si Dunford, Feb 2028, All Rights Reserved
 
 '	EXPERIMENTAL
+'	VERSION 1.0
+
+'	OBSERVATIONS:
+'	Firstly, it appears to work quite well, although I think the list iteslf could benefit from
+'	a change in the way entities are reallocated.
+'
+'	We know that Structs are created and copied when returned or passed, so the preferred option
+'	might be to pass them by reference.
+'
+'	The "free" stack is currently FILO, so index values for short-lived objects would be re-used 
+'	quickly. This in turn means the version would increase quickly relative to others and loop
+'	back to zero causing a potential loss of uniqueness. Using a FIFO stack would reduce this issue.
+'
+'	The next issue is iteration of the stack. I keep a count and loop through the linked list, but
+'	this is not going to be as efficient memory-wise as a packed array. It may be better to iterate
+'	through a fixed-size array. This would mean the counter points to the top of the stack and when 
+'	you delete an entity, you move the top of stack into the position occuped by the deleted record.
+'	Whether this copy and re-organisation will improve speed is currently unknown and because of the
+'	level of indirection used in the index it may make no difference at all.
+'
+'	The "type" or "signature" works nicely, but it does mean you can only have a finite amount of
+'	systems (each with a different signature). I think the system manager might be better creating
+'	its own list of entities that register with it.
+'
+'	Currently the handle is a type and we extend it for components and systems. I think it could 
+'	easily be reduced to a Struct with one field "ID:UINT". As you cannot return NULL for a Struct;
+'	id=0 should be reserved as NULL which is similar to what is done now.
+'
+'	I think 1 byte is enough for the version, but whether we should reference it through a
+'	byte ptr[0] instead of a seperate field is unknown, if we do then the index will need to be 
+'	obtained using AND $0FFF which could simply increase processing time.
+'
+'	The library needs some additional features for use in an ECS
+'		Custom sorting, using an Interface or blitzmax built-in iteration (Ned to test speeds).
+'		A swap function that moves the array positions and updates the index
+
+REM NOTES:
+	When updating objects, they need a dirty flag. The list needs a pointer to "top-dirty" and
+	as objects are updated they are swapped to the start of the array. We can then iterate over
+	dirty objects instead of the entire stack.
+	Instead of using observer to inform every system of entity deletions; use of a deleted flag
+	might be helpful. The stack could then have a built-in GC (reaper) that cleans up as it finds them
+	with some limit (say 5 or 6) on actual deletion. Maybe add them to a stack as found and reap
+	infrequently!
+endrem
 
 Rem
 
