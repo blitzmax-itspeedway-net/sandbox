@@ -5,6 +5,8 @@
 '	This application tests the indirection list
 '	The biggest issue here is "How the hell do I test it"!
 
+'	
+
 SuperStrict
 
 Import "../bin/indirection_list.bmx"
