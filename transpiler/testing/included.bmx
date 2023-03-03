@@ -1,3 +1,0 @@
-
-Function t()
-End function
