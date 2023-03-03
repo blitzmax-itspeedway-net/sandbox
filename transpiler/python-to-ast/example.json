@@ -1,0 +1,108 @@
+{
+    "type": "Module",
+    "body": [
+        {
+            "type": "FunctionDef",
+            "args": {
+                "type": "arguments",
+                "args": [],
+                "defaults": [],
+                "kw_defaults": [],
+                "kwarg": null,
+                "kwonlyargs": [],
+                "vararg": null
+            },
+            "body": [
+                {
+                    "type": "Expr",
+                    "col_offset": 4,
+                    "lineno": 5,
+                    "value": {
+                        "type": "Call",
+                        "args": [
+                            {
+                                "type": "Str",
+                                "col_offset": 11,
+                                "lineno": 5,
+                                "s": "Hello World!"
+                            }
+                        ],
+                        "col_offset": 4,
+                        "func": {
+                            "type": "Name",
+                            "col_offset": 4,
+                            "ctx": {
+                                "type": "Load"
+                            },
+                            "id": "print",
+                            "lineno": 5
+                        },
+                        "keywords": [],
+                        "lineno": 5
+                    }
+                }
+            ],
+            "col_offset": 0,
+            "decorator_list": [],
+            "lineno": 3,
+            "name": "myFunc",
+            "returns": null
+        },
+        {
+            "type": "If",
+            "body": [
+                {
+                    "type": "Expr",
+                    "col_offset": 4,
+                    "lineno": 9,
+                    "value": {
+                        "type": "Call",
+                        "args": [],
+                        "col_offset": 4,
+                        "func": {
+                            "type": "Name",
+                            "col_offset": 4,
+                            "ctx": {
+                                "type": "Load"
+                            },
+                            "id": "myFunc",
+                            "lineno": 9
+                        },
+                        "keywords": [],
+                        "lineno": 9
+                    }
+                }
+            ],
+            "col_offset": 0,
+            "lineno": 7,
+            "orelse": [],
+            "test": {
+                "type": "Compare",
+                "col_offset": 3,
+                "comparators": [
+                    {
+                        "type": "Str",
+                        "col_offset": 15,
+                        "lineno": 7,
+                        "s": "__main__"
+                    }
+                ],
+                "left": {
+                    "type": "Name",
+                    "col_offset": 3,
+                    "ctx": {
+                        "type": "Load"
+                    },
+                    "id": "__name__",
+                    "lineno": 7
+                },
+                "lineno": 7,
+                "ops": [
+                    {
+                        "type": "Eq"
+                    }
+                ]
+            }
+        }
+    ]
+}
