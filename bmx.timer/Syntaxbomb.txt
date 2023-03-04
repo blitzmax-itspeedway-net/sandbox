@@ -1,0 +1,45 @@
+I wrote this as more of an experiment, but thought I should post it here in case anyone may need or want to improve on it.
+
+It all started whilst I was looking at a simple animation in Javascript and I wondered how SetTimeout() and setInterval() were implemented because there didn't seem to be any limit on the number you could create. In Windows, there is a limit of just 16 timers so you need some careful coding if you want to create lots of them (There was a post about this on the old Blitzbasic forum, but I cannot find it).
+
+Behind the scene; Javascript and Node both use a list to hold active timers which is sorted by the time that the timer will be called. The event loop simply checks the current time against the header of the list and if it has expired, the callback is executed. setInterval() does exactly the same except it adds itself back into the list after activation.
+
+So, I turned to Blitzmax and wrote this:
+
+[codebox]
+
+[/codebox]
+
+You can use it in several ways but the first decision is how to update the timers. At first I wrote it in such a way to be implemented inside your game loop, like this:
+
+[code]
+[/code]
+
+But you can also attach it to the Flip Hook, which cleans up your game loop a little:
+
+[code]
+[/code]
+
+Next you have to create your Timouts or Intervals and I have created four functions to help with this:
+
+[code]
+[/code]
+
+[code]
+[/code]
+
+[code]
+[/code]
+
+[code]
+[/code]
+
+You can also create and cancel timers and Intervals:
+
+[code]
+[/code]
+
+[code]
+[/code]
+
+
