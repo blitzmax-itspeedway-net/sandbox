@@ -1,9 +1,6 @@
 import ast, codecs, json, os, sys
 from _ast import AST
 
-GET_TEXT = 0    # Default output 
-GET_JSON = 1
-
 def tojson( node ):
 
     result = dict()
@@ -55,14 +52,6 @@ if __name__ == "__main__":
         print( "Python3 required" )
         os.quit()
 
-    #   OPTIONS
-
-    output = GET_JSON
-
-    if len( sys.argv ) == 3:
-        if sys.argv[2] == "--text":
-            output = GET_TEXT
-
     #   READ SOURCE
 
     with open( sys.argv[1], 'r') as file:
@@ -73,12 +62,12 @@ if __name__ == "__main__":
     print( "Parsing '"+sys.argv[1]+"' ("+str(len(source))+" bytes)" )
     tree = ast.parse( source )
 
-    #   CONVERT TO TEXT
+    #   AST TO TEXT
 
-    if output == GET_TEXT:
+    if len( sys.argv ) == 3 and sys.argv[2] == "--text":
         text = str( ast.dump(tree) )
         filetype = ".txt"
-    elif output == GET_JSON:
+    else:
         text = json.dumps( tojson( tree ), indent=4 )
         filetype = ".json"
 
