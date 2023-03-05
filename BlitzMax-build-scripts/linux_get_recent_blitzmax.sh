@@ -117,7 +117,7 @@ cd ../..
 #cleanup toolchain build dir
 rm -r "toolchain"
  
-
+ 
 cd ..
 echo "=========="
 echo "Setup is complete. You can close now.."
