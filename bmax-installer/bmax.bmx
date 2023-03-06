@@ -15,6 +15,8 @@ Import "bin/TGitHub.bmx"
 
 Import "bin/cmd_install.bmx"
 
+Import "bin/GUI.bmx"
+
 Rem ARGUMENTS
 
 bmax --version							Show Application version

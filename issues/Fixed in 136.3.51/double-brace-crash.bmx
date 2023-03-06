@@ -6,8 +6,7 @@ DebugStop
 Print Text
 
 Rem
-16 FEB 2023
-FIXED IN LATEST RELEASE
+FIXED IN OFFICIAL RELEASE 136.3.51
 
 MANUAL FIX FOR OFFICIAL RELEASE
 A fix was found by GWRON (on Discord) for this issue as follows:
