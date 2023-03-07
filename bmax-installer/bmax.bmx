@@ -15,7 +15,7 @@ Import "bin/TGitHub.bmx"
 
 Import "bin/cmd_install.bmx"
 
-Import "bin/GUI.bmx"
+'Import "bin/GUI.bmx"
 
 Rem ARGUMENTS
 
