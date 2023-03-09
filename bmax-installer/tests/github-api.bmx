@@ -10,8 +10,8 @@ SuperStrict
 'Import bmx.json
 'Import bah.libcurl
 
-Import "bin/TGitHub.bmx"
-Import "bin/TRepository.bmx"
+Import "../bin/TGitHub.bmx"
+Import "../bin/TRepository.bmx"
 
 ' Set platform specific filters
 Global BLITZMAX_FILTER:String

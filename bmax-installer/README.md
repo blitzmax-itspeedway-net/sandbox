@@ -88,7 +88,7 @@ Because it is HTTPS; we have to use Bruceys CURL module
         libssh2.mod
         mbedtls.mod
 	
-		volumes.mod		<- Now part of BlitzMaxNH brl.volumes
+		volumes.mod		<- Now part of BlitzMaxNG brl.volumes
 
     Copy them into mods/bah.mod (You may need to create the folder)
     
