@@ -18,7 +18,6 @@ transpiler/java-to-ast/javaparser-master/
 transpiler/java-to-ast/*.class
 transpiler-bmx/
 #transpiler/old
-bmx.datetime/
 Pratt-Parser/bantam-master/
 Pratt-Parser/bin-java/
 
