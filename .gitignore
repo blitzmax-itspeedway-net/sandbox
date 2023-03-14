@@ -8,6 +8,7 @@
 # Exclude folders
 .bmx/
 .vscode/
+*.private/
 
 # Private Sandboxes
 languageserver/
