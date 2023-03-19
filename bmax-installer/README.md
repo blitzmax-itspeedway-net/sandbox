@@ -170,6 +170,7 @@ bmx.json		blitzmax-itspeedway-net	json.mod		. to /mod/bmx/json.mod
 Need to document other users modules; i'm sure there are a lot of them
 
 THINGS TO DO
+* Downloaded files need to go in an installer or setup folder (not in downloads)
 * Document how to re-generate the certificate (Before it expires)
 * Do we need setProgressCallback() in TModserver.downloadString()?
 * setProgressCallback() needs to be in MB instead of bytes... and only show increases.
@@ -178,5 +179,12 @@ THINGS TO DO
 * Move from my ADLER32 to the one in ZLib; it is so much faster!
 * Repo default modserver should be modserver, but if it doesn't exist we
 	must add them manually into the repo until owner supports the installer!
-	
+* When downloading the "modserver.json" file, we must extract the SHA and save
+	it into the	setup folder. This should be used to see if file has changed.
+	We should be able to do the same for version files related to modules.
+	In that case we need a installer.json file in module repository.
+	- This also needs bmk and bmx code to update the file during build so
+	   developers can easily add installer support.
+	- version insformation without a version file should be dealt with inside
+	   installer but requires download and checksum creation.
 

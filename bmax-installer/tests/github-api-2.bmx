@@ -13,6 +13,8 @@
 
 SuperStrict
 
+Import brl.base64
+
 'Import bmx.json
 'Import bah.libcurl
 
@@ -81,12 +83,29 @@ Try
 	Local modules:JSON = JSON.parse( jtext )
 	
 	' Validate response from modserver
-	If modules.isInvalid() Or modules["message"].Lower()="not found"
+	If modules.isInvalid() Or Lower(modules["message"])="not found"
 		Print "** FAILED TO GET MODSERVER FILE **"
 	Else
 		Print modules.prettify()
+
+		Local content:String
+		Local sha:String = modules["sha"]
+		Local encoded:String = modules["content"]
+		Local encoding:String = modules["encoding"]
+		If encoding = "base64"
+			Local data:Byte[] = TBase64.Decode(encoded)
+			content = String.FromUTF8String(data)
+		End If
+
+		Local m:JSON = JSON.parse( content )
+		If m And m.isValid()
+			Print m.prettify()
+		End If
 	End If
 	DebugStop
+	
+	' Compare SHA to see if the file has changed.
+	
 	
 	
 Catch e:String
