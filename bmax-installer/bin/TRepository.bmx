@@ -2,7 +2,11 @@
 '	BlitzMax installer
 '	(c) Copyright Si Dunford [Scaremonger], FEB 2023, All rights reserved
 
+
+
 SuperStrict
+
+'Global API:String = "http://api.github.com/repos/{USERNAME}/{REPO}/contents/{FILEPATH}"
 
 Type TRepository
 	'Const GITHUB:Int = 0

@@ -1,0 +1,7 @@
+{
+    "name":"Sandbox modserver",
+    "modules":[
+        "bmx.memento",
+        "bmx.timer"
+    [
+}

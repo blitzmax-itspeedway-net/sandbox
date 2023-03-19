@@ -6,7 +6,8 @@
 
 SuperStrict
 
-Import bmx.json
+'Import bmx.json
+'Import bmx.timestamp
 'Import bah.volumes		' Now part of BlitzMaxNG, see brl.volumes
 'Import brl.volumes
 
@@ -15,6 +16,9 @@ Import "bin/config.bmx"
 Import "bin/TGitHub.bmx"
 
 Import "bin/cmd_install.bmx"
+Import "bin/unzip.bmx"
+
+DebugStop
 
 'Import "bin/GUI.bmx"
 

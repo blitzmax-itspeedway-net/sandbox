@@ -5,6 +5,31 @@ EXPERIMENTAL
 CURRENT STATE:
 Will download latest official release but does not unzip it etc (yet)
 
+INSTALLATION:
+
+	Because it is HTTPS; we have to use Bruceys CURL module
+    https://github.com/maxmods/bah.mod
+
+    You will need 
+        libcurl.mod
+        libssh2.mod
+        mbedtls.mod
+	
+		NOT REQUIRED: volumes.mod		<- Now part of BlitzMaxNG brl.volumes
+
+    Copy them into mods/bah.mod (You may need to create the folder)
+
+		''bmx.timestamp
+		''bmx.json
+    
+	ON LINUX:
+	* You also need libidn
+		sudo apt-get install libidn11-dev	
+
+
+* Copy certificate:
+	FROM: mods/bah.mod/libcurl.mod/certificates/cacert.pem
+	TO: ~/BlitzMax/cfg/
 
 NEED COMMUNITY INPUT BUT THIS MIGHT CHANGE
 
@@ -91,6 +116,9 @@ Because it is HTTPS; we have to use Bruceys CURL module
 		volumes.mod		<- Now part of BlitzMaxNG brl.volumes
 
     Copy them into mods/bah.mod (You may need to create the folder)
+
+		''bmx.timestamp
+		''bmx.json
     
 	ON LINUX:
 	* You also need libidn
@@ -147,5 +175,8 @@ THINGS TO DO
 * setProgressCallback() needs to be in MB instead of bytes... and only show increases.
 * Improve TModserver.sanitise()
 * We dont need to download releases EVERY time. Once per day is enough.
-
+* Move from my ADLER32 to the one in ZLib; it is so much faster!
+* Repo default modserver should be modserver, but if it doesn't exist we
+	must add them manually into the repo until owner supports the installer!
+	
 

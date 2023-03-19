@@ -21,7 +21,7 @@ Type TModserver
 		Self.repository = repository
 	End Method
 	
-	Method downloadString:String( url:String )
+	Method downloadString:String( url:String, headers:String[] = [] )
 		Local curl:TCurlEasy = TCurlEasy.Create()
 		If curl<>Null
 			curl.setWriteString()
@@ -30,7 +30,8 @@ Type TModserver
 			curl.setOptString( CURLOPT_CAINFO, CertPath )
 			curl.setOptString( CURLOPT_URL, url )
 			'curl.setProgressCallback( progressCallback )
-			curl.httpHeader( ["User-Agent: "+UserAgent, "Referer:"] )
+			headers :+ ["User-Agent: "+UserAgent, "Referer:"]
+			curl.httpHeader( headers )
 		EndIf
 		Local error:Int = curl.perform()
 		If error; Throw CurlError( error )

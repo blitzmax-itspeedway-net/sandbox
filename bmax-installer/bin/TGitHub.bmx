@@ -2,6 +2,11 @@
 '	GitHub modserver for BlitzMax installer
 '	(c) Copyright Si Dunford [Scaremonger], FEB 2023, All rights reserved
 
+'	GITHUB API:
+'	https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28
+
+
+
 SuperStrict
 
 Import bmx.json

@@ -29,6 +29,7 @@ Function cmd_install_blitzmax()
 		Print( "Downloading "+latest.name+"..." )	
 		modserver.downloadBinary( latest.url, latest.name ) 
 	End If
+	
 	' Decompress the library if we haven't already
 	' FOR THIS WE NEED TO KNOW THE UNZIPPED NAME
 	
