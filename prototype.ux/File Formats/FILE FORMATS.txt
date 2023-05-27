@@ -1,0 +1,88 @@
+Delphi uses a .dfm file containing its form formatting.
+
+    object DfmSampleForm: TDfmSampleForm
+      Left = 0
+      Top = 0
+      Caption = 'DfmSampleForm'
+      ClientHeight = 202
+      ClientWidth = 221
+      Color = clBtnFace
+      ...
+      OldCreateOrder = False
+      PixelsPerInch = 96
+      TextHeight = 13
+    end
+
+    object DfmSampleForm: TDfmSampleForm
+      ...
+      object Memo: TMemo
+        Left = 8
+        Top = 8
+        Width = 252
+        Height = 217
+        Anchors = [akLeft, akTop, akRight, akBottom]
+        TabOrder = 0
+        ...
+      end
+      object BottomPanel: TPanel
+        Left = 0
+        Top = 226
+        Width = 268
+        Height = 32
+        Align = alBottom
+        Anchors = [akRight, akBottom]
+        ...
+        object Button: TButton
+          Left = 185
+          Top = 5
+          Width = 75
+          Height = 25
+          Anchors = [akRight, akBottom]
+          Caption = 'Button'
+          TabOrder = 0
+        end
+      end
+    end
+
+VISUAL BASIC USES .frm FORMAT:
+
+
+    Version 6.00
+    Begin VB.Form.MyForm1
+        BackColor = &H00FF0000&
+        Caption = "Form1"
+        Height = 6000
+        Left = 820
+
+
+        Begin VB.Frame.Frame1
+            Caption = "Frame1"
+            Height = 1600
+
+            Begin VB.CommandButton.MyButton
+                Caption = "Start"
+                Height = 372
+            End
+        End
+    End
+
+    The first line is always the version number
+    FOllowing this are Control Blocks (Begin..End)
+        - These act as a Z-Ordering of components
+
+
+    Other options include:
+
+        Shortcut = ^{F4}' <CTRL><F4>
+        ' Comments
+        BorderStyle = 0         ' None
+
+        Begin VB.Image imgDemo
+           Picture = "Myform.frx":02EB
+        End
+
+    The form definition can be followed by VB source code
+
+    Further examples:
+
+

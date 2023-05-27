@@ -2,7 +2,7 @@
 '	BlitzMax installer
 '	(c) Copyright Si Dunford [Scaremonger], FEB 2023, All rights reserved
 
-SuperStrict
+'SuperStrict
 
 Type TRelease
 	Field author:String

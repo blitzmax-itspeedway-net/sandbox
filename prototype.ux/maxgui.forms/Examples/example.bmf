@@ -1,0 +1,52 @@
+! Workflow Form Definition
+! Example
+FORM customer
+	Caption="Customer"
+!	Tab=60
+!	Create an auto-extending grid sizer
+	GRIDSIZER	2 0
+		LABEL	L1	"First Name:" 
+!			Top=1
+!			Left=0
+!			Width=20
+!			Caption="First Name:"
+		END
+		TEXTBOX name (Enter your name)
+!			Top=-1
+!			Left=-1
+!			Width = 40
+!			Text="Sample"
+		END
+		LABEL	L2	"Surname:"
+!			POSITION=-1
+!			TOP=2
+!			Left=0
+!			Width=20
+!			Caption="Surname:"
+		END
+		TEXTBOX surname (Surname goes here)
+!			Top=1
+!			Left=20
+!			Width=40
+!			Text="surname here"
+		END
+		BUTTON cmd1 "Save"
+!			Top=3
+!			Left=0
+!			Width=20
+!			Text="Save"
+		END
+		BUTTON cmd2	"Apply"		
+!			Top=3
+!			Left=21
+!			Width=20
+!			Text="Cancel"
+		END
+		TButton cmd3	"Cancel"		
+!			Top=3
+!			Left=21
+!			Width=20
+!			Text="Cancel"
+		END
+	END
+END

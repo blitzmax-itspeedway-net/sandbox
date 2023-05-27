@@ -1,0 +1,147 @@
+Rem
+Object	
+	TEvent
+	Font
+	FontMetrics
+	Color
+	Graphics
+	TGadget	(Component)
+		TGUIContainer	Container
+			Panel
+				Applet
+			Window
+				Frame **
+				Dialog
+					FileDialog
+		Button **
+		Label **
+		TextComponent
+			TextField **
+			TextArea **
+		List **
+		Choice **
+		Checkbox **
+		CheckboxGroup **
+		Canvas **
+		MenuComponent
+			MenuItem
+				Menu **
+			MenuBar **
+		ScrollBar **
+
+** Indicates objects that can be created with Create()
+End Rem
+
+
+
+Rem
+Object	
+	AWTEvent
+	Font
+	FontMetrics
+	Color
+	Graphics
+	Component
+		Container
+			Panel
+				Applet
+			Window
+				Frame
+				Dialog
+					FileDialog
+		Button
+		Label
+		TextComponent
+			TextFIeld
+			TextArea
+		List
+		Choice
+		Checkbox
+		CheckboxGroup
+		Canvas
+		MenuComponent
+			MenuItem
+				Menu
+			MenuBar
+		ScrollBar
+	
+End Rem
+
+'##### Root
+Type GObject
+End Type
+
+'##### GObjects
+Type GEvent Extends GObject
+End Type
+Type Font Extends GObject
+End Type
+Type GFontMetrics Extends GObject
+End Type
+Type GColor Extends GObject
+End Type
+Type GGraphics Extends GObject
+End Type
+Type GComponent Extends GObject
+End Type
+
+'##### GComponents
+
+Type GContainer Extends GComponents
+End Type
+Type GButton Extends GComponents
+End Type
+Type GLabel Extends GComponents
+End Type
+Type GTextComponent Extends GComponents
+End Type
+Type GList Extends GComponents
+End Type
+Type GChoice Extends GComponents
+End Type
+Type GCheckbox Extends GComponents
+End Type
+Type GCheckboxGroup Extends GComponents
+End Type
+Type GCanvas Extends GComponents
+End Type
+Type GMenuComponent Extends GComponents
+End Type
+Type GScrollBar Extends GComponents
+End Type
+
+'##### GContainers
+
+Type GPanel Extends GContainer
+End Type
+Type GWindow Extends GContainer
+End Type
+Type GScrollPane Extends GContainer
+End Type
+
+Type GApplet Extends GPanel
+End Type
+
+Type GFrame Extends GWindow
+End Type
+Type GDialog Extends GWindow
+End Type
+
+Type GFileDialog Extends GDialog
+End Type
+
+'##### GTextComponent
+Type GTextField Extends GTextComponent
+End Type
+Type GTextArea Extends GTextComponent
+End Type
+
+'##### GMenuComponent
+Type GMenuItem Extends GMenuComponent
+End Type
+Type GMenuBar Extends GMenuComponent
+End Type
+
+Type GMenu Extends GMenuItem 
+End Type
+

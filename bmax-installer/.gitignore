@@ -18,6 +18,7 @@ test/
 *.old
 *.sh
 *.code-workspace
+*.private
 bls.config
 runlog.txt
 TODO.txt

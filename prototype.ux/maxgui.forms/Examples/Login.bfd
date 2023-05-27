@@ -1,0 +1,57 @@
+!BlitzMAX Form Definition
+VERSION=1.0
+
+FORM Form1
+	top=10
+	left=10
+	width=300
+	height=170
+	resize=0
+	caption=Login
+	status=1
+	LABEL Label1
+		top=10
+		left=10
+		width=75
+		height=20
+		caption=Name:
+	End
+	LABEL Label2
+		top=35
+		left=10
+		width=75
+		height=20
+		caption=Password:
+	End
+	TEXTBOX fldName
+		top=10
+		left=85
+		width=200
+		height=20
+		caption=Email address
+	End
+	PASSWORD fldPassword
+		top=35
+		left=85
+		width=100
+		height=20
+		text=::::::::::
+	End
+	BUTTON btnOk
+		command=-1
+		top=85
+		left=65
+		width=80
+		height=22
+		caption=&Ok
+	End
+	BUTTON btnCancel
+		command=-2
+		top=85
+		left=155
+		width=80
+		height=22
+		caption=&Cancel
+	End
+
+End

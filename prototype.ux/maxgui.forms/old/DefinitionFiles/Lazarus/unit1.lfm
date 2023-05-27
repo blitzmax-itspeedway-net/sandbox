@@ -1,0 +1,82 @@
+object Form1: TForm1
+  Left = 300
+  Height = 556
+  Top = 119
+  Width = 691
+  Caption = 'Form1'
+  ClientHeight = 556
+  ClientWidth = 691
+  OnCreate = FormCreate
+  LCLVersion = '1.0.14.0'
+  object Button1: TButton
+    Left = 8
+    Height = 25
+    Top = 8
+    Width = 75
+    Caption = 'ONE'
+    OnClick = Button1Click
+    TabOrder = 0
+  end
+  object Button2: TButton
+    Left = 88
+    Height = 25
+    Top = 8
+    Width = 75
+    Caption = 'TWO'
+    OnClick = Button2Click
+    TabOrder = 1
+  end
+  object Button3: TButton
+    Left = 168
+    Height = 25
+    Top = 8
+    Width = 75
+    Caption = 'THREE'
+    OnClick = Button3Click
+    TabOrder = 2
+  end
+  object StringGrid1: TStringGrid
+    Left = 323
+    Height = 100
+    Top = 187
+    Width = 200
+    TabOrder = 3
+  end
+  object Label1: TLabel
+    Left = 271
+    Height = 16
+    Top = 9
+    Width = 38
+    Caption = 'TIMER:'
+    ParentColor = False
+  end
+  object txtTimer: TLabel
+    Left = 312
+    Height = 16
+    Top = 9
+    Width = 23
+    Caption = 'TBC'
+    ParentColor = False
+  end
+  object SQLTransaction1: TSQLTransaction
+    Active = False
+    Action = caNone
+    left = 592
+    top = 8
+  end
+  object SQLQuery1: TSQLQuery
+    FieldDefs = <>
+    Params = <>
+    left = 624
+    top = 8
+  end
+  object SQLite3Connection1: TSQLite3Connection
+    Connected = False
+    LoginPrompt = False
+    KeepConnection = False
+    LogEvents = []
+    Options = []
+    left = 656
+    top = 8
+  end
+end

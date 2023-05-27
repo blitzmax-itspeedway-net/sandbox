@@ -1,0 +1,14 @@
+GUIde2.0 is based on GUIde1.4 but converted to Blitzmax by Si Dunford (Scaremonger).
+
+GUIde1.4 (c) Copyright Wiebo, 24/6/2006
+http://www.blitzbasic.com/toolbox/toolbox.php?tool=28
+https://code.google.com/p/noisycode/
+https://github.com/wiebow/guide
+
+This new version is designed to be compatible with MAXIDE tabs and includes a container application
+to allow it to be used stand-alone too.
+
+It no longer generates native code as per the previous versions but instead produces a BlitzMAX Form Definition
+file with exension .bfd which can be used by your application using the gui.forms module.
+
+

@@ -5,9 +5,9 @@ Import "../bin/unzip.bmx"
 
 DebugStop
 
-Local ARCHIVE:String = "/home/si/BlitzMax.Downloads/bah.mod-master.zip"
+Local ARCHIVE:String = "/home/si/BlitzMaxTest/setup/bah.mod-master.zip"
 
-Local DESTINATION:String = "/home/si/BlitzMax.Downloads/example"
+Local DESTINATION:String = "/home/si/BlitzMaxTest/test/"
 
 ' Callback for unzip
 Function unzipNotifier( event:Int, pathname:String, data:Int=0 )
@@ -27,7 +27,8 @@ End Function
 
 ' Unzip and Overwrite
 Try
-	unzip( ARCHIVE, DESTINATION, unzipNotifier )
+	'unzip( ARCHIVE, DESTINATION, unzipNotifier )
+	unzip( ARCHIVE, "bah.mod-master/clipboard.mod", "/home/si/BlitzMaxTest/mod/bah.mod/clipboard.mod", unzipnotifier )
 Catch e:TRuntimeException
 	Print e.error
 Catch e:String

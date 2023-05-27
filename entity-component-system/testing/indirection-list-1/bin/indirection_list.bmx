@@ -6,11 +6,11 @@
 '	VERSION 1.0
 
 '	OBSERVATIONS:
-'	Firstly, it appears to work quite well, although I think the list iteslf could benefit from
+'	Firstly, it appears to work quite well, although I think the list itself could benefit from
 '	a change in the way entities are reallocated.
 '
 '	We know that Structs are created and copied when returned or passed, so the preferred option
-'	might be to pass them by reference.
+'	is to pass them by reference.
 '
 '	The "free" stack is currently FILO, so index values for short-lived objects would be re-used 
 '	quickly. This in turn means the version would increase quickly relative to others and loop
@@ -33,13 +33,13 @@
 '
 '	I think 1 byte is enough for the version, but whether we should reference it through a
 '	byte ptr[0] instead of a seperate field is unknown, if we do then the index will need to be 
-'	obtained using AND $0FFF which could simply increase processing time.
+'	obtained using "AND $0FFF" which could increase processing time.
 '
 '	The library needs some additional features for use in an ECS
-'		Custom sorting, using an Interface or blitzmax built-in iteration (Ned to test speeds).
+'		Custom sorting, using an Interface or blitzmax built-in iteration (Need to test speeds).
 '		A swap function that moves the array positions and updates the index
 
-REM NOTES:
+Rem NOTES:
 	When updating objects, they need a dirty flag. The list needs a pointer to "top-dirty" and
 	as objects are updated they are swapped to the start of the array. We can then iterate over
 	dirty objects instead of the entire stack.

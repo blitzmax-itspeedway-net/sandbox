@@ -1,0 +1,51 @@
+! BLITZMAX FORM DEFINITION
+! example1.bfd
+Version=1.0
+FORM customer
+	Caption="Customer"
+	Height=478
+	Width=363
+	center=1
+	PANEL	pnl
+		left=10
+		top=10
+		width=-10
+		height=-10
+		border=3
+		LABEL	L1	"First Name:" 
+			Top=100
+			Left=5
+			Width=60
+			Height=22
+		END
+		TEXTBOX name (Enter your name)
+			Top=100
+			Left=80
+			Width=-10
+			Text="Sample"
+		END
+		LABEL	L2	"Surname:"
+			Top=125
+			Left=5
+			Width=60
+			Height=22
+		END
+		TEXTBOX surname (Surname goes here)
+			Top=125
+			Left=80
+			Width=-10
+		END
+		BUTTON cmd1 "Save"
+			Width=75
+			Height=22
+			Right=170
+			Bottom=32
+		END
+		BUTTON cmd2	"Cancel"		
+			Width=75
+			Height=22
+			Right=85
+			Bottom=32
+		END
+	END
+END

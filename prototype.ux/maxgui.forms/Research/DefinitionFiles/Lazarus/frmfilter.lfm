@@ -1,0 +1,113 @@
+object frmSeverity: TfrmSeverity
+  Left = 312
+  Height = 272
+  Top = 200
+  Width = 170
+  Caption = 'Severity'
+  ClientHeight = 272
+  ClientWidth = 170
+  LCLVersion = '1.0.14.0'
+  object GroupBox1: TGroupBox
+    Left = 8
+    Height = 217
+    Top = 8
+    Width = 153
+    Caption = 'Equals:'
+    ClientHeight = 199
+    ClientWidth = 149
+    TabOrder = 0
+    object CheckBox1: TCheckBox
+      Left = 14
+      Height = 19
+      Top = 8
+      Width = 79
+      Caption = 'Emergency'
+      TabOrder = 0
+    end
+    object CheckBox2: TCheckBox
+      Left = 14
+      Height = 19
+      Top = 32
+      Width = 45
+      Caption = 'Alert'
+      TabOrder = 1
+    end
+    object CheckBox3: TCheckBox
+      Left = 14
+      Height = 19
+      Top = 56
+      Width = 57
+      Caption = 'Critical'
+      TabOrder = 2
+    end
+    object CheckBox4: TCheckBox
+      Left = 14
+      Height = 19
+      Top = 80
+      Width = 45
+      Caption = 'Error'
+      TabOrder = 3
+    end
+    object CheckBox5: TCheckBox
+      Left = 14
+      Height = 19
+      Top = 104
+      Width = 65
+      Caption = 'Warning'
+      TabOrder = 4
+    end
+    object CheckBox6: TCheckBox
+      Left = 14
+      Height = 19
+      Top = 128
+      Width = 55
+      Caption = 'Notice'
+      TabOrder = 5
+    end
+    object CheckBox7: TCheckBox
+      Left = 14
+      Height = 19
+      Top = 152
+      Width = 92
+      Caption = 'Informational'
+      TabOrder = 6
+    end
+    object CheckBox8: TCheckBox
+      Left = 14
+      Height = 19
+      Top = 176
+      Width = 55
+      Caption = 'Debug'
+      TabOrder = 7
+    end
+  end
+  object Panel1: TPanel
+    Left = 0
+    Height = 41
+    Top = 231
+    Width = 170
+    Align = alBottom
+    Alignment = taLeftJustify
+    ClientHeight = 41
+    ClientWidth = 170
+    Color = clWindowFrame
+    ParentColor = False
+    TabOrder = 1
+    object Button1: TButton
+      Left = 8
+      Height = 25
+      Top = 8
+      Width = 75
+      Caption = 'Okay'
+      TabOrder = 0
+    end
+    object Button2: TButton
+      Left = 88
+      Height = 25
+      Top = 8
+      Width = 75
+      Caption = 'Cancel'
+      TabOrder = 1
+    end
+  end
+end

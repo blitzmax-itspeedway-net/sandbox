@@ -1,0 +1,27 @@
+INTRODUCING MAXGUI FORMS
+========================
+
+A Form is a Definition file that is Loaded/Saved and is used to build a MaxGUI page with minimal
+effort.
+
+Initially it will support:
+	Blitzmax Form Definition	(*.bfd)
+	
+Later versions will support Lazerus Forms (*.lfm) and Visual Basic Forms (.frm)
+Support for Delphi Forms may be added if I can find some documentation.
+
+## GUI EDITOR
+GUIde 1.4 (and possible 2.0) are available online as Blitzmax Source.
+I would like to convert these to create .bmf files instead of MaxGUI source code.
+	(Shouldn't be too difficult)
+	
+Later versions will bring MaxGUI.Forms and MaxGUI.Sizer together and allow forms to include sizers.
+
+## FORM TRANSLATION
+
+There is some code (in one of the folders) that attempts to translate Lazerus forms to Blitzmax forms
+* This should be finished.
+* Maybe do the same for other form creators.
+
+##
+

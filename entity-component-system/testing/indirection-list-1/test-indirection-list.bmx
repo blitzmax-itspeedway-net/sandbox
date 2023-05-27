@@ -9,8 +9,8 @@
 
 SuperStrict
 
-Import "../bin/indirection_list.bmx"
-Import "../../prototype.ux/ux.bmx"	
+Import "bin/indirection_list.bmx"
+Import "../../../prototype.ux/ux.bmx"	
 
 Print UX.COL_SURFACE
 
@@ -20,7 +20,7 @@ Function SetupUX()
 	'UX.SetColor( UX.COL_ONSURFACE, New SColor8( $504030 ) )
 	Return
 	
-	' Define the colours for SFXR
+	' Define the colours 
 	UX.SetColor( UX.COL_BACKGROUND, New SColor8( $404040 ) )	'# Charcoal
 	'UX.SetColor( UX.COL_ONBACKGROUND, WHITE )
 	'UX.SetModal( 0.5 )
@@ -78,13 +78,13 @@ Repeat
 		If hnd.enabled()
 			If UX.Button( index+1, txt, 5, 5+index*20, 100, 19 )
 				Print("pressed")
-				entities.remove( New THandle( index, hnd.version, UINT(0) ) )
+				entities.remove( New THandle( index, hnd.version, UInt(0) ) )
 			End If
 		Else
 			SetColor( $c0, $c0, $c0 )
 			DrawRect( 15, 15+index*20, 100, 19 )
 			SetColor( $00, $00, $00 )
-			DrawText( txt, 5+(100-textwidth(txt))/2, 15+index*20+(19-textheight(txt))/2 )
+			DrawText( txt, 5+(100-TextWidth(txt))/2, 15+index*20+(19-TextHeight(txt))/2 )
 		End If
 		
 	Next

@@ -1,35 +1,90 @@
 # BlitzMax Installer
 
-EXPERIMENTAL
+*EXPERIMENTAL*
 
 CURRENT STATE:
 Will download latest official release but does not unzip it etc (yet)
+Only supports modservers from github at present. Will be extended if required.
 
-INSTALLATION:
+# Command Line
 
-	Because it is HTTPS; we have to use Bruceys CURL module
-    https://github.com/maxmods/bah.mod
+NOTE: This should be based on something like "apt"
 
-    You will need 
-        libcurl.mod
-        libssh2.mod
-        mbedtls.mod
-	
-		NOT REQUIRED: volumes.mod		<- Now part of BlitzMaxNG brl.volumes
+```
+    IMPLEMENTED
+    bmax version                        Application version
 
-    Copy them into mods/bah.mod (You may need to create the folder)
+    EXPERIMENTAL
+    bmax install blitzmax               Installs the official blitzmax release
 
-		''bmx.timestamp
-		''bmx.json
-    
-	ON LINUX:
-	* You also need libidn
-		sudo apt-get install libidn11-dev	
+    IN DEVELOPMENT
+    bmax install <module>               Installs latest module
+    bmax install [blitzmax] -latest     Install blitzmax release plus latest modules
 
+    NOT IMPLEMENTED
+    bmax list           List all modules
+    bmax show <module>  Show module detail
+
+    bmax --debug        Produced a CSV containing all module data
+
+    bmax install [--default|--in <folder>]	Installs latest release of Blitzmax
+	    --default							Install in default location
+	    --in <folder>						Specify the installation directory
+
+    bmax install <package|module>			Installs latest package or module
+
+    FROM HERE ARE NOT IMPLEMENTED:
+    bmax upgrade
+
+    bmax update <package|module>
+    bmax install <package|module>
+    bmax uninstall <package|module>
+```
+
+#Installation
+
+*To compile the installer, you will need the following third party components:
+
+    https://github.com/blitzmax-itspeedway-net/json.mod
+    https://github.com/blitzmaxmods/timestamp.mod
+
+ON LINUX:
+* You also need libidn
+	sudo apt-get install libidn11-dev	
 
 * Copy certificate:
 	FROM: mods/bah.mod/libcurl.mod/certificates/cacert.pem
 	TO: ~/BlitzMax/cfg/
+
+ADD MODSERVER SUPPORT TO YOUR MODULES
+
+1. On Github; identify the username or origanisation you will use as your modserver.
+
+	For example, the authors modserver is located in organistion: blitzmaxmods
+	
+2. Identify the repository you will use as the default modserver
+
+	You can either use the default "modserver", or any existing one
+	
+3. Add a file called "modserver.json" to your modserver root.
+
+4. Add your modserver to the installer
+
+	a: Request via discord or make a pull request to add your modserver to the installer
+
+	** 19 MAR 2023 - not documented at the moment
+	
+	b: Ask users to add your modserver from the command line:
+	
+		If you are using the repository 'modserver' you do not need to include it:
+
+		bmax --add GITHUB:username[/repository]
+		
+		For example:
+		bmax --add GITHUB:blitzmax-itspeedway-net
+		bmax --add GITHUB:myBlitzMaxMods/mbm.master
+
+5. Add an installer.json file to your module root to help with version control and dependencies.
 
 NEED COMMUNITY INPUT BUT THIS MIGHT CHANGE
 
@@ -48,30 +103,34 @@ NEED COMMUNITY INPUT BUT THIS MIGHT CHANGE
 * Community input into this change is necessary 
 
 
-# Command Line
+	
 
-NOTE: This should be based on something like "apt"
+# modserver.json
 
-```
-bmax --version      Application version
-bmax list           List all modules
-bmax show <module>  Show module detail
+** This design has not been completed **
 
-bmax --debug        Produced a CSV containing all module data
+```{
+	"name": "My Mod server",
+	"modules": [
+		"mms.amazingframework",
+		"mms.amazingfeatures"
+	]
+}```
 
-THESE ARE IN PROGESS AND ARE EXPERIMENTAL
-bmax install [--default|--in <folder>]	Installs latest release of Blitzmax
-	--default							Install in default location
-	--in <folder>						Specify the installation directory
+# installer.json
 
-bmax install <package|module>			Installs latest package or module
+** This design has not been completed **
 
-FROM HERE ARE NOT IMPLEMENTED:
-bmax upgrade
-
-bmax update <package|module>
-bmax install <package|module>
-bmax uninstall <package|module>			
+```{
+	"modname": "mms.amazingfeatures",
+	"author": "Jack Frost",
+	"date": "2023-03-18 08:43:00",
+	"checksum": "38759287B9",
+	"version": 1.6,
+	"dependencies": [
+		{ "module": "bcc", "version": "", "date": "2023-03-11" },
+	]
+}```
 
 # NOTES
 
@@ -104,25 +163,6 @@ This uses the "Release" API
 
 To get a list of releases; you call this:
 https://api.github.com/repos/<username>/<repository_name>/releases
-
-Because it is HTTPS; we have to use Bruceys CURL module
-    https://github.com/maxmods/bah.mod
-
-    You will need 
-        libcurl.mod
-        libssh2.mod
-        mbedtls.mod
-	
-		volumes.mod		<- Now part of BlitzMaxNG brl.volumes
-
-    Copy them into mods/bah.mod (You may need to create the folder)
-
-		''bmx.timestamp
-		''bmx.json
-    
-	ON LINUX:
-	* You also need libidn
-		sudo apt-get install libidn11-dev
 
 INSTALLER LOGIC
 
@@ -187,4 +227,4 @@ THINGS TO DO
 	   developers can easily add installer support.
 	- version insformation without a version file should be dealt with inside
 	   installer but requires download and checksum creation.
-
+* Document layout of modserver.json and installer.json files

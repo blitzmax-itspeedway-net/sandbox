@@ -1,0 +1,35 @@
+THINGS DO DO
+
+# ESSENTIAL
+Form loader must support nested objects so that a form, panel or sizer can contain objects
+	Currently this fails
+Support for sizer (all types)
+
+	WIDGET
+		CONTAINER		Has Children objects and surface (TGadget) to draw on
+			FORM		Can add Widgets
+						Surface is Maxgui Parent
+			SIZER		Can add widgets
+						Surface is Maxgui Parent
+				GRIDSIZER
+				HSIZER
+				VSIZER
+				etc
+			PANEL		Can add Widgets
+						Surface is TGadget
+		COMPONENT
+			TEXTBOX
+			BUTTON
+			LABEL
+			etc
+
+# REQUIRED
+
+
+
+# NICE TO HAVE
+
+Helper functions to replace those from MaxGUI as shortform
+	NewTextBox(), NewLabel("Text"), etc...
+	
+

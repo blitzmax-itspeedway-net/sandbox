@@ -26,6 +26,10 @@ Function SetFileTime( path:String, time:Long, timeType:Int=FILETIME_MODIFIED)
 End Function
 
 Function unzip( source:String, target:String, callback( event:Int, message:String="", data:Int=0 )=Null )
+	unzip( source, "", target, callback )
+End Function
+
+Function unzip( source:String, path:String, target:String, callback( event:Int, message:String="", data:Int=0 )=Null )
 
 	'	VALIDATION
 	
@@ -36,6 +40,9 @@ Function unzip( source:String, target:String, callback( event:Int, message:Strin
 	
 	target = target.Replace("\\","/")
 	If Not (target.endswith("/")); target :+ "/"
+
+	path = path.Replace("\\","/")
+	If path<>"" And Not (path.endswith("/")); path :+ "/"
 		
 	'	OPEN ARCHIVE
 	Local ra:TReadArchive = New TReadArchive
@@ -64,8 +71,29 @@ Function unzip( source:String, target:String, callback( event:Int, message:Strin
 	
 	While ra.ReadNextHeader(entry) = ARCHIVE_OK
 
+		'DebugStop
+		Local pathname:String = entry.pathname()
+		'Print pathname
+		
+		Local dst:String
+		If path=""
+			' No filter applied
+			dst = target+pathname
+		ElseIf pathname.startswith( path )
+			' Confirm path is required
+			If Len(pathname)<=Len(path) ; Continue
+			' Apply filter
+			dst = target + pathname[path.length..]
+		Else
+			' We do not want to unzip this entry
+			Continue
+		EndIf
+		'DebugStop
+		'Print target + entry.pathname()[path.length..]
+	
 		' Delete existing entry to allow replace
-		Local dst:String = target+entry.pathname()
+		'Local dst:String = target+entry.pathname()
+		
 		Select FileType( dst )
 		Case FILETYPE_DIR
 			DeleteDir( dst, True )
@@ -90,7 +118,7 @@ Function unzip( source:String, target:String, callback( event:Int, message:Strin
 		Default
 			New TRuntimeException( "Unknown Entry.Filetype() = "+entry.FileType().toString() )
 		End Select
-		
+
 	Wend
 	
 	If callback; callback( EVENT_UNZIP_FINISH, source )

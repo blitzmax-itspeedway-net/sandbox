@@ -2,24 +2,57 @@
 '	BlitzMax installer
 '	(c) Copyright Si Dunford [Scaremonger], FEB 2023, All rights reserved
 
-SuperStrict
+'SuperStrict
 
-Import bmx.json
-Import bah.libcurl
 
-Import "config.bmx"
-Import "TRelease.bmx"
-Import "TRepository.bmx"
+
+'Import "config.bmx"
+'Import "TRelease.bmx"
+'Import "TRepository.bmx"
+
+Const MODSERVER_GITHUB:Int = $00
+'Const MODSERVER_SOURCEFORGE:Int = $01
+'Const MODSERVER_WEBSITE:Int = $02
+
+Const MODSERVER_RELEASE:Int = $10
+Const MODSERVER_ZIP:Int = $11
 
 Type TModserver
 
-	Field UserAgent:String = "BlitzMaxNG"
-	Field CertPath:String  = CONFIG.CERTPATH+DIRSLASH+CONFIG.CERTIFICATE	'"certificates/cacert.pem"
-	Field repository:TRepository
+	' Timer used to display download status
+	Global timer:Int
+
+	'Global list:TMap = New TMap()
 	
-	Method New( repository:TRepository )
-		Self.repository = repository
-	End Method
+	'Function register( name:String, modserver:TModserver )
+	'	list.insert( name, modserver )
+	'End Function
+	
+	'Function find:TModserver( name:String )
+	'	Return TModserver( list.valueforkey( name ) )
+	'End Function
+
+	'Function remove( name:String )
+	'	list.remove( name )
+	'End Function
+	
+
+	'//
+
+	Field UserAgent:String = "BlitzMaxNG"
+	Field CertPath:String  = CONFIG.CERTPATH+CONFIG.CERTIFICATE	'"certificates/cacert.pem"
+	'Field repository:TRepository
+	'Field description:String
+
+	'Method New( path:String, description:String="" )
+	'	Self.repository = TRepository.get( path, path )
+	'	Self.description = description
+	'End Method
+	
+	'Method New( repository:TRepository, description:String="" )
+	'	Self.repository = repository
+	'	Self.description = description
+	'End Method
 	
 	Method downloadString:String( url:String, headers:String[] = [] )
 		Local curl:TCurlEasy = TCurlEasy.Create()
@@ -39,9 +72,9 @@ Type TModserver
 		Return curl.toString()
 	End Method
 	
-	Method downloadBinary( url:String, filename:String="" )
-		If filename = ""; filename = repository.name
-		filename = CONFIG.DOWNLOAD+DIRSLASH+sanitise( filename )
+	Method downloadBinary:Int( url:String, filename:String="" )
+		'If filename = ""; filename = repository.name
+		filename = CONFIG.DATAPATH+sanitise( filename )
 		
 		Local curl:TCurlEasy = TCurlEasy.Create()
 		Local stream:TStream = WriteStream( filename )
@@ -59,17 +92,23 @@ Type TModserver
 		CloseStream( stream )
 		If error; Throw CurlError( error )
 		curl.cleanup()
-		Print filename+", filesize: "+FileSize(filename)
+		'Print filename+", filesize: "+FileSize(filename)
 		'Return curl.toString()
-
+		Return FileSize(filename)
 	End Method 
 	
 	Method Jdownload:JSON( url:String )
 		Return JSON.parse( downloadString( url ) )
 	End Method
 	
-	Method getReleases:TList( filter:String = "" ) Abstract
-	Method getLatest:TRelease() Abstract
+	Method getReleases:TList( repository:TRepository, filter:String = "" ) Abstract
+	Method getLatest:TRelease( repository:TRepository ) Abstract
+	
+	' Method used to get the modserver.json file from a modserver
+	Method getRemoteConfig:JSON( source:TRepository ) Abstract
+	
+	' Get the last commit of a given file
+	Method getLastCommit:String( repository:TRepository, filepath:String ) Abstract
 	
 	' Santise a filename
 	'TODO: Need to improve this
@@ -89,7 +128,15 @@ Type TModserver
 	End Function
 
 	Function progressCallback:Int(data:Object, dltotal:Long, dlnow:Long, ultotal:Long, ulnow:Long)
-		Print " ++++ " + dlnow + " bytes"
+		'Local this:TModserver = TModserver(data)
+		Local now:Int = MilliSecs()
+		If now > TModserver.timer
+			Print " "+CurrentTime()+" "+ dlnow/1024/1024 +"Mb"
+			TModserver.timer = now+5000
+		End If
+		'Print " ++++ " + dlnow + " bytes"
 		Return 0	
-	End Function	
+	End Function
+	
+	
 End Type

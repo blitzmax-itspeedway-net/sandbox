@@ -27,14 +27,19 @@ Type UX
 	Global COL_SURFACE:Int				= 5
 	Global COL_ERROR:Int 				= 6
 
-	Global COL_ONPRIMARY:Int			= 7
-	Global COL_ONPRIMARY_VARIANT:Int 	= 8
-	Global COL_ONSECONDARY:Int 			= 9
-	Global COL_ONSECONDARY_VARIANT:Int	= 10
+	Global COL_DISABLED:Int				= 7
 
-	Global COL_ONBACKGROUND:Int 		= 11
-	Global COL_ONSURFACE:Int 			= 12
-	Global COL_ONERROR:Int				= 13
+	Global COL_ONPRIMARY:Int			= 8
+	Global COL_ONPRIMARY_VARIANT:Int 	= 9
+	Global COL_ONSECONDARY:Int 			= 10
+	Global COL_ONSECONDARY_VARIANT:Int	= 11
+
+	Global COL_ONBACKGROUND:Int 		= 12
+	Global COL_ONSURFACE:Int 			= 13
+	Global COL_ONERROR:Int				= 14
+
+	Global COL_ONDISABLED:Int			= 15
+
 	
 	Private
 	
@@ -76,7 +81,8 @@ Type UX
 
 	'Const VISIBLE:Int 			= 0
 	Const HIDDEN:Int 			= $0010		' 00000000 00000000 00000000 00001000
-
+	Const DISABLED:Int			= $80000000	' 10000000 00000000 00000000 00000000
+	
 	' Define New() as private to prevent instance creation
 	Method New() ; End Method
 
@@ -117,13 +123,15 @@ Type UX
 		New SColor8( $FFFFFF ),		' BACKGROUND
 		New SColor8( $EFE5FD ),		' SURFACE
 		New SColor8( $B00020 ),		' ERROR
+		New SColor8( $C0C0C0 ),		' DISABLED
 		WHITE,						' ON PRIMARY
 		WHITE,						' ON PRIMARY VARIANT
 		BLACK,						' ON SECONDARY
 		WHITE,						' ON SECONDARY VARIANT
 		BLACK,						' ON BACKGROUND
 		BLACK,						' ON SURFACE
-		WHITE ..					' ON ERROR
+		WHITE,						' ON ERROR
+		New SColor8( $222222 )..	' ON DISABLED
 		]
 		'DebugStop
 
@@ -193,9 +201,14 @@ Type UX
 	End Function
 	
 	Function Button:Int( id:Int, Caption:String, x:Int, y:Int, w:Int = -1, h:Int = -1, flags:Int = 0 )
-		If flags And HIDDEN = HIDDEN Return False
+
+		If flags & HIDDEN ; Return False
+
 		If w = -1; w = TextWidth( caption ) + _vpadding_
 		If h = -1; h = _textheight_ + _hpadding_
+
+		Local _disabled:Int = False
+		If flags & DISABLED; _disabled = True
 		
 		x :+ parentx
 		y :+ parenty
@@ -206,6 +219,12 @@ Type UX
 
 		' Three states of the button
 		Select True
+		Case _disabled
+			SetColor( _colours_[ COL_DISABLED ] )
+			DrawRect( x, y, w, h ) 	' Border and default background
+			SetColor( _colours_[ COL_ONDISABLED ] )
+			_DrawCaption_( Caption, x, y, w, h, ALIGN_CENTRE )
+			'Return False
 		Case inside And MouseDown(1)		' Pressed
 			SetColor( _colours_[ COL_PRIMARY_VARIANT ] )
 			DrawRect( x, y, w, h ) 	' Border and default background

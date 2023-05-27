@@ -5,20 +5,21 @@
 '	GITHUB API:
 '	https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28
 
+'SuperStrict
 
+'Import bmx.json
 
-SuperStrict
+'Import "TModserver.bmx"
+'Import "TRelease.bmx"
+'Import "TRepository.bmx"
 
-Import bmx.json
-
-Import "TModserver.bmx"
-Import "TRelease.bmx"
-Import "TRepository.bmx"
-Import "datetime.bmx"
+'TModServer.register( "GiTHUB", New TGithub() )
 
 Type TGithub Extends TModserver
 
 	Private
+	
+	Field path:String
 	
 	Const ONE_DAY:Int = 60*60*24	
 	Const GITHUB_API:String = "http://api.github.com/repos/"
@@ -39,27 +40,28 @@ Type TGithub Extends TModserver
 
 	Public
 	
-'	Method New()
-'	End Method
+	Method New( path:String )
+		Self.path = path
+	End Method
 	
-	Method getReleases:TList( filter:String = "" )
+	Method getReleases:TList( repository:TRepository, filter:String = "" )
 		Local data:JSON
 		DebugStop
 		
 		' Check if we have a recent copy of Repository Releases in cache
-		Local filename:String = CONFIG.DOWNLOAD+DIRSLASH+repository.filename()
-		If FileType( filename ) = FILETYPE_FILE And FileTime(filename ) < DateTime.time() - ONE_DAY
+		Local cachefile:String = CONFIG.DATAPATH + repository.filename()	
+		If FileType( cachefile ) = FILETYPE_FILE And FileTime( cachefile ) > DateTime.time() - ONE_DAY
 			' Load from cache
-			Local jtext:String = LoadString( filename )
+			Local jtext:String = LoadString( cachefile )
 			data = JSON.parse( jtext ) 
 		Else
 			Print "Updating release information"
-			DebugStop
+			'DebugStop
 			If Not filter; Return Null
-			data = JDownload( GITHUB_API + repository.repo + "/releases" )
+			data = JDownload( GITHUB_API + repository.path + "/releases" )
 			' Cache release information
 			If Not data Or data.isInvalid(); Return Null
-			SaveString( data.prettify(), filename )
+			SaveString( data.prettify(), cachefile )
 		End If
 		
 		' Extract release information	
@@ -73,12 +75,68 @@ Type TGithub Extends TModserver
 		Return releases
 	End Method
 	
-	Method getLatest:TRelease()
+	Method getLatest:TRelease( repository:TRepository )
 		Print "READING LATEST:"
-		Local asset:JSON = JDownload( GITHUB_API + repository.repo + "/releases/latest" )
+		Local asset:JSON = JDownload( GITHUB_API + repository.path + "/releases/latest" )
 '		Print asset.prettify()
 '		DebugStop
 		Return _TRelease( asset )
+	End Method
+	
+	' Retrieve modserver.json from the modserver repository
+	Method getRemoteConfig:JSON( repo:TRepository )
+	
+		Local url:String = GITHUB_API+repo.path+"/contents/modserver.json"
+		DebugStop
+		
+		' Optionally add users github token
+		Local headers:String[] 
+		Local githubEnvironment:String = CONFIG["github|environment"]
+		If Not githubEnvironment; githubEnvironment = "GITHUB_TOKEN"
+		Local token:String = getenv_( "GITHUB_TOKEN" )
+		If token = ""
+			Print "WARNING: GITHUB token not found in '"+githubEnvironment+"'"
+		Else
+			Print "Using GITHUB token in environment variable '"+githubEnvironment+"'"
+			headers = [ "Authorisation: "+token ]
+		End If
+		Local response:String = downloadString( url, headers )
+		DebugStop
+		
+	End Method
+
+	Method getLastCommit:String( repository:TRepository, filepath:String )
+	'Method getLastCommit:String( username:String, modrepo:String, filepath:String, token:String="" )
+'Global API:String = "http://api.github.com/repos/${USERNAME}/${REPO}/commits?path=${FILEPATH}&page=1&per_page=1"
+		DebugStop
+		Local curl:TCurlEasy = New TCurlEasy.Create()
+		Local encoded:String = curl.escape( filepath )
+		Local url:String = GITHUB_API+repository.path+"/commits?path="+encoded+"&page=1&per_page=1"
+		
+		'url = Replace( url, "${USERNAME}", username )
+		'url = Replace( url, "${REPO}", modrepo )
+		'url = Replace( url, "${FILEPATH}", encoded )
+		
+		
+		DebugStop
+		' Optionally add users github token
+		Local headers:String[] 
+		Local githubEnvironment:String = CONFIG["github|environment"]
+		If Not githubEnvironment; githubEnvironment = "GITHUB_TOKEN"
+		Local token:String = getenv_( "GITHUB_TOKEN" )
+		If token = ""
+			Print "WARNING: GITHUB token not found in '"+githubEnvironment+"'"
+		Else
+			Print "Using GITHUB token in environment variable '"+githubEnvironment+"'"
+			headers = [ "Authorisation: "+token ]
+		End If
+		headers :+ [ "Content-Type:application/json" ]
+		
+		Local response:String = downloadString( url, headers )
+		
+		Return response
+		
+
 	End Method
 	
 End Type
