@@ -6,6 +6,9 @@ SuperStrict
 
 Import archive.core
 Import archive.zip
+Import archive.tar
+Import archive.gzip
+Import archive.xz
 
 Global EVENT_UNZIP_START:Int = AllocUserEventId( "Starting file unzip" )
 Global EVENT_UNZIP_ENTRY:Int = AllocUserEventId( "Unzipping file" )
@@ -29,6 +32,11 @@ Function unzip( source:String, target:String, callback( event:Int, message:Strin
 	unzip( source, "", target, callback )
 End Function
 
+' UNZIP AN ARCHIVE
+' TARGET FOLDER MUST BE CREATED BY CALLER
+' source	- Name of the archive file
+' path		- Filter used to identify folder to extract (""=No filter)
+' target	- Folder to store extracted data
 Function unzip( source:String, path:String, target:String, callback( event:Int, message:String="", data:Int=0 )=Null )
 
 	'	VALIDATION
@@ -40,27 +48,48 @@ Function unzip( source:String, path:String, target:String, callback( event:Int, 
 	
 	target = target.Replace("\\","/")
 	If Not (target.endswith("/")); target :+ "/"
-
+	
 	path = path.Replace("\\","/")
-	If path<>"" And Not (path.endswith("/")); path :+ "/"
-		
-	'	OPEN ARCHIVE
-	Local ra:TReadArchive = New TReadArchive
-	If Not ra; Throw New TRuntimeException( "Unable to create TReadArchive" )
-	ra.SetFormat(EArchiveFormat.ZIP)
-	ra.Open( source )
+	If path<>"" And Not (path.endswith("/")); path :+ "/"	
+	
 
+	If FileType(target) <> FILETYPE_DIR
+		Throw New TRuntimeException( "Target directory does not exist" )
+	End If
+	
+	'DebugStop
+	
 	'	CREATE TARGET FOLDER
 	'	Deleting it if it exists first!
 	
-	Select FileType( target )
-	Case FILETYPE_FILE
-		DeleteFile( target )
-	Case FILETYPE_DIR
-		DeleteDir( target, True )
+	'Select FileType( target )
+	'Case FILETYPE_FILE
+	'	DeleteFile( target )
+	'Case FILETYPE_DIR
+	'	DeleteDir( target, True )
+	'End Select
+	'CreateDir( target, True )
+	'SetFileTime( target, FileTime( source ) )
+	
+	'	OPEN ARCHIVE
+	Local ra:TReadArchive = New TReadArchive
+	If Not ra; Throw New TRuntimeException( "Unable to create TReadArchive" )
+
+	'DebugStop
+	'archive_read_support_format_tar(a)
+    'archive_read_support_filter_gzip(a)
+
+	Select True
+	Case source.endswith( ".tar.xz" )
+		ra.AddFilter(EArchiveFilter.XZ)
+		ra.SetFormat(EArchiveFormat.TAR)
+	Case source.endswith( ".zip" )
+		ra.SetFormat( EArchiveFormat.ZIP )
+	Default
+		Throw New TRuntimeException( "Unsupported archive" )
 	End Select
-	CreateDir( target, True )
-	SetFileTime( target, FileTime( source ) )
+	
+	ra.Open( source )
 
 	'	Loop through archive records
 
@@ -68,6 +97,11 @@ Function unzip( source:String, path:String, target:String, callback( event:Int, 
 	If Not entry; Throw New TRuntimeException( "Unable to create TArchiveEntry" )
 	
 	If callback; callback( EVENT_UNZIP_START, source )
+	
+	'DebugStop
+	If ra.ReadNextHeader(entry) <> ARCHIVE_OK
+		Throw New TRuntimeException( "Failed to extract archive headers" )
+	End If
 	
 	While ra.ReadNextHeader(entry) = ARCHIVE_OK
 
@@ -125,3 +159,6 @@ Function unzip( source:String, path:String, target:String, callback( event:Int, 
 	
 End Function
 
+Function unzip_extract()
+
+End Function

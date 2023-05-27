@@ -157,7 +157,7 @@ Type TDatabase
 				repositories = New JSON()
 				db.set( "repositories", repositories )
 			End If
-			Print db.prettify()
+			'Print db.prettify()
 			Local record:JSON = repositories.search( name )
 			
 			' New record

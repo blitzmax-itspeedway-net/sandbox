@@ -22,7 +22,7 @@ Function cmd_install_blitzmax( options:TMap )
 	Local repository:TRepository = New TRepository.get( package.repository )
 	If Not repository; die( "Repository not found for "+name )
 	
-	Print "-Installing Blitzmax"
+	Print "- Installing Blitzmax"
 	
 	' Get available releases
 
@@ -32,9 +32,9 @@ Function cmd_install_blitzmax( options:TMap )
 	Local latest:TRelease = TRelease( releases.removeFirst() )
 	' Download archive if we don't already have a copy
 	If FileType( CONFIG.DATAPATH+latest.name ) = FILETYPE_FILE
-		Print( latest.name +" already downloaded" )
+		Print( "- Package exists in cache: "+latest.name )
 	Else
-		Print( "Downloading "+latest.name+"..." )	
+		Print( "- Downloading "+latest.name+"..." )	
 		Local size:Int = repository.downloadBinary( latest.url, latest.name ) 
 		' Check size with release information
 		If size <> latest.size
@@ -46,31 +46,35 @@ Function cmd_install_blitzmax( options:TMap )
 		End If
 	End If
 
-	' Decompress the "blitzmax" folder into our working directory
+	' Decompress the "blitzmax" folder
 	
 	Local source:String = CONFIG.DATAPATH+latest.name
-	Local target:String = CONFIG.DATAPATH+package.target
-	Local folder:String = package.folder
+	Local target:String = CONFIG.BMX_ROOT
+	Local filter:String = package.folder
 	
 	' Check target is folder or path!
-	If Not target.endswith( DIRSLASH )
-		target :+ folder
-	End If
+	'If Not target.endswith( DIRSLASH )
+	'	target :+ folder
+	'End If
 	
 	'	DECOMPRESS
 	
 	Try
-		unzip( source, folder, target, unzipNotifier )
+		' Unzip folder blitzmax in archive to 
+		unzip( source, filter, target, unzipNotifier )
 	Catch e:TRuntimeException
 		Print e.error
 	Catch e:String
 		Print e
 	End Try
 	
+	Print( "- Official BlitzMaxNG release installed" ) 
 	'	OPTIONS
-	If Not options.contains( "latest" ); Return
+	If Not options Or Not options.contains( "latest" ); Return
 	
 	DebugStop
+	
+	Print "- Latest option is not currently implemented"
 	
 	'	INSTALL LATEST PACKAGES
 	'cmd_install_package( "bcc" )

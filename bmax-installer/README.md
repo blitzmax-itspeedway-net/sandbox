@@ -11,34 +11,42 @@ Only supports modservers from github at present. Will be extended if required.
 NOTE: This should be based on something like "apt"
 
 ```
-    IMPLEMENTED
-    bmax version                        Application version
+    bmax version                        IMPLEMENTED     Application version
+    bmax install <package> [options]    IMPLEMENTED     Installs Blitzmax, a package or module
 
-    EXPERIMENTAL
-    bmax install blitzmax               Installs the official blitzmax release
+        Package:
+            blitzmax                    IMPLEMENTED     Install the current official BlitzMax release 
+            <module>                    EXPERIMENTAL    Install specified module (See list)
+        Options:
+            -latest                     TBC             Install blitzmax release plus latest modules
+            -in                         TBC             Override default installation directory
 
-    IN DEVELOPMENT
-    bmax install <module>               Installs latest module
-    bmax install [blitzmax] -latest     Install blitzmax release plus latest modules
+    bmax purge                          TBC             Clean up install directory
 
     NOT IMPLEMENTED
-    bmax list           List all modules
-    bmax show <module>  Show module detail
+    bmax list <options>                 TBC             List modules and/ packages
 
-    bmax --debug        Produced a CSV containing all module data
+        Options:
+            -installed | -i             TBC             Lists modules installed
+            -available | -a             TBC             Lists modules available for install
+            -modules   | -m
+            -packages  | -p
 
-    bmax install [--default|--in <folder>]	Installs latest release of Blitzmax
-	    --default							Install in default location
-	    --in <folder>						Specify the installation directory
+    bmax show <package>                 TBC             Show details of a package
 
-    bmax install <package|module>			Installs latest package or module
+        Package:
+            blitzmax                    TBC             Show details of package Blitzmax 
+            <module>                    TBC             Show details of a module
 
-    FROM HERE ARE NOT IMPLEMENTED:
-    bmax upgrade
+    bmax --debug        Produce a CSV containing all module data
 
-    bmax update <package|module>
-    bmax install <package|module>
-    bmax uninstall <package|module>
+    bmax upgrade <options>
+
+    bmax update <package|module> <options>
+
+    bmax uninstall <package|module> <options>
+    bmax remove <package|module> <options>
+
 ```
 
 #Installation
