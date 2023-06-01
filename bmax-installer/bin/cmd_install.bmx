@@ -44,6 +44,9 @@ Function cmd_install_blitzmax( options:TMap )
 			End If
 			die( "Failed to download release" )
 		End If
+		
+		' Add file to filecache
+		DATABASE.filecache_add( latest.name, "blizmax" )
 	End If
 
 	' Decompress the "blitzmax" folder

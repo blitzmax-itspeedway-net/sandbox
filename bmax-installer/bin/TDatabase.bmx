@@ -213,8 +213,39 @@ Type TDatabase
 			DebugStop
 			
 			'WE ARE HERE
+			Print( "IMPLEMENTATION INCOMPLETE" )
 
 		Next
 		
 	End Method
+
+	Method filecache_add( filename:String, package:String )
+		Local filecache:JSON = db.find( "filecache" )
+		Local file:JSON = New JSON()
+		file["name"]    = filename
+		file["package"] = package
+		file["date"]    = FileTime( CONFIG.DATAPATH+cachefile )
+		filecache[filename] = file
+		save()
+	End Method
+	
+	Method filecache_remove( filename:String, package:String )
+		Local filecache:JSON = db.find( "filecache" )
+	End Method
+	
+	Method filecache_get:TList( package:String )
+		Local filecache:JSON = db.find( "filecache" )
+		
+		' Loop through each cache entry
+		For Local name:String = EachIn JRepositories.keys()
+		
+		Local files:TList = New TList()
+		For Local file:JSON = EachIn filecache.toArray()
+			If package="" Or file["package"]=package; files.addlast( file )
+		Next
+		If files.isEmpty(); Return Null
+		Return files
+		
+	End Method
+	
 End Type

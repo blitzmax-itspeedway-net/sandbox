@@ -1,0 +1,21 @@
+WORKING ON "BMX PURGE [-all]"
+WHEN FILES ARE DOWNLOADED THEY MUST BE ADDED To THE FILECACHE
+DURING PURGE
+	filecache is checked For packages/modules
+	For each package:
+		list is sorted by date And all removed except latest
+		If -all is specified Then latest is also removed
+	Unknown archive files (.zip And .tar.xz) are removed
+	filecache is updated And missing files removed.
+
+ACTIONS:
+* Update JSON with unset(route) and unset() to strip a value - TBC
+* Add filecache_add(), remove() and get() to TDatabase       - TBC
+    - THESE ARE NOT TESTED
+    - Check database is updated correctly
+* Call filecache_add() when files are downloaded             - TBC
+* Create TDatabase test for filecache functions
+* Add cmd_purge
+* Implement file purging
+
+
