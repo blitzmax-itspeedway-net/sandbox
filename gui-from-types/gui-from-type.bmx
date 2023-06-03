@@ -1,5 +1,11 @@
 SuperStrict
 
+'	EXAMPLE SHOWING BASIC FORM FROM TYPE
+'	Author: Si Dunford [Scaremonger], June 2023
+'	Contributions from:
+'		@GW		(Discord)
+'		@mingw	(Discord)
+
 Interface IForm
 	Method onClick( fld:TFormField )
 End Interface
@@ -74,6 +80,12 @@ Type TForm
 		Local n:Int = TextHeight( x )
 		If title; height :+ TextHeight( title ) + MARGIN
 		
+		'In a related issue, The tForm.New Method needs To keep track of all the gadgets created And update 
+		'Method-wide 'width' parameter, so that the border rect will size to the largest gadget.  
+		'In the loop, I added something like this 
+		'`tempW=Max(tempW ,MARGIN*2 + Max( widths[0] + widths[1], TextWidth(title))+ PADDING)
+		'`  Then assign 'width' to that value after the loop.
+
 		For Local fld:TField = EachIn t.EnumFields()
 			Local meta:String = fld.metadata()
 
@@ -196,6 +208,21 @@ Type TForm
 				' FOREGROUND
 				colour( inside, ONPRIMARY, ONSECONDARY )
 				DrawText( fld.value, col1+(col2-col1-PADDING-TextWidth(fld.value))/2, y )
+			Case "radio"
+				Local rsize% = 14
+				Local inside:Int = boundscheck( col2, y, rsize,rsize) 'widths[0], fld.height )
+				If inside And MouseHit( 1 ); parent.onclick( fld )
+				SetColor( palette[ ONBACKGROUND ] )
+				DrawText( fld.caption, col1, y )
+				colour( inside, PRIMARY, SECONDARY )
+				DrawOval(col2, y, rsize,rsize)
+				colour( inside, ONPRIMARY, ONSECONDARY )
+				DrawOval(col2+1, y+1, rsize,rsize)
+				SetColor( palette[ ONBACKGROUND ] )
+				If fld.value<>"" Then
+					DrawOval(col2+4, y+4, rsize-6,rsize-6)
+				Else    
+				EndIf
 			Default
 				SetColor( palette[ ONBACKGROUND ] )
 				DrawText( fld.caption, col1, y )
@@ -205,7 +232,6 @@ Type TForm
 	
 	End Method
 
-
 	Method colour( state:Int, isTrue:Int, isFalse:Int )
 		If state
 			SetColor( palette[ isTrue ] )
@@ -214,10 +240,9 @@ Type TForm
 		End If
 	End Method
 	
-	Method iif:String( state:Int, isTrue:String, isFalse:String )
-		If state; Return isTrue
-		Return isFalse
-	End Method
+	Function iif:String( state:Int, isTrue:String, isFalse:String )
+		If state Return isTrue Else Return isFalse
+	End Function
 	
 	Method stringRepeat:String( char:String, count:Int )
 		Return " "[..count].Replace(" ",char)
@@ -258,8 +283,6 @@ Type TForm
 	
 End Type
 
-
-
 ' This is going to be our GUI Form:
 
 Type TExample Implements IForm {title="Example"}
@@ -276,15 +299,15 @@ Type TExample Implements IForm {title="Example"}
 	
 	Method onclick( fld:TFormField )
 		Print( "onclick() -> "+fld.fldName )
+		If fld.fldName = "Gender" Then fld.value = TForm.iif(fld.value<>"","","X")
 	End Method
 	
 End Type
 
 Graphics 800,600
 
-DebugStop
-
 Local myform:TExample = New TExample()
+
 Local form:TForm = New TForm( myform )
 form.setPalette( PALETTE_BLUE )
 
