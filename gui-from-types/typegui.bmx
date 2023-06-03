@@ -1,35 +1,42 @@
 SuperStrict
 
-'	EXAMPLE SHOWING BASIC FORM FROM TYPE
+'	TYPEGUI
 '	Author: Si Dunford [Scaremonger], June 2023
 '	Contributions from:
 '		@GW		(Discord)
 '		@mingw	(Discord)
+'
+'	Version 1.2
+
+Global SUPPORTED_TYPES:String[] = ["button","checkbox","password","radio","textbox"]
+' Others: color,slider,icon,dropdown,textarea,intbox
 
 Interface IForm
-	Method onClick( fld:TFormField )
+	Method onGUI( fld:TFormField )
 End Interface
 
 Global PALETTE_BLUE:Int[] = [..
 	$c8c8c8,..	' BACKGROUND
 	$ffffff,..	' SURFACE
-	$0071dc,..	' PRIMARY
-	$002c5c,..	' SECONDARY
+	$0D47A1,..	' PRIMARY		- BLUE 900
+	$FF9800,..	' SECONDARY		- ORANGE 500
 	$8a8a8a,..	' DISABLED
 	$000000,..	' ON BACKGROUND
-	$000000,..	' ON SURFACE
+	$0D47A1,..	' ON SURFACE	- BLUE 900
 	$ffffff,..	' ON PRIMARY
 	$ffffff,..	' ON SECONDARY
 	$ffffff]	' ON DISABLED
 
 Type TFormField
+	'Field owner:IForm
 	Field fld:TField
 	Field fldName:String
 	Field fldType:String
 	Field caption:String
 	Field datatype:String
-	Field value:String
+	'Field value:String
 	Field length:Int
+	Field options:String[]
 	'
 	'Field xpos:Int, ypos:Int
 	Field width:Int, height:Int
@@ -87,19 +94,28 @@ Type TForm
 		'`  Then assign 'width' to that value after the loop.
 
 		For Local fld:TField = EachIn t.EnumFields()
-			Local meta:String = fld.metadata()
-
 			'Only include fields with metadata
-			If Not meta; Continue
+			'Local meta:String = fld.metadata()
+			'If Not meta; Continue
+			If Not fld.metadata(); Continue
 			
 			Local row:TFormField = New TFormField()
 			row.fld      = fld
 			row.fldName  = fld.name()
 			row.fldType  = fld.typeid().name()
-			row.datatype = Lower(fld.metadata("type"))
-			row.caption  = fld.metadata("text")
+			'row.datatype = Lower(fld.metadata("type"))
+			row.caption  = fld.metadata("label")
 			row.length   = Int( fld.metadata("length") )
-			row.value    = fld.getString( parent )
+			'row.value    = fld.getString( parent )
+
+			' Read datatype from metadata
+			For Local fieldtype:String = EachIn SUPPORTED_TYPES
+				If fld.hasmetadata( fieldtype )
+					row.datatype = Lower(fieldtype)
+					Local opt:String = fld.metadata(fieldtype)
+					If opt<>"1"; row.options = opt.split(",")
+				End If
+			Next
 
 			' Validation
 			If Not row.caption; row.caption = row.fldname
@@ -107,15 +123,26 @@ Type TForm
 			row.height = Max( TextHeight( row.caption ), TextHeight("8y") )
 			row.width  = TextWidth( stringRepeat( "W", row.length ) )
 			
+			' Adjust width for multiple fields
+			If row.datatype="radio"
+				row.width = row.height*row.options.length + PADDING*(row.options.length)
+				For Local text:String = EachIn row.options
+					row.width :+ TextWidth( text )
+				Next
+			End If
+			
 			' Calculate column widths
 			widths[0] = Max( widths[0], TextWidth( row.caption ) )
-			widths[1] = row.width
+			widths[1] = Max( widths[1], row.width )
 			height :+ row.height + PADDING
 			
 			'DebugStop
 			fields.addlast( row )
 
 		Next
+
+		' Give focus to first field
+		If Not focus; focus = TFormField( fields.first() )
 	
 		' Calculate size of the form
 		width = MARGIN*2 + Max( widths[0] + widths[1], TextWidth(title) ) + PADDING 
@@ -141,7 +168,9 @@ Type TForm
 		' Title
 		If title
 			SetColor( palette[ PRIMARY ] )
-			DrawText( title, col1, y )
+			DrawRect( col1-MARGIN, y-MARGIN, width, TextHeight(title) )
+			SetColor( palette[ ONPRIMARY ] )
+			DrawText( title, col1, y-MARGIN+2 )
 			y :+ TextHeight( title ) + MARGIN
 		End If
 		' Cursor
@@ -157,72 +186,144 @@ Type TForm
 			Local ypos:Int = y
 			Select Lower(fld.datatype)
 			Case "textbox", "password"
+				Local value:String = fld.fld.getString(parent)
+				' ACTION
 				Local inside:Int = boundscheck( col2, y, widths[0], fld.height )
 				If inside And MouseHit(1); setfocus( fld )
 				' LABEL
-				SetColor( palette[ ONBACKGROUND ] )
+				SetColor( palette[ PRIMARY ] )
 				DrawText( fld.caption, col1, y )
 				' BACKGROUND
-				colour( inside, PRIMARY, SURFACE )
-				DrawRect( col2, y, fld.width, fld.height )
+				SetColor( palette[ SURFACE ] )
+				'DrawRect( col2, y, fld.width, fld.height )
+				DrawRect( col2, y, widths[1], fld.height )
 				' BORDER
-				If hasfocus( fld ); drawBorder( PRIMARY, col2, y, fld.width, fld.height )
+				If inside
+					'drawBorder( PRIMARY, col2, y, fld.width, fld.height )
+					drawBorder( PRIMARY, col2, y, widths[1], fld.height )
+				ElseIf hasfocus( fld )
+					'drawBorder( SECONDARY, col2, y, fld.width, fld.height )
+					drawBorder( SECONDARY, col2, y, widths[1], fld.height )
+				End If
 				' FOREGROUND
-				colour( inside, ONPRIMARY, ONSURFACE )
-				Local text:String = iif( fld.datatype="password", stringRepeat( "*", fld.value.length ), fld.value )
-				DrawText( text, col2, y )
+				SetColor( Palette[ PRIMARY ] )
+				Local text:String = iif( fld.datatype="password", stringRepeat( "*", value.length ), value )
+				DrawText( text, col2, y+2 )
 				' CURSOR
 				If hasfocus( fld )
 					If KeyHit( KEY_HOME ); cursorpos = 0
-					If KeyHit( KEY_END ); cursorpos = Fld.value.length
+					If KeyHit( KEY_END ); cursorpos = value.length
 					If KeyHit( KEY_LEFT ); cursorpos :- 1
 					If KeyHit( KEY_RIGHT ); cursorpos :+ 1
-					cursorpos = Max( 0, Min( cursorpos, fld.value.length ))	' Bounds validation
-					If KeyHit( KEY_DELETE )
-						'DebugStop
-						fld.value = fld.value[..cursorpos]+fld.value[cursorpos+1..]
-					End If
-					If KeyHit( KEY_BACKSPACE )
-						'DebugStop
-						fld.value = fld.value[..cursorpos-1]+fld.value[cursorpos..]
-					End If
+					cursorpos = Max( 0, Min( cursorpos, value.length ))	' Bounds validation
+					If KeyHit( KEY_DELETE ); value = value[..cursorpos]+value[cursorpos+1..]
+					If KeyHit( KEY_BACKSPACE ); value = value[..cursorpos-1]+value[cursorpos..]
 					Local key:Int = GetChar()
 					If key>31 And key<127
 						'DebugStop
-						fld.value = fld.value[..cursorpos]+Chr(key)+fld.value[cursorpos..]
+						value = value[..cursorpos]+Chr(key)+value[cursorpos..]
 						cursorpos :+ 1
 					End If
 					' Draw cursor
 					If cursorstate
-						Local offset:Int = TextWidth( fld.value[..cursorpos] )
+						Local offset:Int = TextWidth( value[..cursorpos] )
 						colour( inside, ONPRIMARY, ONSURFACE )
 						DrawLine( col2+offset, y+2, col2+offset, y+fld.height-2 )
 					End If
 				End If
+				' UPDATE TYPE
+				fld.fld.setString( parent, value )
 			Case "button"
+				Local value:String = fld.fld.getString(parent)
+				' ACTION
 				Local inside:Int = boundscheck( col1, y, widths[0], fld.height )
+				If inside And MouseHit( 1 )
+					setfocus( fld )
+					parent.onGUI( fld )
+				End If
+				Local pressed:Int = MouseDown(1) And inside
 				' BACKGROUND
-				If inside And MouseHit( 1 ); parent.onclick( fld )
-				colour( inside, PRIMARY, SECONDARY )
-				DrawRect( col1, y, fld.width, fld.height )
+				SetColor( palette[ PRIMARY ] )
+				DrawRect( col1+pressed, y+pressed, fld.width, fld.height )
+				If Not pressed
+					SetColor( $22,$22,$22 )
+					DrawLine( col1+fld.width, y,            col1+fld.width, y+fld.height )
+					DrawLine( col1,           y+fld.height, col1+fld.width, y+fld.height )
+				End If
+				' BORDER
+				If inside
+					drawBorder( SECONDARY, col1+pressed, y+pressed, fld.width, fld.height )
+				'ElseIf hasfocus( fld )
+				'	drawBorder( SECONDARY, col1+pressed, y+pressed, fld.width, fld.height )
+				End If
 				' FOREGROUND
-				colour( inside, ONPRIMARY, ONSECONDARY )
-				DrawText( fld.value, col1+(col2-col1-PADDING-TextWidth(fld.value))/2, y )
-			Case "radio"
-				Local rsize% = 14
-				Local inside:Int = boundscheck( col2, y, rsize,rsize) 'widths[0], fld.height )
-				If inside And MouseHit( 1 ); parent.onclick( fld )
-				SetColor( palette[ ONBACKGROUND ] )
-				DrawText( fld.caption, col1, y )
-				colour( inside, PRIMARY, SECONDARY )
-				DrawOval(col2, y, rsize,rsize)
-				colour( inside, ONPRIMARY, ONSECONDARY )
-				DrawOval(col2+1, y+1, rsize,rsize)
-				SetColor( palette[ ONBACKGROUND ] )
-				If fld.value<>"" Then
-					DrawOval(col2+4, y+4, rsize-6,rsize-6)
-				Else    
+				SetColor( palette[ ONPRIMARY ] )
+				DrawText( value, col1+(col2-col1-PADDING-TextWidth(value))/2+pressed, y+pressed+1 )
+			Case "checkbox"
+				Local value:Int = fld.fld.getInt( parent )
+				' ACTION
+				Local inside:Int = boundscheck( col2, y, fld.height, fld.height )
+				If inside And MouseHit( 1 )
+					value = Not value
+					setfocus( fld )
+				End If
+				' LABEL
+				SetColor( palette[ PRIMARY ] )
+				DrawText( fld.caption, col2+fld.height+PADDING, y+2 )	' We use height here to make a square!
+				' BACKGROUND
+				SetColor( Palette[ SURFACE ] )
+				DrawRect( col2, y, fld.height, fld.height )		' We use height here to make a square!
+				' BORDER
+				If inside
+					drawBorder( PRIMARY, col2, y, fld.height, fld.height )
+				ElseIf hasfocus( fld )
+					drawBorder( SECONDARY, col2, y, fld.height, fld.height )
+				End If
+				' FOREGROUND
+				If value
+					SetColor( Palette[ PRIMARY ] )
+					DrawRect( col2+3, y+3, fld.height-6, fld.height-6 )
 				EndIf
+				' SET FIELD VALUE
+				fld.fld.setInt( parent, value )
+			Case "radio"
+				Local value:Int = fld.fld.getInt( parent )
+				' LABEL
+				SetColor( palette[ PRIMARY ] )
+				DrawText( fld.caption, col1, y+2 )
+				'
+				' Create button for each option
+				Local px:Int = col2
+				For Local id:Int = 1 To fld.options.length
+					Local inside:Int = boundscheck( px, y, fld.height, fld.height )
+					If inside And MouseHit( 1 )
+						value = id
+						setfocus( fld )
+					End If
+					' BORDER
+					If inside
+						SetColor( palette[ PRIMARY ] )
+						DrawOval( px, y, fld.height, fld.height )
+					ElseIf hasfocus( fld )
+						SetColor( palette[ SECONDARY ] )
+						DrawOval( px, y, fld.height, fld.height )
+					End If
+					' BACKGROUND
+					SetColor( Palette[ SURFACE ] )
+					DrawOval( px+1, y+1, fld.height-2,fld.height-2 )
+					' FOREGROUND
+					SetColor( palette[ PRIMARY ] )
+					If id = value
+						DrawOval( px+3, y+3, fld.height-6,fld.height-6 )
+					EndIf
+					' Option text
+					Local text:String = fld.options[id-1]
+					DrawText( text, px+fld.height, y+2 )
+					' NEXT
+					px :+ fld.height + PADDING*2 + TextWidth( text )
+				Next				
+				' SET FIELD VALUE
+				fld.fld.setInt( parent, value )
 			Default
 				SetColor( palette[ ONBACKGROUND ] )
 				DrawText( fld.caption, col1, y )
@@ -267,10 +368,10 @@ Type TForm
 	
 	Method drawborder( colour:Int, x:Int, y:Int, w:Int, h:Int )
 		SetColor( palette[ colour ] )
-		DrawLine( x, y, x+w, y )
-		DrawLine( x+w, y, x+w, y+h )
-		DrawLine( x+w, y+h, x, y+h )
-		DrawLine( x, y+h, x, y )
+		DrawLine( x,     y,     x+w-1, y )
+		DrawLine( x+w-1, y,     x+w-1, y+h-1 )
+		DrawLine( x+w-1, y+h-1, x,     y+h-1 )
+		DrawLine( x,     y+h-1, x,     y )
 	End Method
 	
 	Method hasfocus:Int( fld:TFormField )
@@ -282,42 +383,3 @@ Type TForm
 	End Method
 	
 End Type
-
-' This is going to be our GUI Form:
-
-Type TExample Implements IForm {title="Example"}
-
-	Field Username:String	{Type="textbox" label="User Name" length=10}
-	Field Password:String	{Type="password"}
-	Field test:String
-	Field Gender:Int =0		{Type="radio" options="male,female"}
-	
-	Field ok:String = "OK" 	{Type="button"}
-	
-	Method New()
-	End Method
-	
-	Method onclick( fld:TFormField )
-		Print( "onclick() -> "+fld.fldName )
-		If fld.fldName = "Gender" Then fld.value = TForm.iif(fld.value<>"","","X")
-	End Method
-	
-End Type
-
-Graphics 800,600
-
-Local myform:TExample = New TExample()
-
-Local form:TForm = New TForm( myform )
-form.setPalette( PALETTE_BLUE )
-
-Repeat
-	SetClsColor( $cc,$cc,$cc )
-	Cls
-
-	form.show()
-
-	Flip
-Until KeyHit( KEY_ESCAPE ) Or AppTerminate()
-
-
