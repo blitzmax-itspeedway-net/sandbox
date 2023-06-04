@@ -1,21 +1,29 @@
 SuperStrict
 
+'	TYPEGUI
+'	Author: Si Dunford [Scaremonger], June 2023
+'	Contributions from:
+'		@GW		(Discord)
+'		@mingw	(Discord)
+'
+'	Version 0.4
+
 Import "typegui.bmx"
 
 ' This is going to be our GUI Form:
 
-Type TExample Implements IForm {title="Example"}
+Type TExample Implements IForm {title="Example" pos="25,25"}
 
 	Field Username:String	{textbox label="User Name" length=10}
 	Field Password:String	{password}
 	Field test:String
-	Field Gender:Int = 0	{radio="Male,Female"}
+	Field Gender:Int = 0	{radio="Male,Female" disabled}
 	Field Over18:Int		{checkbox label="Over 18?"}
 	
 	Field ok:String = "OK" 	{button}
 	
-	Method New()
-	End Method
+	'Method New()
+	'End Method
 	
 	Method onGUI( fld:TFormField )
 		Print( "onGUI() -> "+fld.fldName )
@@ -33,14 +41,15 @@ Graphics 400,300
 
 Local myform:TExample = New TExample()
 
-Local form:TForm = New TForm( myform )
+'DebugStop
+Local form:TForm = New TForm( myform )	', 10,10 )
 form.setPalette( PALETTE_BLUE )
 
 Repeat
-	SetClsColor( $cc,$cc,$cc )
+	SetClsColor( $ff,$ff,$ff )
 	Cls
 
-	form.show()
+	form.show()	'True )
 
 	Flip
 Until KeyHit( KEY_ESCAPE ) Or AppTerminate()

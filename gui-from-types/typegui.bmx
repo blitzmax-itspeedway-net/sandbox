@@ -6,7 +6,7 @@ SuperStrict
 '		@GW		(Discord)
 '		@mingw	(Discord)
 '
-'	Version 1.2
+'	Version 0.4
 
 Global SUPPORTED_TYPES:String[] = ["button","checkbox","password","radio","textbox"]
 ' Others: color,slider,icon,dropdown,textarea,intbox
@@ -34,9 +34,10 @@ Type TFormField
 	Field fldType:String
 	Field caption:String
 	Field datatype:String
-	'Field value:String
+	Field value:String
 	Field length:Int
 	Field options:String[]
+	Field disable:Int = False
 	'
 	'Field xpos:Int, ypos:Int
 	Field width:Int, height:Int
@@ -60,12 +61,16 @@ Type TForm
 	Const ONSECONDARY:Int = 8
 	Const ONDISABLED:Int = 9
 	
+	Const _CENTRE_:Int = $0001	' For the Brits
+	Const _CENTER_:Int = $0001	' For the Americans
+	
 	Field parent:IForm
 	Field title:String
 	Field fields:TList
 	Field xpos:Int, ypos:Int
 	Field width:Int, height:Int
 	Field widths:Int[2]
+	Field flags:Int = _CENTRE_
 	
 	Field focus:TFormfield		' Field with focus
 
@@ -75,7 +80,7 @@ Type TForm
 	Field cursortimer:Int
 	Field cursorpos:Int
 	
-	Method New( form:IForm )
+	Method New( form:IForm, fx:Int=-1, fy:Int=-1 )
 		parent = form
 		fields = New TList()
 		
@@ -86,6 +91,22 @@ Type TForm
 		Local x:String = title
 		Local n:Int = TextHeight( x )
 		If title; height :+ TextHeight( title ) + MARGIN
+		
+		' Position Form
+		'Print( Hex(flags) )
+		If fx>=0 And fy>=0
+			xpos = fx
+			ypos = fy
+			flags = flags & (Not _CENTRE_)	' Turn off center flag
+		ElseIf t.hasMetadata("pos")
+			'Local sPos:String = t.metadata("pos")
+			Local Pos:String[] = t.metadata("pos").split(",")
+			If pos.length = 2
+				xpos = Int( pos[0] )
+				ypos = Int( pos[1] )
+				flags = flags & (Not _CENTRE_)	' Turn off center flag
+			End If
+		End If
 		
 		'In a related issue, The tForm.New Method needs To keep track of all the gadgets created And update 
 		'Method-wide 'width' parameter, so that the border rect will size to the largest gadget.  
@@ -106,7 +127,8 @@ Type TForm
 			'row.datatype = Lower(fld.metadata("type"))
 			row.caption  = fld.metadata("label")
 			row.length   = Int( fld.metadata("length") )
-			'row.value    = fld.getString( parent )
+			
+			row.disable = fld.hasmetadata( "disabled" ) = True
 
 			' Read datatype from metadata
 			For Local fieldtype:String = EachIn SUPPORTED_TYPES
@@ -148,17 +170,28 @@ Type TForm
 		width = MARGIN*2 + Max( widths[0] + widths[1], TextWidth(title) ) + PADDING 
 		height :+ MARGIN
 		
-		' Centralise form
-		xpos = (GraphicsWidth()-width)/2
-		ypos = (GraphicsHeight()-height)/2		
+		' Centralise form (if Required )
+		'Print( Hex(flags) )
+		If ( flags & _CENTRE_ )
+			xpos = (GraphicsWidth()-width)/2
+			ypos = (GraphicsHeight()-height)/2		
+		End If
 		
 	End Method
 	
-	Method show()
+	Method show( modal:Int = False )
 
 		Local col1:Int = xpos+MARGIN
 		Local col2:Int = col1+widths[0]+PADDING
 		Local y:Int = ypos+MARGIN
+		
+		' Draw modal background
+		If modal
+			SetAlpha( 0.7 )
+			SetColor( 0, 0, 0 )
+			DrawRect( 0, 0, GraphicsWidth(), GraphicsHeight() )
+			SetAlpha( 1.0 )
+		EndIf 
 		
 		' Background
 		SetColor( palette[ BACKGROUND ] )
@@ -184,29 +217,41 @@ Type TForm
 		For Local fld:TFormField = EachIn fields
 			Local xpos:Int = col2
 			Local ypos:Int = y
+			
+			' Turn off focus for disabled widgets
+			If fld.disable And focus = fld; focus = Null
+			
 			Select Lower(fld.datatype)
 			Case "textbox", "password"
 				Local value:String = fld.fld.getString(parent)
+				Local inside:Int
 				' ACTION
-				Local inside:Int = boundscheck( col2, y, widths[0], fld.height )
-				If inside And MouseHit(1); setfocus( fld )
+				If Not fld.disable
+					inside = boundscheck( col2, y, widths[1], fld.height )
+					If inside And MouseHit(1); setfocus( fld )
+				End If
 				' LABEL
-				SetColor( palette[ PRIMARY ] )
+				colour( fld.disable, ONDISABLED, PRIMARY )
+				'SetColor( palette[ PRIMARY ] )
 				DrawText( fld.caption, col1, y )
 				' BACKGROUND
-				SetColor( palette[ SURFACE ] )
+				colour( fld.disable, DISABLED, SURFACE )
+				'SetColor( palette[ SURFACE ] )
 				'DrawRect( col2, y, fld.width, fld.height )
 				DrawRect( col2, y, widths[1], fld.height )
 				' BORDER
-				If inside
-					'drawBorder( PRIMARY, col2, y, fld.width, fld.height )
-					drawBorder( PRIMARY, col2, y, widths[1], fld.height )
-				ElseIf hasfocus( fld )
-					'drawBorder( SECONDARY, col2, y, fld.width, fld.height )
-					drawBorder( SECONDARY, col2, y, widths[1], fld.height )
+				If Not fld.disable
+					If inside
+						'drawBorder( PRIMARY, col2, y, fld.width, fld.height )
+						drawBorder( PRIMARY, col2, y, widths[1], fld.height )
+					ElseIf hasfocus( fld )
+						'drawBorder( SECONDARY, col2, y, fld.width, fld.height )
+						drawBorder( SECONDARY, col2, y, widths[1], fld.height )
+					End If
 				End If
 				' FOREGROUND
-				SetColor( Palette[ PRIMARY ] )
+				colour( fld.disable, ONDISABLED, PRIMARY )
+				'SetColor( Palette[ PRIMARY ] )
 				Local text:String = iif( fld.datatype="password", stringRepeat( "*", value.length ), value )
 				DrawText( text, col2, y+2 )
 				' CURSOR
@@ -236,83 +281,105 @@ Type TForm
 			Case "button"
 				Local value:String = fld.fld.getString(parent)
 				' ACTION
-				Local inside:Int = boundscheck( col1, y, widths[0], fld.height )
-				If inside And MouseHit( 1 )
-					setfocus( fld )
-					parent.onGUI( fld )
+				Local inside:Int
+				Local pressed:Int
+				If Not fld.disable
+					inside = boundscheck( col1, y, widths[0], fld.height )
+					If inside And MouseHit( 1 )
+						setfocus( fld )
+						parent.onGUI( fld )
+					End If
+					pressed = MouseDown(1) And inside
 				End If
-				Local pressed:Int = MouseDown(1) And inside
 				' BACKGROUND
-				SetColor( palette[ PRIMARY ] )
+				colour( fld.disable, DISABLED, PRIMARY )
+				'SetColor( palette[ PRIMARY ] )
 				DrawRect( col1+pressed, y+pressed, fld.width, fld.height )
-				If Not pressed
+				If Not pressed And Not fld.disable
 					SetColor( $22,$22,$22 )
 					DrawLine( col1+fld.width, y,            col1+fld.width, y+fld.height )
 					DrawLine( col1,           y+fld.height, col1+fld.width, y+fld.height )
 				End If
 				' BORDER
-				If inside
+				If inside And Not fld.disable
 					drawBorder( SECONDARY, col1+pressed, y+pressed, fld.width, fld.height )
 				'ElseIf hasfocus( fld )
 				'	drawBorder( SECONDARY, col1+pressed, y+pressed, fld.width, fld.height )
 				End If
 				' FOREGROUND
-				SetColor( palette[ ONPRIMARY ] )
+				colour( fld.disable, ONDISABLED, ONPRIMARY )
+				'SetColor( palette[ ONPRIMARY ] )
 				DrawText( value, col1+(col2-col1-PADDING-TextWidth(value))/2+pressed, y+pressed+1 )
 			Case "checkbox"
 				Local value:Int = fld.fld.getInt( parent )
+				Local inside:Int
 				' ACTION
-				Local inside:Int = boundscheck( col2, y, fld.height, fld.height )
-				If inside And MouseHit( 1 )
-					value = Not value
-					setfocus( fld )
+				If Not fld.disable
+					inside = boundscheck( col2, y, fld.height, fld.height )
+					If inside And MouseHit( 1 )
+						value = Not value
+						setfocus( fld )
+					End If
 				End If
 				' LABEL
-				SetColor( palette[ PRIMARY ] )
+				colour( fld.disable, ONDISABLED, PRIMARY )
+				'SetColor( palette[ PRIMARY ] )
 				DrawText( fld.caption, col2+fld.height+PADDING, y+2 )	' We use height here to make a square!
 				' BACKGROUND
-				SetColor( Palette[ SURFACE ] )
+				colour( fld.disable, DISABLED, SURFACE )
+				'SetColor( Palette[ SURFACE ] )
 				DrawRect( col2, y, fld.height, fld.height )		' We use height here to make a square!
 				' BORDER
-				If inside
-					drawBorder( PRIMARY, col2, y, fld.height, fld.height )
-				ElseIf hasfocus( fld )
-					drawBorder( SECONDARY, col2, y, fld.height, fld.height )
+				If Not fld.disable
+					If inside
+						drawBorder( PRIMARY, col2, y, fld.height, fld.height )
+					ElseIf hasfocus( fld )
+						drawBorder( SECONDARY, col2, y, fld.height, fld.height )
+					End If
 				End If
 				' FOREGROUND
 				If value
-					SetColor( Palette[ PRIMARY ] )
+					colour( fld.disable, ONDISABLED, PRIMARY )
+					'SetColor( Palette[ PRIMARY ] )
 					DrawRect( col2+3, y+3, fld.height-6, fld.height-6 )
 				EndIf
 				' SET FIELD VALUE
 				fld.fld.setInt( parent, value )
 			Case "radio"
 				Local value:Int = fld.fld.getInt( parent )
+				
 				' LABEL
-				SetColor( palette[ PRIMARY ] )
+				colour( fld.disable, ONDISABLED, PRIMARY )
+				'SetColor( palette[ PRIMARY ] )
 				DrawText( fld.caption, col1, y+2 )
 				'
 				' Create button for each option
 				Local px:Int = col2
 				For Local id:Int = 1 To fld.options.length
-					Local inside:Int = boundscheck( px, y, fld.height, fld.height )
-					If inside And MouseHit( 1 )
-						value = id
-						setfocus( fld )
-					End If
-					' BORDER
-					If inside
-						SetColor( palette[ PRIMARY ] )
-						DrawOval( px, y, fld.height, fld.height )
-					ElseIf hasfocus( fld )
-						SetColor( palette[ SECONDARY ] )
-						DrawOval( px, y, fld.height, fld.height )
+					Local inside:Int
+					If Not fld.disable
+						inside = boundscheck( px, y, fld.height, fld.height )
+						If inside And MouseHit( 1 )
+							'parent.onGui( "select", fld )
+							value = id
+							setfocus( fld )
+						End If
+						' BORDER
+						If inside
+							SetColor( palette[ PRIMARY ] )
+							DrawOval( px, y, fld.height, fld.height )
+						ElseIf hasfocus( fld )
+							SetColor( palette[ SECONDARY ] )
+							DrawOval( px, y, fld.height, fld.height )
+						End If
 					End If
 					' BACKGROUND
-					SetColor( Palette[ SURFACE ] )
+					colour( fld.disable, DISABLED, SURFACE )
+					'SetColor( Palette[ SURFACE ] )
 					DrawOval( px+1, y+1, fld.height-2,fld.height-2 )
 					' FOREGROUND
-					SetColor( palette[ PRIMARY ] )
+					colour( fld.disable, ONDISABLED, PRIMARY )
+					'SetColor( palette[ PRIMARY ] )
 					If id = value
 						DrawOval( px+3, y+3, fld.height-6,fld.height-6 )
 					EndIf
@@ -331,7 +398,14 @@ Type TForm
 			y:+fld.height+PADDING			
 		Next
 	
+		' Throw away mouseclicks within the form
+		' Without this, clicking in the form and moving to a button clicks it.
+		If boundscheck( xpos, ypos, width, height ); FlushMouse()
+
 	End Method
+
+	'Method Render_Button()
+	'End Method
 
 	Method colour( state:Int, isTrue:Int, isFalse:Int )
 		If state
@@ -381,5 +455,17 @@ Type TForm
 	Method setfocus( fld:TFormField )
 		focus = fld 
 	End Method
+	
+	Method Disable( caption:String )
+        For Local r:TFormField = EachIn fields
+            If r.caption=caption Then r.disable=True
+        Next
+    End Method
+
+    Method Enable( caption:String )
+        For Local r:TFormField=EachIn fields
+            If r.caption=caption Then r.disable=False
+        Next
+    End Method
 	
 End Type
