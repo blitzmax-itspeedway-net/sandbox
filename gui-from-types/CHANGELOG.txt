@@ -11,9 +11,10 @@ VER  DATE        RELEASE  DESCRIPTION
                           - Added enable/disable (@mingw)
                           - Added {pos=} (@GW)
 0.5  4 JUN 2023  Draft    Added {margin=} and {padding=} to form (Not fields yet)
-                          Updated Button support
-                          Moved Rendering of Button to methods
-                          Added experimental Inspector and Crude Layout manager
+                          Moved Rendering of Button to methods (As a test)
+                          Added experimental Inspector()
+                          Added Crude Layout manager
+                          Moved SColor8 to TColor due to Alpha issue (Temporary I hope)
                           Updates from community:
                           - Fixed backspace cursor (@GW)
                           - Added Seperator (@mingw)
