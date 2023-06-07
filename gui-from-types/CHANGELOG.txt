@@ -1,12 +1,19 @@
 
 VER  DATE        RELEASE  DESCRIPTION     
 0.0  2 JUN 2023  Draft    Textbox, Password, Button
-0.1  3 JUN 2023  Draft    Updates from community
+0.1  3 JUN 2023  Draft    Updates from community:
                           - Added radio (@GW) - That is more like a checkbox!
 0.2  3 JUN 2023  Draft    Fixed field bugs, colours, updated Radio, added Checkbox
 0.3  3 JUN 2023  no       Added form position to new()
                           Added modal support to show()
                           Fixed form click issue outside of components
-0.4  4 JUN 2023  Draft    Updates from community
+0.4  4 JUN 2023  Draft    Updates from community:
                           - Added enable/disable (@mingw)
                           - Added {pos=} (@GW)
+0.5  4 JUN 2023  Draft    Added {margin=} and {padding=} to form (Not fields yet)
+                          Updated Button support
+                          Moved Rendering of Button to methods
+                          Added experimental Inspector and Crude Layout manager
+                          Updates from community:
+                          - Fixed backspace cursor (@GW)
+                          - Added Seperator (@mingw)
