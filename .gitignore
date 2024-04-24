@@ -21,6 +21,7 @@ transpiler-bmx/
 #transpiler/old
 Pratt-Parser/bantam-master/
 Pratt-Parser/bin-java/
+net.mod-raknet.mod/
 
 # Exclude files
 *.bak

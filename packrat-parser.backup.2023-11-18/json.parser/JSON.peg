@@ -1,0 +1,33 @@
+# JSON Defintion
+# Based on definition found in Appendix A2, 
+# Thesis "Error Handling in PEG Parsers" by Michael R ̈ufenacht
+
+#
+
+start              -> _ VALUE
+_                  -> %d22*
+comma              -> ','
+dot                -> "."
+curlyBraceLeft     -> '[' _
+curlyBraceRight    -> ']' _
+squareBracketLeft  -> '{' _
+squareBracketRight -> '}' _
+booleanTrue        -> 'true' _
+booleanFalse       -> 'false' _
+boolean            -> booleanTrue / booleanFalse
+null               -> 'null' _
+number             -> '-'? integer numberFraction? numberExponential? _
+numberInteger      -> ( [1-9] [0-9]* ) / '0'
+numberFraction     -> dot [1-9]+
+numberExponential  -> [eE] numberSign? [1-9]+
+numberSign         -> '+' / '-'
+string             -> stringQuote ( !stringQuote . )* stringQuote _
+stringQuote        -> '"'
+array              -> squareBracketLeft arrayItems? squareBracketRight
+arrayItems         -> arrayItem ( comma arrayItem )*
+arrayItem          -> value
+object             -> curlyBracketLeft objectItems? curlyBracketRight
+objectItems        -> objectItem ( comma objectItem)*
+objectItem         -> string colon value
+value              -> boolean / null / string / array / object / number
+

@@ -1,0 +1,47 @@
+@define importall
+
+    print( '## Creating wildcard import for folder "'..arg0..'"' )
+
+    -- Get buildpath and folder to scan
+
+    buildpath = bmk.findvalue( "BUILDPATH" )
+    folder = buildpath.."/"..arg0
+
+    -- Get command that will extract file list
+
+    if bmk.Platform() == "win32" then
+        print( "## WINDOWS" )
+        cmd = "dir "..folder.."/*.bmx /b/s"
+    else
+        print( "## LINUX" )
+        cmd = "find "..folder.."/ -type f | grep .bmx"
+        #cmd = "find ./"..folder.."/ -type f | grep .bmx"
+    end
+
+    -- Create a list of files to import
+
+    list = {}
+    for path in io.popen(cmd):lines() do
+        path,filename,extension=string.match(path, "(.-)([^\\/]-%.?([^%.\\/]*))$")
+        #print( "## "..filename )
+        if extension:lower() == "bmx" and filename ~= "all.bmx" then
+            table.insert( list, filename )
+        end
+    end
+
+    -- Create a datestring
+
+    datestr = os.date('%d %b %Y, %H:%M:%S')
+    #print( "## DATE: "..datestr )
+
+    -- Write wilcard import file
+
+    wildcard = io.open( folder.."/all.bmx","w")
+    wildcard:write( "'"..'\tFile generated '..datestr..'\n\n' )
+    for i,file in ipairs(list) do
+        wildcard:write( 'Import "'..file..'"\n' )
+    end
+    wildcard:close()
+
+@end
+

@@ -1,0 +1,4 @@
+Superstrict
+
+print( "Hello World" )
+

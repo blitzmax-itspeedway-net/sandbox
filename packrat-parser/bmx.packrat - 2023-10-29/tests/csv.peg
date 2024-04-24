@@ -1,0 +1,13 @@
+// PEG Example for CSV files
+//
+// EOL is a core rule
+
+!START=FILE
+
+FILE -> LINE ( EOL LINE )*
+LINE -> ITEM ( COMMA ITEM )*
+CELL -> (!COMMA !EOL . )* 
+
+COMMA -> ","
+
+/* This is an example that parses a CSV file */

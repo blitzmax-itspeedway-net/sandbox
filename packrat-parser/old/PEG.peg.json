@@ -1,0 +1,591 @@
+{
+  "ALPHA": {
+    "iffail": "",
+    "kind": 3,
+    "pattern": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+    "typeid": "TCharMatch"
+  },
+  "ALPHANUMUNDER": {
+    "iffail": "",
+    "kind": 1,
+    "pattern": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_",
+    "typeid": "TCharMatch"
+  },
+  "ANDNOT": {
+    "kind": 0,
+    "patterns": [
+      {
+        "name": "ANDPREDICATE",
+        "typeid": "TPlaceholder"
+      },
+      {
+        "name": "NOTPREDICATE",
+        "typeid": "TPlaceholder"
+      }
+    ],
+    "typeid": "TChoice"
+  },
+  "ANDPREDICATE": {
+    "iffail": "",
+    "kind": 13,
+    "patterns": [
+      {
+        "iffail": "",
+        "kind": 9,
+        "pattern": "&",
+        "typeid": "TLiteral"
+      },
+      {
+        "name": "EXPRESSION",
+        "typeid": "TPlaceholder"
+      }
+    ],
+    "typeid": "TSequence"
+  },
+  "CHOICE": {
+    "iffail": "",
+    "kind": 13,
+    "patterns": [
+      {
+        "name": "EXPRESSION",
+        "typeid": "TPlaceholder"
+      },
+      {
+        "kind": 0,
+        "pattern": {
+          "iffail": "",
+          "kind": 13,
+          "patterns": [
+            {
+              "iffail": "",
+              "kind": 9,
+              "pattern": "/",
+              "typeid": "TLiteral"
+            },
+            {
+              "name": "EXPRESSION",
+              "typeid": "TPlaceholder"
+            }
+          ],
+          "typeid": "TSequence"
+        },
+        "typeid": "TOneOrMore"
+      }
+    ],
+    "typeid": "TSequence"
+  },
+  "COMMENT": {
+    "kind": 12,
+    "name": "COMMENT",
+    "pattern": {
+      "iffail": "",
+      "kind": 13,
+      "patterns": [
+        {
+          "kind": 0,
+          "pattern": {
+            "name": "SP",
+            "typeid": "TPlaceholder"
+          },
+          "typeid": "TZeroOrMore"
+        },
+        {
+          "iffail": "",
+          "kind": 9,
+          "pattern": "#",
+          "typeid": "TLiteral"
+        },
+        {
+          "iffail": "",
+          "kind": 13,
+          "patterns": [
+            {
+              "kind": 0,
+              "pattern": {
+                "iffail": "",
+                "kind": 13,
+                "patterns": [
+                  {
+                    "kind": 0,
+                    "pattern": {
+                      "name": "EOL",
+                      "typeid": "TPlaceholder"
+                    },
+                    "typeid": "TNegate"
+                  },
+                  {
+                    "kind": 8,
+                    "typeid": "TAny"
+                  }
+                ],
+                "typeid": "TSequence"
+              },
+              "typeid": "TZeroOrMore"
+            },
+            {
+              "name": "EOL",
+              "typeid": "TPlaceholder"
+            }
+          ],
+          "typeid": "TSequence"
+        }
+      ],
+      "typeid": "TSequence"
+    },
+    "typeid": "TNamed"
+  },
+  "DQUOTE": {
+    "iffail": "",
+    "kind": 1,
+    "pattern": "",
+    "typeid": "TCharMatch"
+  },
+  "EOL": {
+    "iffail": "",
+    "kind": 17,
+    "patterns": [
+      {
+        "kind": 0,
+        "pattern": {
+          "name": "SP",
+          "typeid": "TPlaceholder"
+        },
+        "typeid": "TZeroOrMore"
+      },
+      {
+        "kind": 0,
+        "pattern": {
+          "iffail": "",
+          "kind": 9,
+          "pattern": "\r",
+          "typeid": "TLiteral"
+        },
+        "typeid": "TOptional"
+      },
+      {
+        "iffail": "",
+        "kind": 9,
+        "pattern": "\n",
+        "typeid": "TLiteral"
+      }
+    ],
+    "typeid": "TSequence"
+  },
+  "EXPRESSION": {
+    "kind": 0,
+    "patterns": [
+      {
+        "name": "NONTERMINAL",
+        "typeid": "TPlaceholder"
+      },
+      {
+        "name": "QUOTEDSTRING",
+        "typeid": "TPlaceholder"
+      }
+    ],
+    "typeid": "TChoice"
+  },
+  "GROUPED": {
+    "iffail": "",
+    "kind": 13,
+    "patterns": [
+      {
+        "iffail": "",
+        "kind": 9,
+        "pattern": "(",
+        "typeid": "TLiteral"
+      },
+      {
+        "name": "EXPRESSION",
+        "typeid": "TPlaceholder"
+      },
+      {
+        "iffail": "",
+        "kind": 9,
+        "pattern": ")",
+        "typeid": "TLiteral"
+      }
+    ],
+    "typeid": "TSequence"
+  },
+  "INVALIDRULE": {
+    "kind": 8,
+    "typeid": "TAny"
+  },
+  "LINE": {
+    "kind": 0,
+    "patterns": [
+      {
+        "kind": 12,
+        "name": "BLANKLINE",
+        "pattern": {
+          "name": "EOL",
+          "typeid": "TPlaceholder"
+        },
+        "typeid": "TNamed"
+      },
+      {
+        "name": "COMMENT",
+        "typeid": "TPlaceholder"
+      },
+      {
+        "name": "RULE",
+        "typeid": "TPlaceholder"
+      },
+      {
+        "name": "INVALIDRULE",
+        "typeid": "TPlaceholder"
+      },
+      {
+        "errortext": "Cannot parse line",
+        "kind": 15,
+        "pattern": {
+          "kind": 0,
+          "pattern": {
+            "kind": 8,
+            "typeid": "TAny"
+          },
+          "typeid": "TZeroOrMore"
+        },
+        "typeid": "TError"
+      }
+    ],
+    "typeid": "TChoice"
+  },
+  "NONTERMINAL": {
+    "kind": 0,
+    "pattern": {
+      "name": "UPPERCASE",
+      "typeid": "TPlaceholder"
+    },
+    "typeid": "TOneOrMore"
+  },
+  "NOTPREDICATE": {
+    "iffail": "",
+    "kind": 13,
+    "patterns": [
+      {
+        "iffail": "",
+        "kind": 9,
+        "pattern": "!",
+        "typeid": "TLiteral"
+      },
+      {
+        "name": "EXPRESSION",
+        "typeid": "TPlaceholder"
+      }
+    ],
+    "typeid": "TSequence"
+  },
+  "ONEORMORE": {
+    "iffail": "",
+    "kind": 13,
+    "patterns": [
+      {
+        "name": "EXPRESSION",
+        "typeid": "TPlaceholder"
+      },
+      {
+        "iffail": "",
+        "kind": 9,
+        "pattern": "+",
+        "typeid": "TLiteral"
+      }
+    ],
+    "typeid": "TSequence"
+  },
+  "OPTIONAL": {
+    "iffail": "",
+    "kind": 13,
+    "patterns": [
+      {
+        "name": "EXPRESSION",
+        "typeid": "TPlaceholder"
+      },
+      {
+        "iffail": "",
+        "kind": 9,
+        "pattern": "?",
+        "typeid": "TLiteral"
+      }
+    ],
+    "typeid": "TSequence"
+  },
+  "PEG": {
+    "kind": 0,
+    "patterns": [
+      {
+        "kind": 0,
+        "pattern": {
+          "name": "LINE",
+          "typeid": "TPlaceholder"
+        },
+        "typeid": "TOneOrMore"
+      },
+      {
+        "errortext": "Invalid file",
+        "kind": 15,
+        "pattern": {
+          "kind": 0,
+          "pattern": {
+            "kind": 8,
+            "typeid": "TAny"
+          },
+          "typeid": "TZeroOrMore"
+        },
+        "typeid": "TError"
+      }
+    ],
+    "typeid": "TChoice"
+  },
+  "PEXPR": {
+    "kind": 0,
+    "patterns": [
+      {
+        "name": "CHOICE",
+        "typeid": "TPlaceholder"
+      },
+      {
+        "name": "SEQUENCE",
+        "typeid": "TPlaceholder"
+      },
+      {
+        "name": "ZEROONEOOPT",
+        "typeid": "TPlaceholder"
+      },
+      {
+        "name": "ANDNOT",
+        "typeid": "TPlaceholder"
+      },
+      {
+        "name": "GROUPED",
+        "typeid": "TPlaceholder"
+      },
+      {
+        "errortext": "Invalid Expression",
+        "kind": 15,
+        "pattern": {
+          "kind": 0,
+          "pattern": {
+            "kind": 8,
+            "typeid": "TAny"
+          },
+          "typeid": "TZeroOrMore"
+        },
+        "typeid": "TError"
+      }
+    ],
+    "typeid": "TChoice"
+  },
+  "QUOTEDSTRING": {
+    "iffail": "",
+    "kind": 13,
+    "patterns": [
+      {
+        "name": "DQUOTE",
+        "typeid": "TPlaceholder"
+      },
+      {
+        "kind": 0,
+        "pattern": {
+          "iffail": "",
+          "kind": 13,
+          "patterns": [
+            {
+              "kind": 0,
+              "pattern": {
+                "name": "DQUOTE",
+                "typeid": "TPlaceholder"
+              },
+              "typeid": "TNegate"
+            },
+            {
+              "kind": 8,
+              "typeid": "TAny"
+            }
+          ],
+          "typeid": "TSequence"
+        },
+        "typeid": "TZeroOrMore"
+      },
+      {
+        "name": "DQUOTE",
+        "typeid": "TPlaceholder"
+      }
+    ],
+    "typeid": "TSequence"
+  },
+  "RULE": {
+    "iffail": "",
+    "kind": 13,
+    "patterns": [
+      {
+        "iffail": "Invalid rulename",
+        "kind": 13,
+        "patterns": [
+          {
+            "name": "NONTERMINAL",
+            "typeid": "TPlaceholder"
+          },
+          {
+            "pattern": {
+              "iffail": "",
+              "kind": 9,
+              "pattern": "->",
+              "typeid": "TLiteral"
+            },
+            "typeid": "TAndPredicate"
+          }
+        ],
+        "typeid": "TSequence"
+      },
+      {
+        "kind": 0,
+        "pattern": {
+          "name": "SP",
+          "typeid": "TPlaceholder"
+        },
+        "typeid": "TZeroOrMore"
+      },
+      {
+        "iffail": "",
+        "kind": 9,
+        "pattern": "->",
+        "typeid": "TLiteral"
+      },
+      {
+        "iffail": "",
+        "kind": 13,
+        "patterns": [
+          {
+            "kind": 0,
+            "pattern": {
+              "iffail": "",
+              "kind": 13,
+              "patterns": [
+                {
+                  "kind": 0,
+                  "pattern": {
+                    "name": "EOL",
+                    "typeid": "TPlaceholder"
+                  },
+                  "typeid": "TNegate"
+                },
+                {
+                  "kind": 8,
+                  "typeid": "TAny"
+                }
+              ],
+              "typeid": "TSequence"
+            },
+            "typeid": "TZeroOrMore"
+          },
+          {
+            "name": "EOL",
+            "typeid": "TPlaceholder"
+          }
+        ],
+        "typeid": "TSequence"
+      }
+    ],
+    "typeid": "TSequence"
+  },
+  "SEQUENCE": {
+    "iffail": "",
+    "kind": 13,
+    "patterns": [
+      {
+        "name": "EXPRESSION",
+        "typeid": "TPlaceholder"
+      },
+      {
+        "kind": 0,
+        "pattern": {
+          "name": "EXPRESSION",
+          "typeid": "TPlaceholder"
+        },
+        "typeid": "TOneOrMore"
+      }
+    ],
+    "typeid": "TSequence"
+  },
+  "SP": {
+    "kind": 0,
+    "patterns": [
+      {
+        "iffail": "",
+        "kind": 9,
+        "pattern": " ",
+        "typeid": "TLiteral"
+      },
+      {
+        "iffail": "",
+        "kind": 9,
+        "pattern": "\t",
+        "typeid": "TLiteral"
+      }
+    ],
+    "typeid": "TChoice"
+  },
+  "TERMINAL": {
+    "iffail": "",
+    "kind": 13,
+    "patterns": [
+      {
+        "name": "ALPHA",
+        "typeid": "TPlaceholder"
+      },
+      {
+        "kind": 0,
+        "pattern": {
+          "name": "ALPHANUMUNDER",
+          "typeid": "TPlaceholder"
+        },
+        "typeid": "TZeroOrMore"
+      }
+    ],
+    "typeid": "TSequence"
+  },
+  "UPPERCASE": {
+    "iffail": "",
+    "kind": 1,
+    "pattern": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    "typeid": "TCharMatch"
+  },
+  "ZEROONEOOPT": {
+    "iffail": "",
+    "kind": 13,
+    "patterns": [
+      {
+        "name": "EXPRESSION",
+        "typeid": "TPlaceholder"
+      },
+      {
+        "name": "ONEORMORE",
+        "typeid": "TPlaceholder"
+      },
+      {
+        "name": "OPTIONAL",
+        "typeid": "TPlaceholder"
+      }
+    ],
+    "typeid": "TSequence"
+  },
+  "ZEROORMORE": {
+    "iffail": "",
+    "kind": 13,
+    "patterns": [
+      {
+        "name": "EXPRESSION",
+        "typeid": "TPlaceholder"
+      },
+      {
+        "iffail": "",
+        "kind": 9,
+        "pattern": "*",
+        "typeid": "TLiteral"
+      }
+    ],
+    "typeid": "TSequence"
+  }
+}

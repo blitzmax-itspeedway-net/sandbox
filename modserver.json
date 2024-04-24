@@ -1,7 +1,55 @@
 {
-    "name":"Sandbox modserver",
-    "modules":[
-        "bmx.memento",
-        "bmx.timer"
-    ]
+"name":"Sandbox modserver",
+"packages":{
+    "Max IDE":{
+        "author":"Simon Armstrong, Blitz Research Limited",
+        "dependencies":{
+		    "bcc":{"version":"", "date":"2023-03-11" }
+	    },
+        "description":"Integrated Development Environment for BlitzMax",
+        "type":"application",
+        "repository":"github:blitzmax-itspeedway-net/bmx.json",
+        "target":"${BLITZMAX}/mod/bmx.mod/json.mod/",
+        "install.win32":[
+            {"action":"copy", "source":"maxide.exe", "target":"${BLITZMAX}/"}
+            ],
+        "install.linux":[
+            {"action":"copy", "source":"maxide", "target":"${BLITZMAX}/"}
+            ]
+    },
+    "bmx.json":{
+        "author":"Si Dunford [Scaremonger]",
+        "description":"JSON Module for BlitzMax",
+        "type":"module",
+        "dependencies":{},
+        "repository":"github:blitzmax-itspeedway-net/bmx.json",
+        "target":"${BLITZMAX}/mod/bmx.mod/json.mod/",
+        },
+    "bmx.observer":{
+        "author":"Si Dunford [Scaremonger]",
+        "description":"Observer Module for BlitzMax",
+        "type":"module",
+        "dependencies":{
+		    "bmx.json":{"version":"3.2", "date":"2024-04-10" }
+	    },
+        "repository":"github:blitzmax-itspeedway-net/observer.mod",
+        "target":"${BLITZMAX}/mod/bmx.mod/observer.mod/",
+        },
+    "bmx.timestamp":{
+        "author":"Si Dunford [Scaremonger]",
+        "description":"Timestamp Module for BlitzMax",
+        "type":"module",
+        "dependencies":{},
+        "repository":"github:blitzmaxmods/timestamp.mod",
+        "target":"${BLITZMAX}/mod/bmx.mod/timestamp.mod/",
+        },
+    "bah.database":{
+        "author":"[brucey]",
+        "description":"Database Module for BlitzMax",
+        "type":"module",
+        "dependencies":{},
+        "repository":"github:maxmods/bah.mod/database.mod",
+        "target":"${BLITZMAX}/mod/bah.mod/database.mod/",
+        }
+    },
 }

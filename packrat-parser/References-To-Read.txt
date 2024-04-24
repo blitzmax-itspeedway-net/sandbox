@@ -1,0 +1,39 @@
+PACKRAT
+-------
+https://blog.bruce-hill.com/packrat-parsing-from-scratch
+https://docs.rs/peginator/latest/peginator/
+https://github.com/badicsalex/peginator/tree/master
+https://pest.rs/book/grammars/syntax.html
+https://github.com/pegjs/pegjs/tree/master
+https://inspirnathan.com/posts/161-peg-parser-for-math-expressions-with-peggy/
+https://tomassetti.me/a-peggy-js-tutorial/
+
+PEG
+------
+https://en.wikipedia.org/wiki/Parsing_expression_grammar
+
+EXPRESSIONS
+------------
+https://stackoverflow.com/questions/19390084/parsing-complete-mathematical-expressions-with-peg-js
+
+PACKRAT LEFT RECURSION
+----------------------
+https://tinlizzie.org/VPRIPapers/tr2007002_packrat.pdf
+https://github.com/arithy/packcc/tree/master
+
+PACKRAT ERROR RECOVERY
+----------------------
+https://arxiv.org/pdf/1806.11150.pdf
+https://github.com/pegjs/pegjs/issues/198
+
+PEG/ CFC or PRATT
+-----------------
+https://www.abubalay.com/blog/2021/12/31/lr-control-flow
+
+INFINATE PEG LOOPS
+------------------
+https://www.reddit.com/r/compsci/comments/v5b2gm/ll_parsing_with_loop_detection_is_there_a_name/
+
+GLL Algorithm
+https://pure.royalholloway.ac.uk/ws/portalfiles/portal/26408385/postprint.pdf
+

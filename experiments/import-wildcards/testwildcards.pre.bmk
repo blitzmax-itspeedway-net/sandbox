@@ -1,0 +1,7 @@
+# Build widlcards
+echo ## Building wildcards
+include importall.bmk
+
+# Create Wildcard for folder 'includes'
+importall includes
+

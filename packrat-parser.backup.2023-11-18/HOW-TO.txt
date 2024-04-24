@@ -1,0 +1,36 @@
+PARSE PEG INTO PARSETREE
+
+    Import bmx.packrat
+    Local definition:string = LoadString( "example.peg" )
+    Local PEG:TPackrat_Parser = New TPackrat_PEG_Parser()
+    Local tree:TParseTree = PEG.Parse( definition )
+
+    .OR.
+
+    Import bmx.packrat
+    Local definition:string = LoadString( "example.peg" )
+    Local PEG:TPackrat_Parser = New TPackrat_PEG_Parser( definition )
+    Local tree:TParseTree = PEG.Parse()
+
+GENERATE PARSER SOURCE CODE
+
+    Import bmx.packrat
+    Local definition:string = LoadString( "example.peg" )
+    Local PEG:TPackrat_Parser = New TPackrat_PEG_Parser()
+    Local source:string = PEG.Generate( "example", definition )
+    SaveString( source, "example_parser.bmx" )
+
+    .OR.
+
+    Import bmx.packrat
+    Local definition:string = LoadString( "example.peg" )
+    Local PEG:TPackrat_Parser = New TPackrat_PEG_Parser( definition )
+    Local source:string = PEG.Generate( "example" )
+    SaveString( source, "example_parser.bmx" )
+
+PARSE PEG INTO AST
+This is the same as PEG to Parsetree, except you override the tree methods
+with those that return AST nodes
+
+TBC
+
