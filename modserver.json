@@ -8,8 +8,7 @@
 	    },
         "description":"Integrated Development Environment for BlitzMax",
         "type":"application",
-        "repository":"github:blitzmax-itspeedway-net/bmx.json",
-        "target":"${BLITZMAX}/mod/bmx.mod/json.mod/",
+        "repository":"github:bmx-ng/maxide",
         "install.win32":[
             {"action":"copy", "source":"maxide.exe", "target":"${BLITZMAX}/"}
             ],
