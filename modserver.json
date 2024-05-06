@@ -47,7 +47,8 @@
         "description":"Database Module for BlitzMax",
         "type":"module",
         "dependencies":{},
-        "repository":"github:maxmods/bah.mod/database.mod",
+        "repository":"github:maxmods/bah.mod",
+        "folder":"database.mod",
         "target":"${BLITZMAX}/mod/bah.mod/database.mod/",
         }
     },
