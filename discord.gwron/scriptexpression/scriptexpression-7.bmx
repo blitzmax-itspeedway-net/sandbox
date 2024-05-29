@@ -4,7 +4,11 @@ Import Brl.Map
 Import Brl.StringBuilder
 Import brl.retro	' Hex() in SToken.reveal()
 
-Rem SCAREMONGER CHANGES THIS VERSION
+Rem VERSION 7 CHANGES / Scaremonger (Si)
+
+EndRem
+
+Rem VERSION 6 CHANGES / Scaremonger (Si)
 * Moved try-catch from parse() and parsetext() up into expect()
 * Modified GetToken() to parse SYM_PERIOD followed by an identifier as a TK_FUNCTION, freeing up identifers to be variables.
 * Modified readWrapper() to process TK_FUNCTION instead of SYM_PERIOD
@@ -57,7 +61,7 @@ Const TK_CR:Int 			= 13	' /r
 Function TokenName:String( id:Int )
 	If id<32
 		Select id
-			CASE TK_ERROR;	Return "Error"
+			Case TK_ERROR;	Return "Error"
 			Case TK_EOF;		Return "EOF"
 			Case TK_IDENTIFIER;	Return "Identifier"
 			Case TK_NUMBER;		Return "Number"
@@ -82,29 +86,29 @@ Struct STokenGroup
 	Field added:Int
 	
 	Method GetToken:SToken(index:Int)
-		If index < token.length
+		If index < token.Length
 			Return token[index]
-		ElseIf index < dynamicToken.length - token.length
-			Return dynamicToken[dynamicToken.length - token.length]
+		ElseIf index < dynamicToken.Length - token.Length
+			Return dynamicToken[dynamicToken.Length - token.Length]
 		EndIf
 	End Method
 
 
 	Method AddToken(s:SToken)
-		If added < token.length
+		If added < token.Length
 			token[added] = s
-		ElseIf added < dynamicToken.length + token.length
-			dynamicToken[added - token.length] = s
+		ElseIf added < dynamicToken.Length + token.Length
+			dynamicToken[added - token.Length] = s
 		EndIf
 		added :+ 1
 	End Method
 
 
 	Method SetToken(index:Int, s:SToken)
-		If index < token.length
+		If index < token.Length
 			token[index] = s
-		ElseIf index < dynamicToken.length + token.length
-			dynamicToken[index - token.length] = s
+		ElseIf index < dynamicToken.Length + token.Length
+			dynamicToken[index - token.Length] = s
 		EndIf
 	End Method
 End Struct
@@ -190,7 +194,7 @@ Struct SToken
 
 	Method GetValueText:String()
 		Select id
-		case TK_ERROR
+		Case TK_ERROR
 			Return value
 		Case TK_EOF
 			Return "EOF"
@@ -209,7 +213,7 @@ Struct SToken
 
 	' Debugging
 	Method reveal:String()
-		if id=TK_ERROR then return "h"+Hex(id)+" = ERROR:"+value+" at ["+linenum+","+linepos+"]"
+		If id=TK_ERROR Then Return "h"+Hex(id)+" = ERROR:"+value+" at ["+linenum+","+linepos+"]"
 		Select valueType
 			Case 0
 				Return "h"+Hex(id)+" = '"+value+"' (string, " + TokName()+") at ["+linenum+","+linepos+"]"
@@ -308,12 +312,12 @@ Type TScriptExpression
 
 
 	Method Parse:SToken( expression:String, context:Object = Null)
-		Return New SScriptExpression.Parse(expression, self.config.s, context)
+		Return New SScriptExpression.Parse(expression, Self.config.s, context)
 	End Method
 
 
 	Method ParseText:String( expression:String, context:TStringMap=Null )
-		Return New SScriptExpression.ParseText(expression, self.config.s, context)
+		Return New SScriptExpression.ParseText(expression, Self.config.s, context)
 	End Method
 
 
@@ -462,27 +466,27 @@ End Struct
 
 Type TScriptExpressionConfig Final
 	Field s:SScriptExpressionConfig
-	Field sIsSet:int
+	Field sIsSet:Int
 
 	Method New(config:SScriptExpressionConfig)
-		self.s = config
-		self.sIsSet = True
+		Self.s = config
+		Self.sIsSet = True
 	End Method
 
 	
 	Method New( functionHandlerCB:TSEFN_Handler(functionName:String), variableHandlerCB:String(variableName:String, context:Object), errorHandler:String(t:String, context:Object) )
-		self.s = New SScriptExpressionConfig(functionHandlerCB, variableHandlerCB, errorHandler)
-		self.sIsSet = True
+		Self.s = New SScriptExpressionConfig(functionHandlerCB, variableHandlerCB, errorHandler)
+		Self.sIsSet = True
 	End Method
 
 
 	Method GetFunctionHandler:TSEFN_Handler(functionName:String)
-		If sIsSet Then Return self.s.GetFunctionHandler(functionName)
+		If sIsSet Then Return Self.s.GetFunctionHandler(functionName)
 	End Method
 
 	
 	Method EvaluateVariable( identifier:SToken Var )
-		If sIsSet Then self.s.EvaluateVariable(identifier)
+		If sIsSet Then Self.s.EvaluateVariable(identifier)
 		'TODO: Throw exception about unset SScriptExpressionConfig
 	End Method
 End Type
@@ -507,13 +511,13 @@ Struct SScriptExpressionLexer
 	Private
 
 	Method PeekChar:Int()
-		If cursor >= expression.length Then Return 0
+		If cursor >= expression.Length Then Return 0
 		Return expression[ cursor ]
 	End Method
 
 	' Pops next character moving the cursor forward
 	Method PopChar:Int()
-		If cursor >= expression.length Then Return TK_EOF
+		If cursor >= expression.Length Then Return TK_EOF
 		Local ch:Int = expression[ cursor ]
 		' Move the cursor forward
 		If ch = TK_LF	' \n
@@ -580,13 +584,13 @@ Struct SScriptExpressionLexer
 					'DebugStop
 					Local ident:String = ExtractIdent()
 'rem
-					If ident.length = 4 
+					If ident.Length = 4 
 						If ident[0] = Asc("t") And ident[1] = Asc("r") And ident[2] = Asc("u") And ident[3] = Asc("e")
 							Return New SToken( TK_BOOLEAN, True, linenumstart, lineposstart )
 						ElseIf ident[0] = Asc("n") And ident[1] = Asc("u") And ident[2] = Asc("l") And ident[3] = Asc("l")
 							Return New SToken( TK_BOOLEAN, -1, linenumstart, lineposstart )
 						EndIf
-					ElseIf ident.length = 5 And ident[0] = Asc("f") And ident[1] = Asc("a") And ident[2] = Asc("l") And ident[3] = Asc("s") And ident[4] = Asc("e")
+					ElseIf ident.Length = 5 And ident[0] = Asc("f") And ident[1] = Asc("a") And ident[2] = Asc("l") And ident[3] = Asc("s") And ident[4] = Asc("e")
 						Return New SToken( TK_BOOLEAN, False, linenumstart, lineposstart )
 					EndIf
 					
@@ -618,7 +622,7 @@ endrem
 	Method GetBlock:String()
 		'DebugStop
 		Local start:Int = cursor	', finish:Int = cursor
-		While cursor<expression.length ..
+		While cursor<expression.Length ..
 			And expression[cursor] <> SYM_DOLLAR
 			cursor :+ 1
 			linepos :+ 1
@@ -649,7 +653,7 @@ endrem
 	Method ExtractIdent:String()
 		'DebugStop
 		Local start:Int = cursor	', finish:Int = cursor
-		While cursor<expression.length ..
+		While cursor<expression.Length ..
 			And ( expression[cursor] = SYM_UNDERSCORE ..
 				Or ( expression[cursor] >= 48 And expression[cursor] <= 57 ) ..		' NUMBER
 				Or ( expression[cursor] >= 65 And expression[cursor] <= 90 ) ..		' UPPERCASE
@@ -664,7 +668,7 @@ endrem
 	Method ExtractNumber:Int(longValue:Long Var, doubleValue:Double Var)
 		longValue = 0
 		doubleValue = 0
-		If cursor = expression.length Then Return False
+		If cursor = expression.Length Then Return False
 
 		'DebugStop
 		Local negative:Int = False
@@ -791,10 +795,10 @@ Struct SScriptExpressionParser
 
 		' Termination
 		'If token.id = TK_EOF Then Throw( New TParseException( "Unexpected end", token, "readWrapper()" ) )
-		If token.id = TK_EOF Then return new SToken( TK_ERROR, "Unexpected end of file", token )
+		If token.id = TK_EOF Then Return New SToken( TK_ERROR, "Unexpected end of file", token )
 		' Empty Wrapper
 		'If token.id = SYM_RBRACE Then Throw( New TParseException( "Empty group", token, "readWrapper()" ) )
-		If token.id = SYM_RBRACE Then return new SToken( TK_ERROR, "Empty group", token )
+		If token.id = SYM_RBRACE Then Return New SToken( TK_ERROR, "Empty group", token )
 		
 		' Next are one or more arguments
 		Repeat
@@ -803,7 +807,7 @@ Struct SScriptExpressionParser
 			Select token.id
 				Case TK_EOF
 					'Throw New TParseException( "Unexpected end of expression", token, "readWrapper().params" )
-					return new SToken( TK_ERROR, "Unexpected end of expression", token )
+					Return New SToken( TK_ERROR, "Unexpected end of expression", token )
 					
 				Case SYM_DOLLAR	' Embedded Script Expression
 					result.AddToken(readWrapper())
@@ -840,7 +844,7 @@ Struct SScriptExpressionParser
 				Default
 					'DebugLog( "ReadWrapper() ["+token.id+"] "+token.GetValueText()+", error" )
 					'Throw New TParseException( "Unexpected token", token, "readWrapper()" )
-					return new SToken( TK_ERROR, "Unexpected token", token )
+					Return New SToken( TK_ERROR, "Unexpected token", token )
 			End Select
 			
 			' If we have finished, evaluate the wrapper returning the result
@@ -873,7 +877,7 @@ Struct SScriptExpressionParser
 		EndIf
 'DebugStop
 		'Throw New TParseException( token.GetValueText() + " was unexpected", token, "eat()" )
-		Return new SToken( TK_ERROR, token.GetValueText() + " was unexpected", token )
+		Return New SToken( TK_ERROR, token.GetValueText() + " was unexpected", token )
 	End Method		
 
 
@@ -1000,7 +1004,7 @@ End Function
 Function lookupstring:String( within:TStringMap, key:String, index:Int )
 	If Not within Or Not within.contains( key ) Then Return "<null>"
 	Local array:String[] = String[]( within.valueforkey( key ) )
-	If array.length < index Then Return "#"+index
+	If array.Length < index Then Return "#"+index
 	Return array[index-1]
 End Function
 
@@ -1075,10 +1079,10 @@ Function expect( test:String, expected:String, token:Int, note:String="" )
 	If note Then note = "  ** "+note+" **"
 	'Try
 		Local result:SToken = ScriptExpression.Parse( test )
-		if result.id = TK_ERROR
+		If result.id = TK_ERROR
 			Print "~n" + test + " -> ERROR "+ note
 			If result.linenum=0 Then Print( " "[..(result.linepos-1)]+"^  "+result.reveal() )	
-		elseif result.id = token And (result.value = expected Or (result.valueType = 1 And result.valueLong = expected) Or (result.valueType = 2 And result.valueDouble = expected))
+		ElseIf result.id = token And (result.value = expected Or (result.valueType = 1 And result.valueLong = expected) Or (result.valueType = 2 And result.valueDouble = expected))
 			Print "~n" + test + " -> SUCCESS  ["+result.TokName()+"] '"+expected+"'" + note
 		Else
 			Print "~n" + test + " -> FAILURE  ["+result.TokName()+"] '" + result.GetValueText() + "', expected ["+TokenName(token)+"] '"+expected+"' )" + note
@@ -1201,6 +1205,21 @@ For Local i:Int = 0 Until 1000000
 Next
 Print "took: " + (MilliSecs() - t) +" ms. Allocs=" + (bbGCAllocCount - allocs)
 End Rem
+
+' ----------------
+
+' Expansion to Script Expression 29 May 2024
+' Current Status: WORKING ON IT...
+DebugStop
+
+expr = "${.if:.timeOfDay<=6:~qNight~q:~qDay Or evening~q}"
+Print "Expression: "+ expr
+allocs = bbGCAllocCount
+For Local i:Int = 0 Until 1000000
+	ScriptExpression.Parse(expr)
+Next
+time = (MilliSecs() - time)
+Print "took: " + time +" ms. Allocs=" + (bbGCAllocCount - allocs)
 
 'print ScriptExpression.Parse("${.or:1:2}") + " = 1"
 'print ScriptExpression.Parse("${.or:0:~q~q}") + " = 0"
