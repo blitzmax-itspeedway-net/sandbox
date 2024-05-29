@@ -1,3 +1,37 @@
+WHY USE PEG
+
+As an example; try using Regex to extract and ISO formatted date (For example: 2024-05-22T21:17:18.345Z) and you get something like this:
+
+    /(\d{4})-(\d{2})-(\d{2})T(\d{2})\:(\d{2})\:(\d{2})\.(\d+)Z/
+
+That will work well enough, but it is not easy on the eye or immediately obvious what you are trying to extract.
+
+Now write a PEG example for the same ISO formatted date and you get something like:
+
+    digit <- [0-9]+
+    datetime <- date 'T' time 'Z'
+    date <- digit '-' digit '-' digit
+    time <- digit ':' digit ':' digit ( '.' digit )? 
+
+NOTE:
+* An extension has been requested to allow default templated variables that look like regex equivalent.
+
+    For example, the following definition would be added as a default expression allowing it to be used without further definition:
+
+    %d <- [0-9]+
+
+    THIS IS NOT CURRENTLY IMPLEMENTED
+
+* An extension has been requested to allow limitation on number of matches
+
+    for example:
+
+    ([0-9]^2) would only match two digits and then proceed. 
+
+    if used with default templates, you could shorten this to {%d^2}
+
+    THIS IS NOT CURRENTLY IMPLEMENTED
+
 PEG PARSER
 ----------
 

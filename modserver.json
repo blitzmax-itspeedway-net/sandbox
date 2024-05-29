@@ -3,18 +3,21 @@
 "packages":{
     "Max IDE":{
         "author":"Simon Armstrong, Blitz Research Limited",
+        "name":"MaxIDE",
         "dependencies":{
 		    "bcc":{"version":"", "date":"2023-03-11" }
 	    },
         "description":"Integrated Development Environment for BlitzMax",
         "type":"application",
         "repository":"github:bmx-ng/maxide",
-        "install.win32":[
-            {"action":"copy", "source":"maxide.exe", "target":"${BLITZMAX}/"}
-            ],
-        "install.linux":[
-            {"action":"copy", "source":"maxide", "target":"${BLITZMAX}/"}
-            ]
+        "installer":{
+            "win32":[
+                {"action":"copy", "source":"maxide.exe", "target":"${BLITZMAX}/"}
+                ],
+            "linux":[
+                {"action":"copy", "source":"maxide", "target":"${BLITZMAX}/"}
+                ]
+        },
     },
     "bmx.json":{
         "author":"Si Dunford [Scaremonger]",
