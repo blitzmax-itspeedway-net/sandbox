@@ -4,7 +4,41 @@ Import Brl.Map
 Import Brl.StringBuilder
 Import brl.retro	' Hex() in SToken.reveal()
 
-Rem VERSION 7 CHANGES / Scaremonger (Si)
+' VERSION 7.1, 1 JUN 2024
+
+Rem VERSION 7.1 / Scaremonger (Si)
+* Added Constants for SYM_LSS, SYM_EQUAL, SYM_GTR and TK_OPERATOR
+* Updated TokenName() to return "Operator" for TK_OPERATOR
+* Updated SScriptExpressionLexer.getNext() to detect "<", "=", ">", "==", "<=", "<>", ">=" tokens
+* Split SScriptExpressionParser.readWrapper() into readStatement(), readBlock() and readFunction()
+* Updated SScriptExpressionParser.readBlock() to add TK_OPERATOR
+* Added STokenGroup.New()
+* Added STokenGroup.GetTokenGroup()
+* Added STokenGroup.reveal() for debugging
+* Created function SEFN_NEq()
+* Created function SEFN_Hour()
+* Registered function SEFN_Eq() as "=="
+* Registered function SEFN_Gt() as ">"
+* Registered function SEFN_Gte() as ">="
+* Registered function SEFN_Lt() as "<"
+* Registered function SEFN_Lte() as "<="
+* Registered function SEFN_NEq() as "<>"
+* Registered function SEFN_Hour() as "hour"
+
+NOTE ON PARSING:
+
+	root       <- "$" wrapper
+	wrapper    <- "{" expression "}"
+	expression <- (block ":")* block
+	block      <- (expression|function|identifier|qstring|number|boolean|variable) (operator block)?
+	operator   <- ("<"|">" "=")|"<>"|"=="
+	function   <- "." identifier
+	identifier <- [a-zA-Z]*
+	qstring    <- '"' (!'"')* '"'
+	number     <- "-"? [0-9]* ("." [0-9]*)
+	boolean    <- true|false
+	variable   <- [0-9]*
+	
 
 EndRem
 
@@ -40,6 +74,9 @@ Const SYM_RPAREN:Int		= 41	' )
 Const SYM_HYPHEN:Int 		= 45	' -
 Const SYM_PERIOD:Int 		= 46	' .
 Const SYM_COLON:Int 		= 58	' :
+Const SYM_LSS:Int 			= 60	' <
+Const SYM_EQUAL:Int 		= 61	' =
+Const SYM_GTR:Int 			= 62	' >
 Const SYM_BACKSLASH:Int 	= 92	' \
 Const SYM_UNDERSCORE:Int	= 95	' _
 Const SYM_LBRACE:Int		= 123	' {
@@ -53,6 +90,7 @@ Const TK_QSTRING:Int 		= 3		' Quoted String
 Const TK_FUNCTION:Int 		= 4		' Function
 Const TK_BOOLEAN:Int 		= 5		' Boolean identifiers (true/false)
 Const TK_TEXT:Int 			= 6		' Text String
+Const TK_OPERATOR:Int 		= 7		' Operator "<","=",">","<=", ">=","<>"
 
 Const TK_TAB:Int 			= 9		' /t
 Const TK_LF:Int 			= 10	' /n
@@ -72,6 +110,7 @@ Function TokenName:String( id:Int )
 			Case TK_TAB;		Return "TAB"
 			Case TK_LF;			Return "LF"
 			Case TK_CR;			Return "CR"
+			Case TK_OPERATOR;   Return "Operator"
 		Default
 			Return "n/a ("+id+")"
 		End Select
@@ -85,6 +124,11 @@ Struct STokenGroup
 	Field dynamicToken:SToken[]
 	Field added:Int
 	
+	' Creates a Token group seeded with it's first member
+	Method New( token:SToken )
+		addToken( token )
+	End Method
+	
 	Method GetToken:SToken(index:Int)
 		If index < token.Length
 			Return token[index]
@@ -93,6 +137,16 @@ Struct STokenGroup
 		EndIf
 	End Method
 
+	' Identical to GetToken, except it returns a new group
+	' containing only the requested token. This is used when calling
+	' a function when you only have the name and no arguments.
+	Method GetTokenGroup:STokenGroup(index:Int)
+		If index < token.Length
+			Return New STokenGroup( token[index] )
+		ElseIf index < dynamicToken.Length - token.Length
+			Return New STokenGroup( dynamicToken[dynamicToken.Length - token.Length] )
+		EndIf
+	End Method
 
 	Method AddToken(s:SToken)
 		If added < token.Length
@@ -103,7 +157,6 @@ Struct STokenGroup
 		added :+ 1
 	End Method
 
-
 	Method SetToken(index:Int, s:SToken)
 		If index < token.Length
 			token[index] = s
@@ -111,10 +164,17 @@ Struct STokenGroup
 			dynamicToken[index - token.Length] = s
 		EndIf
 	End Method
+	
+	' TokenGroup Debugging
+	Method reveal:String( title:String="")
+		Local str:String
+		If title; str :+ title + "~n"
+		For Local n:Int = 0 Until added
+			str :+ n+") "+token[n].reveal()+"~n"
+		Next
+		Return str
+	End Method
 End Struct
-
-
-
 
 Struct SToken
 	Field id:Int = TK_ERROR
@@ -536,10 +596,11 @@ Struct SScriptExpressionLexer
 	Method GetNext:SToken()
 		Repeat
 			Local ch:Int = PeekChar()
+'If ch>=60 And ch<=62; DebugStop
 			' Save the line number and position so we can use it later
 			Local linenumstart:Int = linenum
 			Local lineposstart:Int = linepos
-
+			'DebugStop
 			Select True
 				' End of file
 				Case ch = 0
@@ -609,8 +670,41 @@ Rem
 					Default
 						Return New SToken( TK_IDENTIFIER, ident, linenum, linepos )
 					End Select
-endrem
-
+EndRem
+				
+				' OPERATORS	"<", "<=", "==", ">", ">=" and "<>"
+				Case ( ch >= 60 And ch <= 62)
+					Local opcode:Int = popChar()
+					'
+					ch = peekChar()
+					If opcode = SYM_LSS
+						Select ch
+						Case SYM_EQUAL		' LESS THAN OR EQUAL
+							popChar()
+							Return New SToken( TK_OPERATOR, "<=", linenumstart, lineposstart )						
+						Case SYM_GTR		' NOT EQUAL
+							popChar()
+							Return New SToken( TK_OPERATOR, "<>", linenumstart, lineposstart )						
+						Default				' LESS THAN
+							Return New SToken( TK_OPERATOR, "<", linenumstart, lineposstart )
+						End Select
+					Else If opcode = SYM_EQUAL 
+						If ch = SYM_EQUAL	' EQUAL
+							popChar()
+							Return New SToken( TK_OPERATOR, "==", linenumstart, lineposstart )
+						Else				' ASSIGNMENT
+							'Return New SToken( TK_ASSIGNMENT, "=", linenumstart, lineposstart )
+							Return New SToken( TK_OPERATOR, "=", linenumstart, lineposstart )
+						EndIf
+					Else 'if opcode = SYM_GTR
+						If ch = SYM_EQUAL	' GREATER THAN OR EQUAL
+							popChar()
+							Return New SToken( TK_OPERATOR, ">=", linenumstart, lineposstart )						
+						Else				' GREATER THAN
+							Return New SToken( TK_OPERATOR, ">", linenumstart, lineposstart )
+						End If
+					End If
+				
 				' SYMBOLS
 				Default ' ch = SYM_COLON Or ch = SYM_PERIOD
 					Return New SToken( ch, PopChar(), linenum, linepos )
@@ -787,50 +881,66 @@ Struct SScriptExpressionParser
 
 	' Read a readWrapper ${..}
 	Method readWrapper:SToken()
-		'DebugStop
-		Local result:STokenGroup
-		' Skip leading Dollar symbol and Opening Brace
+		' Skip leading Dollar symbol
 		eat( SYM_DOLLAR )
+		Return readStatement()
+	End Method
+	
+	' Read Statement {..}
+	Method readStatement:SToken()
+		Local result:STokenGroup
+		' Skip leading Opening Brace
+		If token.id <> SYM_LBRACE; Return New SToken( TK_ERROR, "Expected '{'", token )
 		eat( SYM_LBRACE )
-
 		' Termination
-		'If token.id = TK_EOF Then Throw( New TParseException( "Unexpected end", token, "readWrapper()" ) )
 		If token.id = TK_EOF Then Return New SToken( TK_ERROR, "Unexpected end of file", token )
 		' Empty Wrapper
-		'If token.id = SYM_RBRACE Then Throw( New TParseException( "Empty group", token, "readWrapper()" ) )
 		If token.id = SYM_RBRACE Then Return New SToken( TK_ERROR, "Empty group", token )
 		
 		' Next are one or more arguments
 		Repeat
-			'Print lexer.expression
+			' Get next block
+			'DebugStop
+			Local block:SToken = readBlock()
+			If block.id = TK_ERROR; Return block			
+			result.addToken( block )
+			'Print block.reveal()
+			'DebugStop
+						
+			' If we have finished, evaluate the wrapper and return the result
+			If token.id = SYM_RBRACE Then Return eval( result )
+
+			' Next symbol should be a colon
+			eat( SYM_COLON )
+			If token.id = TK_ERROR; Return block
+			
+		Forever			
+	End Method
+	
+	' Read a block of tokens (Between Colons)
+	Method readBlock:SToken()
+		Local result:STokenGroup
+		Repeat
+		'Print lexer.expression
 			'Print " "[..(lexer.cursor-1)]+"^  {"+lexer.linenum+":"+lexer.linepos+"} "+tokenName( token.id )
 			Select token.id
 				Case TK_EOF
 					'Throw New TParseException( "Unexpected end of expression", token, "readWrapper().params" )
 					Return New SToken( TK_ERROR, "Unexpected end of expression", token )
 					
-				Case SYM_DOLLAR	' Embedded Script Expression
+				Case SYM_DOLLAR		' Embedded Script Expression
 					result.AddToken(readWrapper())
-					'DebugStop
+					advance()
 
+				Case SYM_LBRACE		' Embedded function
+					result.AddToken(readStatement())
 					advance()
 
 				Case TK_FUNCTION	' Function
 					result.AddToken(token)
-					advance()
+					advance()			
 					
-				'Case SYM_PERIOD
-				'	' Strip function identifier 
-				'	eat( SYM_PERIOD )
-
-				'	If token.id <> TK_IDENTIFIER Then Throw New TParseException( "Identifier expected", token, "readWrapper()" )
-				'	token.id = TK_FUNCTION
-				'	result.AddToken(token)
-
-				'	advance()
-
 				Case TK_IDENTIFIER	' Identifiers on their own are variables!
-					'DebugStop
 					' Replace the identifier
 					If configIsSet Then config.evaluateVariable( token ) 
 					result.AddToken(token)
@@ -838,7 +948,11 @@ Struct SScriptExpressionParser
 
 				Case TK_QSTRING, TK_NUMBER, TK_BOOLEAN
 					result.AddToken(token)
+					advance()
 
+				Case TK_OPERATOR
+					'DebugStop
+					result.AddToken(token)
 					advance()
 
 				Default
@@ -847,14 +961,43 @@ Struct SScriptExpressionParser
 					Return New SToken( TK_ERROR, "Unexpected token", token )
 			End Select
 			
-			' If we have finished, evaluate the wrapper returning the result
-			If token.id = SYM_RBRACE Then Return eval( result )
+			If token.id = SYM_COLON Or token.id = SYM_RBRACE Or token.id=TK_EOF
+				' Single item in the block is returned as an argument
+				If result.added = 1; Return result.getToken(0)
+				
+				' Multiple items in a block need to be evaluated
+				'DebugStop
 			
-			' Next should be a ":"
-			eat( SYM_COLON )
-		Forever			
+				' Check for an operator
+				'Print result.reveal()
+				'debugstop
+				If result.added = 3 And result.getToken(1).id = TK_OPERATOR
+					'Print result.reveal()
+					'DebugStop
+					' Convert operator to a function
+					Local optoken:SToken = result.getToken(1)
+					optoken.id = TK_FUNCTION
+					Local LExpression:STokenGroup = result.GetTokenGroup(0) ' Left expression
+					Local RExpression:STokenGroup = result.GetTokenGroup(2) ' Right expression
+					'Print( LExpression.reveal("LEFT EXPRESSION:") )
+					'Print( RExpression.reveal("RIGHT EXPRESSION:") )
+					' Build new function defintion
+					Local func:STokenGroup = New STokenGroup()
+					func.addToken( optoken )
+					func.addToken( eval( LExpression ) )	
+					func.addToken( eval( RExpression ) )
+					'Print func.reveal("FUNCTION:")
+					'DebugStop
+					Return eval(func)
+				End If				
+			End If
+			
+		Forever
+		
 	End Method
-
+	
+	Method readFunction:SToken()
+	End Method
 	
 	' Advances the token
 	Method advance()
@@ -880,9 +1023,10 @@ Struct SScriptExpressionParser
 		Return New SToken( TK_ERROR, token.GetValueText() + " was unexpected", token )
 	End Method		
 
-
+	' Evaluate a Token group
 	Method eval:SToken( tokens:STokenGroup Var )
 		Local firstToken:SToken = tokens.GetToken(0)
+
 		Select firstToken.id
 			Case TK_FUNCTION
 				'DebugStop
@@ -908,6 +1052,7 @@ Struct SScriptExpressionParser
 				Return firstToken
 		End Select
 	End Method
+
 End Struct
 
 
@@ -930,10 +1075,7 @@ Type TSEFN_Handler
 	End Method
 End Type
 
-
-
-
-'register defaults
+' Register default functions
 Function SEFN_Or:SToken(params:STokenGroup Var, context:Object = Null)
 	Local first:SToken = params.GetToken(0)
 	Return New SToken( TK_BOOLEAN, Long(TScriptExpression._CountTrueValues(params, 1) > 0), first.linenum, first.linepos )
@@ -950,9 +1092,13 @@ Function SEFN_Not:SToken(params:STokenGroup Var, context:Object = Null)
 End Function
 
 Function SEFN_If:SToken(params:STokenGroup Var, context:Object = Null)
+	' Get the IF token so we can use the line number and position
 	Local first:SToken = params.GetToken(0)
+	
+	' Process results
 	If params.added > 1
 		Local t:SToken = params.GetToken(1)
+		'Print t.reveal()
 		If TScriptExpression._IsTrueValue(t)
 			' Expression is TRUE
 			If params.added < 3
@@ -969,11 +1115,17 @@ Function SEFN_If:SToken(params:STokenGroup Var, context:Object = Null)
 			EndIf
 		EndIf
 	EndIf
+	
 End Function
 
 Function SEFN_Eq:SToken(params:STokenGroup Var, context:Object = Null)
 	Local first:SToken = params.GetToken(0)
 	Return New SToken( TK_BOOLEAN, Long(TScriptExpression._CountEqualValues(params, 1) = params.added - 1), first.linenum, first.linepos )
+End Function
+
+Function SEFN_NEq:SToken(params:STokenGroup Var, context:Object = Null)
+	Local first:SToken = params.GetToken(0)
+	Return New SToken( TK_BOOLEAN, Long(TScriptExpression._CountEqualValues(params, 1) <> params.added - 1), first.linenum, first.linepos )
 End Function
 
 Function SEFN_Gt:SToken(params:STokenGroup Var, context:Object = Null)
@@ -1046,6 +1198,17 @@ Function SEFN_Concat:SToken(params:STokenGroup Var, context:Object = Null)
 	Return New SToken( TK_TEXT, result, first.linenum, first.linepos )
 End Function
 
+Function SEFN_Hour:SToken(params:STokenGroup Var, context:Object = Null)
+	'Print params.reveal("PARAMS: "+ params.added)
+	'DebugStop
+	Local first:SToken = params.GetToken(0)
+	If params.added > 1 Then Return New SToken( TK_BOOLEAN, False, first.linenum, first.linepos )
+	Local Hour:String = CurrentDate( "%H" )
+	Return New SToken( TK_NUMBER, Int(hour), first.linenum, first.linepos )
+End Function
+
+' Register the functions
+' The two numbers are MInimum and Maximum number of allowed parameters
 TScriptExpression.RegisterFunctionHandler( "not", SEFN_Not, 1, -1)
 TScriptExpression.RegisterFunctionHandler( "and", SEFN_And, 1, -1)
 TScriptExpression.RegisterFunctionHandler( "or",  SEFN_Or,  1, -1)
@@ -1056,13 +1219,20 @@ TScriptExpression.RegisterFunctionHandler( "gte", SEFN_Gte, 2,  2)
 TScriptExpression.RegisterFunctionHandler( "lt",  SEFN_Lt,  2,  2)
 TScriptExpression.RegisterFunctionHandler( "lte", SEFN_Lte, 2,  2)
 TScriptExpression.RegisterFunctionHandler( "concat", SEFN_Concat, 2,  2)
+TScriptExpression.RegisterFunctionHandler( "hour", SEFN_Hour, 0,  0)
+' Boolean operators
+TScriptExpression.RegisterFunctionHandler( "==", SEFN_Eq,  2, 2)
+TScriptExpression.RegisterFunctionHandler( ">",  SEFN_Gt,  2, 2)
+TScriptExpression.RegisterFunctionHandler( ">=", SEFN_Gte, 2, 2)
+TScriptExpression.RegisterFunctionHandler( "<",  SEFN_Lt,  2, 2)
+TScriptExpression.RegisterFunctionHandler( "<=", SEFN_Lte, 2, 2)
+TScriptExpression.RegisterFunctionHandler( "<>", SEFN_NEq, 2, 2)
+' ASSIGNMENT - Reserved for future expansion
+'TScriptExpression.RegisterFunctionHandler( "=", SEFN_SetVariable,  2, 2)
 
+' TEST FUNCTIONALITY
 
-
-
-' test functionality
-Print "Tests"
-
+Print "TESTS"
 
 ' sample functions (normally registered in other files with access to the
 ' individual elements like "TRole"
@@ -1115,6 +1285,7 @@ End Function
 
 
 'Local test:String
+Local expr:String
 
 'test = "${.or:${~qhello }~q  }:${  ${0}   }" 'misses } ... incomplete oh noooo!
 'print test + "  ->  " + ScriptExpression.Parse(test) + " = 1 ??"
@@ -1125,7 +1296,7 @@ End Function
 'DebugStop
 
 expect( "${.or:${~qhello }~q  }:${  ${0}   }", "1", TK_QSTRING, "This should fail" )
-
+expect( "${.bad:~qhello~q:${0}}", "1", TK_BOOLEAN, "This should fail" )
 'DebugStop
 expect( "${.or:~qhello~q:${0}}", "1", TK_BOOLEAN )
 expect( "${.if:${.or:~qhello~q:${0}}:~qTrue~q:~qFalse~q}", "True", TK_QSTRING )
@@ -1134,7 +1305,7 @@ expect( "${.if:1:~qTrue~q:~qFalse~q}", "True", TK_QSTRING )
 'DebugStop
 expect( "${.if:1:True:False}", True, TK_BOOLEAN, "This should fail" )
 expect( "${.if:1:true:false}", True, TK_BOOLEAN )
-DebugStop
+'DebugStop
 expect( "${.if:1:~q\~qTrue\~q~q:~qFalse~q}", "~qTrue~q", TK_QSTRING )	' Test escaped quote
 expect( "${.if:${.not:1}:~qTrue~q:~qFalse~q}", "False", TK_QSTRING )
 expect( "${.eq:1:2:1}", "0", TK_BOOLEAN )
@@ -1144,15 +1315,44 @@ expect( "${.gt:4:0}", "1", TK_BOOLEAN )
 expect( "${.gt:0:4}", "0", TK_BOOLEAN )
 expect( "${.gte:4:4}", "1", TK_BOOLEAN )
 
-DebugStop
+'DebugStop
 expect( "${.concat:name:~q,~q:age:~q,~q:postcode}", "Scaremonger,<age>,<postcode>", TK_TEXT )
 
 'Local expr2:String = "${.and:${.gte:4:4}:${.gte:5:4}}"
-Local expr2:String = "${.if:${.and:${.gte:4:4}:${.gte:5:4}}:~qis true~q:~qis false~q}"
-Print expr2
-Print "Parse : " + ScriptExpression.Parse(expr2).GetValueText()
+expr = "${.if:${.and:${.gte:4:4}:${.gte:5:4}}:~qis true~q:~qis false~q}"
+Print expr
+Print "Parse : " + ScriptExpression.Parse(expr).GetValueText()
 
 'end
+
+' Expansion to Script Expression 29 May 2024 / Operators and inline functions
+
+DebugStop
+
+' THIS WILL ONLY WORK AFTER 6PM"
+'expr = "${.if:.timeOfDay<=6:~qNight~q:~qDay Or evening~q}"
+expr = "${.if:.hour>=18:~qNight~q:~qDay Or evening~q}"
+expect( expr, "Night", TK_QSTRING )
+
+' THIS WILL ONLY WORK BEFORE 6PM"
+expr = "${.if:.hour<18:~qDay Or evening~q:~qNight~q}"
+expect( expr, "Day Or evening", TK_QSTRING )
+
+' THIS FAIL BECAUSE '=' WAS USED INSTEAD OF '=='"
+expr = "${.if:.hour=12:~qLunchtime~q:~qNot Lunchtime~q}"
+expect( expr, "Lunchtime", TK_QSTRING, "This should fail" )
+
+' THIS WILL ONLY WORK BETWEEN 12:00 and 12:59"
+expr = "${.if:.hour==12:~qLunchtime~q:~qNot Lunchtime~q}"
+expect( expr, "Lunchtime", TK_QSTRING )
+
+' ?? THIS WILL ONLY WORK OUTSIDE OF 12:00 and 12:59"
+expr = "${.if:.hour<>12:~qNot Lunchtime~q:~qLunchtime~q}"
+expect( expr, "Not Lunchtime", TK_QSTRING )
+
+' THIS WILL ONLY WORK BETWEEN 08:00 And 08:59"
+expr = "${.if:.hour==8:~qComputer Time~q:~qNot Computer Time~q}"
+expect( expr, "Computer Time", TK_QSTRING )
 
 DebugStop
 
@@ -1174,6 +1374,7 @@ Print( "Begin and End:           "+ScriptExpression.ParseText( descr, context ) 
 descr = "Testing ${.rolename:1}${.castname:1} together"
 Print( "Consecutive:             "+ScriptExpression.ParseText( descr, context ) )
 
+' ---------- TIMINGS ----------
 
 Print "~nTIMINGS:"
 
@@ -1183,7 +1384,7 @@ Global bbGCAllocCount:ULong = 0
 'End Extern
 
 Local time:Int = MilliSecs()
-Local expr:String = "${.and:${.gte:4:4}:${.gte:5:4}}"
+expr = "${.and:${.gte:4:4}:${.gte:5:4}}"
 Local allocs:Int
 
 Print "expression: "+ScriptExpression.Parse(expr).GetValueText()
@@ -1208,18 +1409,7 @@ End Rem
 
 ' ----------------
 
-' Expansion to Script Expression 29 May 2024
-' Current Status: WORKING ON IT...
-DebugStop
 
-expr = "${.if:.timeOfDay<=6:~qNight~q:~qDay Or evening~q}"
-Print "Expression: "+ expr
-allocs = bbGCAllocCount
-For Local i:Int = 0 Until 1000000
-	ScriptExpression.Parse(expr)
-Next
-time = (MilliSecs() - time)
-Print "took: " + time +" ms. Allocs=" + (bbGCAllocCount - allocs)
 
 'print ScriptExpression.Parse("${.or:1:2}") + " = 1"
 'print ScriptExpression.Parse("${.or:0:~q~q}") + " = 0"
