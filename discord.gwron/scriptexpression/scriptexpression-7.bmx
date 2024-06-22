@@ -1,12 +1,21 @@
 SuperStrict
+' VERSION 7.2, 22 JUN 2024
+
 Framework Brl.StandardIO
 Import Brl.Map
 Import Brl.StringBuilder
 Import brl.retro	' Hex() in SToken.reveal()
 
-' VERSION 7.1, 1 JUN 2024
+Rem VERSION 7.2 / Scaremonger (Si) / 22 JUN 2024
+* Created function SEFN_DaynameShort()
+* Created function SEFN_DaynameFull()
+* Registered function SEFN_DaynameShort() as "dayshort"
+* Registered function SEFN_DaynameFull() as "dayname"
+* Added day of week variables to Scaremonger_variableHandlerCB()
+* Added new test.
+EndRem
 
-Rem VERSION 7.1 / Scaremonger (Si)
+Rem VERSION 7.1 / Scaremonger (Si) / 1 JUN 2024
 * Added Constants for SYM_LSS, SYM_EQUAL, SYM_GTR and TK_OPERATOR
 * Updated TokenName() to return "Operator" for TK_OPERATOR
 * Updated SScriptExpressionLexer.getNext() to detect "<", "=", ">", "==", "<=", "<>", ">=" tokens
@@ -39,7 +48,6 @@ NOTE ON PARSING:
 	boolean    <- true|false
 	variable   <- [0-9]*
 	
-
 EndRem
 
 Rem VERSION 6 CHANGES / Scaremonger (Si)
@@ -65,7 +73,6 @@ ${.roleLastName:${.castGUID:1}}
 ${.gt:${.worldtimeYear}:2022:&quot;nach 2022&quot;:&quot;2022 oder eher&quot;}
 End Rem
 
-	
 Const SYM_SPACE:Int 		= 32	' space
 Const SYM_DQUOTE:Int 		= 34	' "
 Const SYM_DOLLAR:Int		= 36	' $
@@ -878,7 +885,7 @@ Struct SScriptExpressionParser
 			End Select
 		Forever
 	End Method
-
+	
 	' Read a readWrapper ${..}
 	Method readWrapper:SToken()
 		' Skip leading Dollar symbol
@@ -902,11 +909,20 @@ Struct SScriptExpressionParser
 			' Get next block
 			'DebugStop
 			Local block:SToken = readBlock()
-			If block.id = TK_ERROR; Return block			
-			result.addToken( block )
-			'Print block.reveal()
-			'DebugStop
-						
+			If block.id = TK_ERROR; Return block
+			
+			' V7.2, Single argument functions need to be evaluated
+			If block.id = TK_FUNCTION And result.added>0
+				'DebugStop
+				Local func:STokenGroup = New STokenGroup()
+				func.addToken( block )
+				result.addToken( Eval( func ) )
+			Else
+				result.addToken( block )
+				'Print block.reveal()
+				'DebugStop
+			End If
+			
 			' If we have finished, evaluate the wrapper and return the result
 			If token.id = SYM_RBRACE Then Return eval( result )
 
@@ -995,10 +1011,7 @@ Struct SScriptExpressionParser
 		Forever
 		
 	End Method
-	
-	Method readFunction:SToken()
-	End Method
-	
+
 	' Advances the token
 	Method advance()
 		'DebugStop
@@ -1120,6 +1133,9 @@ End Function
 
 Function SEFN_Eq:SToken(params:STokenGroup Var, context:Object = Null)
 	Local first:SToken = params.GetToken(0)
+	
+	Print params.reveal()
+
 	Return New SToken( TK_BOOLEAN, Long(TScriptExpression._CountEqualValues(params, 1) = params.added - 1), first.linenum, first.linepos )
 End Function
 
@@ -1207,6 +1223,26 @@ Function SEFN_Hour:SToken(params:STokenGroup Var, context:Object = Null)
 	Return New SToken( TK_NUMBER, Int(hour), first.linenum, first.linepos )
 End Function
 
+' Return full day name (Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday)
+' V7.2 - Scaremonger
+Function SEFN_DaynameFull:SToken(params:STokenGroup Var, context:Object = Null)
+'DebugStop
+	Local first:SToken = params.GetToken(0)
+	If params.added > 1 Then Return New SToken( TK_TEXT, "", first.linenum, first.linepos )
+	Local Weekday:String = CurrentDate( "%A" )
+	Return New SToken( TK_IDENTIFIER, Weekday, first.linenum, first.linepos )
+End Function
+
+' Return short day name (mon,tue,wed,thu,fri,sat,sun)
+' V7.2 - Scaremonger
+Function SEFN_DaynameShort:SToken(params:STokenGroup Var, context:Object = Null)
+'DebugStop
+	Local first:SToken = params.GetToken(0)
+	If params.added > 1 Then Return New SToken( TK_TEXT, "", first.linenum, first.linepos )
+	Local Weekday:String = CurrentDate( "%a" )
+	Return New SToken( TK_IDENTIFIER, Weekday, first.linenum, first.linepos )
+End Function
+
 ' Register the functions
 ' The two numbers are MInimum and Maximum number of allowed parameters
 TScriptExpression.RegisterFunctionHandler( "not", SEFN_Not, 1, -1)
@@ -1220,6 +1256,8 @@ TScriptExpression.RegisterFunctionHandler( "lt",  SEFN_Lt,  2,  2)
 TScriptExpression.RegisterFunctionHandler( "lte", SEFN_Lte, 2,  2)
 TScriptExpression.RegisterFunctionHandler( "concat", SEFN_Concat, 2,  2)
 TScriptExpression.RegisterFunctionHandler( "hour", SEFN_Hour, 0,  0)
+TScriptExpression.RegisterFunctionHandler( "dayname", SEFN_DaynameFull, 0,  0)
+TScriptExpression.RegisterFunctionHandler( "dayshort", SEFN_DaynameShort, 0,  0)
 ' Boolean operators
 TScriptExpression.RegisterFunctionHandler( "==", SEFN_Eq,  2, 2)
 TScriptExpression.RegisterFunctionHandler( ">",  SEFN_Gt,  2, 2)
@@ -1253,9 +1291,9 @@ Function expect( test:String, expected:String, token:Int, note:String="" )
 			Print "~n" + test + " -> ERROR "+ note
 			If result.linenum=0 Then Print( " "[..(result.linepos-1)]+"^  "+result.reveal() )	
 		ElseIf result.id = token And (result.value = expected Or (result.valueType = 1 And result.valueLong = expected) Or (result.valueType = 2 And result.valueDouble = expected))
-			Print "~n" + test + " -> SUCCESS  ["+result.TokName()+"] '"+expected+"'" + note
+			Print "~n" + test + " -> SUCCESS  ["+result.TokName()+"]='"+expected+"'" + note
 		Else
-			Print "~n" + test + " -> FAILURE  ["+result.TokName()+"] '" + result.GetValueText() + "', expected ["+TokenName(token)+"] '"+expected+"' )" + note
+			Print "~n" + test + " -> FAILURE  ["+result.TokName()+"]='" + result.GetValueText() + "', expected ["+TokenName(token)+"]='"+expected+"' )" + note
 		End If
 	'Catch e:TParseException
 	'	Print "~n" + test + " -> ERROR "+ note
@@ -1270,14 +1308,30 @@ valueType = se.ExtractNumber(valueLong, valueDouble)
 print "valueLong="+valueLong
 print "valueDouble="+valueDouble
 print "valueType="+valueType
-endrem
+EndRem
 
 ' sample override to have a custom "evaluateVariable()" implementation
 ' instead of a custom callback.
+' 7.2 - Scaremonger: Added varMonday thru' varSunday
 Function Scaremonger_variableHandlerCB:String(variableName:String, context:Object)
+	'DebugStop
 	Select variableName
 		Case "name"
 			Return "Scaremonger"
+		Case "varMonday"
+			Return "Monday"
+		Case "varTuesday"
+			Return "Tuesday"
+		Case "varWednesay"
+			Return "Wednesay"
+		Case "varThursday"
+			Return "Thursday"
+		Case "varFriday"
+			Return "Friday"
+		Case "varSaturday"
+			Return "Saturday"
+		Case "varSunday"
+			Return "Sunday"
 		Default
 			Return "<"+variableName+">"
 	End Select
@@ -1353,6 +1407,12 @@ expect( expr, "Not Lunchtime", TK_QSTRING )
 ' THIS WILL ONLY WORK BETWEEN 08:00 And 08:59"
 expr = "${.if:.hour==8:~qComputer Time~q:~qNot Computer Time~q}"
 expect( expr, "Computer Time", TK_QSTRING )
+
+'THIS ONLY WORKS ON A SATURDAY
+DebugStop
+expr = "${.eq:.dayname:varSaturday}"
+expect( expr, True, TK_BOOLEAN )
+
 
 DebugStop
 

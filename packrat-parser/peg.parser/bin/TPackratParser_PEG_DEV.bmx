@@ -36,6 +36,16 @@ Type TPackratParser_PEG_DEV Extends TPackratParser
 		grammar["SP"]       = SYMBOL( $20 )                             ' %d32 = Space
 		grammar["WSP"]      = CHOICE([ SYMBOL($20), SYMBOL($09) ])  ' Whitespace
 		'
+		' REGULAR EXPRESSION COMPATABILITY
+		' Not implemented
+'		grammar["\d"]       = RANGE( "0-9" )                   		' Digit 0 to 9
+'		grammar["\s"]       = CHOICE([ SYMBOL($20), SYMBOL($09) ])  ' Whitespace
+'		grammar["\w"]       = RANGE( "A-Za-z0-9_" )
+'		grammar["\D"]       = SEQUENCE([ LITERAL("!"), RANGE( "0-9" ) ])
+'		grammar["\S"]       = SEQUENCE([ LITERAL("!"), CHOICE([ SYMBOL($20), SYMBOL($09) ]) ])
+'		grammar["\W"]       = SEQUENCE([ LITERAL("!"), RANGE( "A-Za-z0-9_" ) ])
+
+'		grammar["\q"]       = SYMBOL( $22 )							' QUOTE
 		
 		' WHITESPACE SHORTCUT
 		Local _:TPattern = ZEROORMORE( __("WSP") )

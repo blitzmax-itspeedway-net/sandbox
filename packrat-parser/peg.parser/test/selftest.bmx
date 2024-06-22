@@ -30,13 +30,14 @@ PERFORM THE FOLLOWING TESTS:
 End Rem
 
 '	MANUAL (DEV) PACKRAT PARSER
-Import "../bin/TPackrat_PEG_Parser_DEV.bmx"
+Include "../bin/TPackratParser_PEG_DEV.bmx"
+Include "../bin/TPackratParser_PEG_DEV.bmx"
 
 Global STATE:String = "SUCCESS"
 
 Print "~n## SELF TEST 1 - TEST PEG PARSING"
 ' ------------------------------------------------------------
-Local ParserA:TPackrat_Parser = New TPackrat_PEG_Parser_DEV()
+Local ParserA:TPackrat_Parser = New TPackratParser_PEG_DEV()
 test( ParserA <> Null )
 Print "* Load Manually created DEV parser as 'A'"+STATE
 ' ------------------------------------------------------------
