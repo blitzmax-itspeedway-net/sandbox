@@ -1,0 +1,7 @@
+# Ignore everything and then include folders and files with extensions
+*
+!/**/
+!*.*
+!--*
+!##*
+
