@@ -18,6 +18,6 @@ VER  DATE        RELEASE  DESCRIPTION
                           Updates from community:
                           - Fixed backspace cursor (@GW)
                           - Added Seperator (@mingw)
-0.6  10 JUN 2023  Draft
-* Created TWidget
-* Added Panel, Label, Button widgets        
+0.6  10 JUN 2023  Draft   ABANDONED - NO LONGER AN IMGUI
+    * Created TWidget
+    * Added Panel, Label, Button widgets        

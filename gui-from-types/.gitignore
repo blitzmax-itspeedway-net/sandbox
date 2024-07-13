@@ -9,6 +9,7 @@
 .bmx/
 .vscode/
 *.private/
+*.abandoned/
 juppi88-mgui
 mingw-visualiser
 fry.private

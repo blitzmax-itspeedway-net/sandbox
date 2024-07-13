@@ -5,3 +5,8 @@
 !--*
 !##*
 
+# Exclude folders
+.bmx/
+.vscode/
+*.private/
+
