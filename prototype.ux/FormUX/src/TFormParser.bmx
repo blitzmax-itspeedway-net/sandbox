@@ -9,7 +9,7 @@ Include "TFormParserFRM.bmx"	'# VB6 FORM - EXPERIMENTAL
 Const ERR_EOF:Int         = 1
 Const ERR_INVALID:Int     = 2
 Const ERR_UNSUPPORTED:Int = 3
-
+Const ERR_FILEOPEN:Int = 4
 ' COMPONENT
 
 Const WIDGET_FRAME:Int    = 1	' Frame, Window, Dialog
@@ -26,9 +26,11 @@ Field LineNum:Int=0
 	Field lines:String[]
 	Const TEXTFORMAT_RED:Int = 10
 
+	Field filename:String
+
 	'------------------------------------------------------------
 	Method New( filename:String )
-		Self.filename = String
+		Self.filename = filename
 	End Method
 	
 	'------------------------------------------------------------
@@ -63,7 +65,7 @@ Field LineNum:Int=0
 	Method Parse:Int() Final
 		ts = OpenFile( filename )
 		If Not ts Then Return fail( ERR_FILEOPEN, "Unable to open file" )
-		result = ParseFile()
+		Local result:int = ParseFile()
 		CloseStream ts
 		Return result
 	End Method
