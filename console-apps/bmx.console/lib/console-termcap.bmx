@@ -4,7 +4,7 @@
 '	(c) Copyright Si Dunford [Scaremonger], May 2025
 '
 
-Import "lib/TConsoleBase.bmx"
+Import "TConsoleBase.bmx"
 	
 ?linux
 
@@ -95,15 +95,7 @@ EndRem
 		DebugLog( "Terminal type '"+termtype+"' exists in termcap database." )
 	
 		' Extract Control sequences for commands
-		
-		
-		
-		Local flag:Int = tgetflag( "am" )
-		Print( "AM: "+["FALSE","TRUE"][flag] )
-		flag = tGetFlag( "XXX" )
-		Print( "TEST: "+["FALSE","TRUE"][flag] )
-		'Local temp:String = tget
-		
+				
 		'Print "LENGTH="+Len(TERMCAPS.values())
 		CMD = New String[Len(TERMCAPS.values())]
 		For Local CAP:TERMCAPS = EachIn TERMCAPS.values()
@@ -114,6 +106,14 @@ EndRem
 			'	End
 			'EndIf
 		Next
+
+		' Flags - Not sure what to do with these yet!!
+		Local flag:Int = tgetflag( "am" )
+		'Print( "AM: "+["FALSE","TRUE"][flag] )
+		'flag = tGetFlag( "XXX" )
+		'Print( "TEST: "+["FALSE","TRUE"][flag] )
+		'Local temp:String = tget
+
 Rem
 		_CL = tgetstr( "cl", 0 )
 		_CD = tgetstr( "cd", 0 )
@@ -134,29 +134,14 @@ Rem
 		If _CL = CMD[TERMCAPS.CL] Print "YAHOO"
 EndRem
 		'Print "CL     ="+debug(_CL)
-		Print "CMD[CL]="+debug(CMD[TERMCAPS.CL])
+		
 		
 		' SCREEN SIZE
 		W = tgetnum( "co" )
 		H = tgetnum( "li" )
-		Print( "Screen size: "+ W + "," + H )
+		'Print( "Screen size: "+ W + "," + H )
 
 	End Method
-	
-	Method debug:String( str:String )
-		Local result:String = "["+Len(str)+"] "
-		For Local n:Int = 0 Until Len(str)
-			Select True
-			Case str[n]<32
-				result :+ "\"+Hex( str[n] )[6..]+", "
-			Case str[n]=32
-				result :+ "<SP>, "
-			Default
-				result :+ "'"+Chr(str[n])+"', "
-			End Select
-		Next
-		Return result
-	EndMethod
 	
 	Method Update()
 	End Method

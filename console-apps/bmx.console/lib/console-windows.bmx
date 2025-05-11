@@ -4,7 +4,7 @@
 '	(c) Copyright Si Dunford [Scaremonger], May 2025
 '
 
-Import "lib/TConsoleBase.bmx"
+Import "TConsoleBase.bmx"
 
 ?windows
 
