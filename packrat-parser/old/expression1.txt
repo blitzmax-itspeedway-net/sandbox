@@ -1,4 +1,0 @@
-(print
-    "The golden ratio is:"
-    (divide (add (sqrt 5) 1) 2))
-(print "A random number:" (random))

@@ -1,4 +1,0 @@
-Superstrict
-
-print( "Hello World" )
-

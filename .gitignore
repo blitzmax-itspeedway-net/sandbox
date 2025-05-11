@@ -9,6 +9,8 @@
 .bmx/
 .vscode/
 *.private/
+.sync*
+private/
 
 # Private Sandboxes
 languageserver/
@@ -24,6 +26,7 @@ Pratt-Parser/bin-java/
 net.mod-raknet.mod/
 
 # Exclude files
+syncthing-*.txt
 *.bak
 *.debug
 *.old
